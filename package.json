@@ -1,0 +1,10 @@
+{
+  "name": "shaolin-holds",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8765",
+    "test": "node tests/scoring.test.mjs && node tests/session.test.mjs",
+    "icons": "node tools/make-icons.mjs"
+  }
+}

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Shaolin Holds</title>
+  <meta name="description" content="Gamified Shaolin stance training. Your phone's camera checks your form and scores every second you hold.">
+  <meta name="theme-color" content="#17120e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Holds">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Home -->
+  <section id="home" class="screen">
+    <header class="topbar">
+      <button class="rank" id="rank-btn" aria-label="Progress">
+        <span class="sash" id="sash"></span>
+        <span class="rank-text"><strong id="rank-name"></strong><span class="xpbar"><i id="xp-fill"></i></span><small id="xp-text"></small></span>
+      </button>
+      <div class="chips">
+        <span class="chip" title="Day streak"><svg viewBox="0 0 24 24" class="ico flame"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-4-1-6.5 1-9.5z"/></svg><b id="streak">0</b></span>
+        <span class="chip" title="Points today"><svg viewBox="0 0 24 24" class="ico"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18.2 22 12 18.1 5.8 22l1.7-7.6L2 9.6l7.1-.7z"/></svg><b id="today">0</b></span>
+        <button class="icon-btn" id="settings-btn" aria-label="Settings"><svg viewBox="0 0 24 24" class="ico"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.4 4.7l1.6 1.3-2 3.4-2-.7a7.6 7.6 0 0 1-1.9 1.1l-.3 2.1h-4l-.3-2.1a7.6 7.6 0 0 1-1.9-1.1l-2 .7-2-3.4 1.6-1.3a7.8 7.8 0 0 1 0-2.4L1.6 9.5l2-3.4 2 .7a7.6 7.6 0 0 1 1.9-1.1L7.8 3.6h4l.3 2.1c.7.3 1.3.6 1.9 1.1l2-.7 2 3.4-1.6 1.3c.1.8.1 1.6 0 2.4z"/></svg></button>
+      </div>
+    </header>
+
+    <article class="hero" id="hero">
+      <div class="hero-label">Your hold <button class="text-btn" id="shuffle"><svg viewBox="0 0 24 24" class="ico"><path d="M17 3l4 4-4 4V8h-2.5l-7 9H3v-2h3.5l7-9H17zM3 7h4.5l2 2.6-1.3 1.6L6.5 9H3zm11.5 8H17v-3l4 4-4 4v-3h-3.5l-2-2.6 1.3-1.6z"/></svg>Shuffle</button></div>
+      <div class="hero-body">
+        <div class="hero-fig" id="hero-fig"></div>
+        <div class="hero-info">
+          <h1 id="hero-name"></h1>
+          <p class="native" id="hero-native"></p>
+          <p class="level-line" id="hero-level"></p>
+          <p class="desc" id="hero-desc"></p>
+          <div class="meta" id="hero-meta"></div>
+        </div>
+      </div>
+      <button class="btn primary big" id="hero-start">Start</button>
+    </article>
+
+    <div id="intro" class="intro" hidden>
+      <h2>How it works</h2>
+      <ol>
+        <li>Prop your phone up 2–3&nbsp;m away, about waist height, screen facing you.</li>
+        <li>Step back until your whole body is in view. The camera checks your stance as you hold it.</li>
+        <li>You score points for every second in good form. Better form scores more.</li>
+        <li>Hit the target on 3 different days to unlock the next level.</li>
+      </ol>
+      <p class="small">The camera is only used on your phone. No video leaves the device.</p>
+    </div>
+
+    <h2 class="section-title">All stances</h2>
+    <div class="grid" id="grid"></div>
+    <p class="foot"><button class="text-btn" id="progress-btn">Progress &amp; badges →</button></p>
+  </section>
+
+  <!-- Progress -->
+  <section id="progress" class="screen" hidden>
+    <header class="subbar"><button class="icon-btn back" data-home aria-label="Back"><svg viewBox="0 0 24 24" class="ico"><path d="M15 4l-8 8 8 8 1.4-1.4L9.8 12l6.6-6.6z"/></svg></button><h1>Progress</h1></header>
+    <div class="rank-card" id="rank-card"></div>
+    <div class="stats" id="stats"></div>
+    <h2 class="section-title">Training days</h2>
+    <div class="heatmap" id="heatmap"></div>
+    <h2 class="section-title">Badges</h2>
+    <div class="badges" id="badges"></div>
+    <h2 class="section-title">Recent sessions</h2>
+    <ul class="history" id="history"></ul>
+  </section>
+
+  <!-- Session -->
+  <section id="session" class="screen session" hidden>
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="honour-fig" id="honour-fig" hidden></div>
+    </div>
+    <div class="hud">
+      <div class="hud-top">
+        <button class="icon-btn hud-x" id="end-btn" aria-label="End session"><svg viewBox="0 0 24 24" class="ico"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7l-1.4-1.4L9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3z"/></svg></button>
+        <div class="hud-title"><strong id="s-name"></strong><small id="s-level"></small></div>
+        <div class="hud-pts"><b id="s-points">0</b><small>pts</small></div>
+      </div>
+      <div class="timer"><span id="s-time">0:00</span><span class="of" id="s-target"></span></div>
+      <div class="tbar"><i id="s-tbar"></i></div>
+      <div class="status" id="s-status"></div>
+      <div class="cue" id="s-cue"></div>
+      <div class="hud-bottom">
+        <div class="ref" id="s-ref"></div>
+        <div class="meter" id="s-meter"><div class="fill" id="s-fill"></div><div class="tick" id="s-tick"></div><span id="s-score"></span></div>
+        <div class="hud-btns" id="s-btns"></div>
+      </div>
+    </div>
+    <div class="error-panel" id="s-error" hidden>
+      <h2>Camera unavailable</h2>
+      <p id="s-error-msg"></p>
+      <div class="row"><button class="btn" id="s-retry">Try again</button><button class="btn primary" id="s-honour">Continue without camera</button></div>
+      <button class="text-btn" data-home>Back home</button>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section id="summary" class="screen summary" hidden>
+    <div class="sum-inner">
+      <p class="sum-kicker" id="sum-kicker"></p>
+      <h1 id="sum-title"></h1>
+      <div class="sum-points"><span id="sum-points">0</span><small>points</small></div>
+      <p class="sum-breakdown" id="sum-breakdown"></p>
+      <div class="sum-stats" id="sum-stats"></div>
+      <div class="sum-level" id="sum-level"></div>
+      <div class="sum-badges" id="sum-badges"></div>
+      <p class="sum-msg" id="sum-msg"></p>
+      <div class="row"><button class="btn" id="sum-again">Go again</button><button class="btn primary" data-home>Done</button></div>
+    </div>
+  </section>
+
+  <!-- Hold details -->
+  <dialog id="hold-sheet" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <button class="icon-btn sheet-x" value="close" aria-label="Close"><svg viewBox="0 0 24 24" class="ico"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7l-1.4-1.4L9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3z"/></svg></button>
+      <h2 id="hs-name"></h2>
+      <p class="native" id="hs-native"></p>
+      <p class="about" id="hs-about"></p>
+      <div class="levels" id="hs-levels" role="tablist"></div>
+      <div class="hs-body">
+        <div class="hs-fig" id="hs-fig"></div>
+        <div>
+          <h3 id="hs-lname"></h3>
+          <p id="hs-desc"></p>
+          <div class="meta" id="hs-meta"></div>
+        </div>
+      </div>
+      <label class="toggle" id="hs-cam-row"><input type="checkbox" id="hs-cam"><span>Use camera to check form</span></label>
+      <button class="btn primary big" id="hs-start" value="start">Start</button>
+    </form>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog id="settings" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <button class="icon-btn sheet-x" value="close" aria-label="Close"><svg viewBox="0 0 24 24" class="ico"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7l-1.4-1.4L9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3z"/></svg></button>
+      <h2>Settings</h2>
+      <label class="toggle"><input type="checkbox" name="voice"><span>Spoken coaching</span></label>
+      <label class="toggle"><input type="checkbox" name="sounds"><span>Sounds</span></label>
+      <label class="toggle"><input type="checkbox" name="camera"><span>Use the camera by default</span></label>
+      <label class="field"><span>Form strictness</span>
+        <select name="strictness"><option value="relaxed">Relaxed</option><option value="normal">Normal</option><option value="strict">Strict</option></select>
+      </label>
+      <label class="field"><span>Pose model</span>
+        <select name="model"><option value="full">Accurate (larger download)</option><option value="lite">Fast (older phones)</option></select>
+      </label>
+      <p class="small">Progress is saved in this browser only. Add the app to your home screen so it isn't cleared, and export a backup now and then.</p>
+      <div class="row wrap">
+        <button type="button" class="btn" id="export">Export backup</button>
+        <button type="button" class="btn" id="import">Import backup</button>
+        <input type="file" id="import-file" accept="application/json" hidden>
+        <button type="button" class="btn danger" id="reset">Reset progress</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
