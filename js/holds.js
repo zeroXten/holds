@@ -89,7 +89,7 @@ export const HOLDS = [
     id: 'bow', name: 'Bow Stance', native: 'Gōng Bù', view: 'side', sides: true, camera: true,
     about: 'A long forward stance: front leg bent like a bow, back leg straight like the arrow.',
     levels: [
-      { name: 'Short bow', target: 30, desc: 'Long step forward. Bend the front knee, back leg straight, both heels down. Switch legs halfway.' },
+      { name: 'Short bow', target: 30, desc: 'Long step forward. Bend the front knee, back leg straight, both heels down. Then switch legs.' },
       { name: 'Bow', target: 45, desc: 'Lower: front knee over the ankle, back leg locked straight.' },
       { name: 'Deep bow', target: 60, desc: 'Front thigh nearly level. Hips square, back upright.' },
       { name: 'Pushing bow', target: 90, desc: 'Front thigh level. Arms straight in front at shoulder height, palms pushing.' },
@@ -130,7 +130,7 @@ export const HOLDS = [
     id: 'cat', name: 'Empty Stance', native: 'Xū Bù', view: 'side', sides: true, camera: true,
     about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly.',
     levels: [
-      { name: 'High cat', target: 30, desc: 'Weight on the back leg, knee bent. Front foot forward, just the toes touching. Switch legs halfway.' },
+      { name: 'High cat', target: 30, desc: 'Weight on the back leg, knee bent. Front foot forward, just the toes touching. Then switch legs.' },
       { name: 'Cat', target: 45, desc: 'Sit lower on the back leg. Front foot light enough to lift at any moment.' },
       { name: 'Low cat', target: 60, desc: 'Back thigh sinking towards level. Hips over the back heel.' },
       { name: 'Deep cat', target: 75, desc: 'As low as you can while staying upright, front leg long and light.' },
@@ -170,7 +170,7 @@ export const HOLDS = [
     id: 'crane', name: 'Crane Stance', native: 'Dú Lì Bù', view: 'side', sides: true, camera: true,
     about: 'Standing on one leg with the other knee raised: balance, focus and hip strength.',
     levels: [
-      { name: 'Knee lift', target: 30, desc: 'Stand on one leg, raise the other knee towards hip height. Switch legs halfway.' },
+      { name: 'Knee lift', target: 30, desc: 'Stand on one leg, raise the other knee towards hip height. Then switch legs.' },
       { name: 'Crane', target: 45, desc: 'Raised thigh close to level, toes pointing down, standing leg straight.' },
       { name: 'High crane', target: 60, desc: 'Raised thigh level or higher. Hands together at the chest.' },
       { name: 'Golden rooster', target: 90, desc: 'Knee above the hip and one hand raised high overhead.' },
@@ -204,7 +204,7 @@ export const HOLDS = [
     id: 'drop', name: 'Drop Stance', native: 'Pū Bù', view: 'front', sides: true, camera: true,
     about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together.',
     levels: [
-      { name: 'Side lunge', target: 20, desc: 'Wide stance, sink onto one bent leg, other leg straight out to the side. Switch legs halfway.' },
+      { name: 'Side lunge', target: 20, desc: 'Wide stance, sink onto one bent leg, other leg straight out to the side. Then switch legs.' },
       { name: 'Drop', target: 30, desc: 'Sink lower, both feet flat, extended leg straight.' },
       { name: 'Low drop', target: 45, desc: 'Hips close to the heel of the bent leg. Chest lifted.' },
       { name: 'Full drop', target: 60, desc: 'Fully folded, hips just above the floor, extended leg straight and low.' },
@@ -330,7 +330,7 @@ export const HOLDS = [
     id: 'swallow', name: 'Swallow Balance', native: 'Yàn Shì Píng Héng', view: 'side', sides: true, camera: true,
     about: 'Balance on one leg with the body tipped forward and the other leg reaching back, like a swallow in flight.',
     levels: [
-      { name: 'Leaning balance', target: 20, desc: 'Stand on one leg and tip forward, lifting the other leg behind you. Torso and back leg about 45° from upright. Switch legs halfway.' },
+      { name: 'Leaning balance', target: 20, desc: 'Stand on one leg and tip forward, lifting the other leg behind you. Torso and back leg about 45° from upright. Then switch legs.' },
       { name: 'Half swallow', target: 30, desc: 'Tip further: torso and back leg about 30° from level. Both legs straight.' },
       { name: 'Swallow', target: 45, desc: 'Torso and back leg level with the floor, arms swept back like wings.' },
       { name: 'Flying swallow', target: 60, desc: 'Fully level, back leg as high as your head, arms reaching forward in line with your body.' },
@@ -372,7 +372,7 @@ export const HOLDS = [
     id: 'kick', name: 'Kick Hold', native: 'Dēng Tuǐ', view: 'side', sides: true, camera: true,
     about: 'Hold a front heel kick out in the air: hip strength, hamstring flexibility and balance.',
     levels: [
-      { name: 'Low kick', target: 20, desc: 'Kick one leg forward and hold it there, straight, heel pushing out, foot about shin height. Fists up in guard. Switch legs halfway.' },
+      { name: 'Low kick', target: 20, desc: 'Kick one leg forward and hold it there, straight, heel pushing out, foot about shin height. Fists up in guard. Then switch legs.' },
       { name: 'Knee kick', target: 25, desc: 'Foot at about knee height or higher. Both legs straight.' },
       { name: 'Waist kick', target: 30, desc: 'Kicking leg level with the floor, at waist height. Stay tall.' },
       { name: 'High kick', target: 30, desc: 'Foot above waist height, towards your chest. Both legs locked straight.' },
@@ -465,7 +465,7 @@ export const HOLDS = [
     id: 'rest', name: 'Rest Stance', native: 'Xiē Bù', view: 'front', sides: true, camera: false,
     about: 'A low, twisted, cross-legged stance. The camera can’t judge it reliably, so this one is on your honour.',
     levels: [
-      { name: 'High rest', target: 20, desc: 'Cross one leg behind the other and sink, rear knee behind the front calf. Switch sides halfway.' },
+      { name: 'High rest', target: 20, desc: 'Cross one leg behind the other and sink, rear knee behind the front calf. Then switch sides.' },
       { name: 'Rest', target: 30, desc: 'Sink lower, front foot flat and turned out, rear heel up.' },
       { name: 'Low rest', target: 45, desc: 'Sit almost onto the rear calf, torso upright and twisted.' },
       { name: 'Deep rest', target: 60, desc: 'Fully seated on the rear leg, steady and upright.' },

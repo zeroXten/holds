@@ -3,6 +3,10 @@
 //
 // Camera states: framing → ready → holding ⇄ broken (→ switch for one-sided holds) → done
 // Honour states: countdown → holding (→ switch) → done
+//
+// One-sided holds split the level's target between the two sides. Each side has
+// its own target and bonus time; side one switches over once you drop out of
+// position (or tap Switch in honour mode).
 
 import { makeBody, scorePose, visible } from './scoring.js';
 import { LEVEL_MULT, requiredFor } from './holds.js';
@@ -17,6 +21,7 @@ export const STRICTNESS = {
 const GRACE = 1.5;        // seconds out of form that still count
 const GIVE_UP = 8;        // seconds out of form before the session ends
 const GIVE_UP_AFTER = 3.5; // ...once the target has been reached
+const SWITCH_TIMEOUT = 15; // seconds allowed to change sides
 const HONOUR_FORM = 0.7;  // points factor without the camera
 
 export class Session {
@@ -37,7 +42,11 @@ export class Session {
     this.seenTime = 0;
     this.goodTime = 0;
     this.reached = false;
-    this.switched = !hold.sides;
+    this.sides = hold.sides ? 2 : 1;
+    this.sideTarget = this.target / this.sides;
+    this.sideIndex = 0;
+    this.sideHeld = new Array(this.sides).fill(0);
+    this.sideReached = new Array(this.sides).fill(false);
     this.worst = null;
     this.worstTime = 0;
     this.milestones = new Set();
@@ -96,6 +105,7 @@ export class Session {
         } else {
           this.outTime += dt;
           if (this.outTime < GRACE) this.accrue(dt, 0);
+          else if (this.onFirstSide() && this.sideReached[0]) this.startSwitch();
           else {
             this.go('broken');
             play('slip');
@@ -107,16 +117,43 @@ export class Session {
       case 'broken':
         this.outTime += dt;
         if (inForm) { this.go('holding'); this.outTime = 0; say('Good', { minGap: 4000 }); }
-        else if (this.outTime > (this.reached ? GIVE_UP_AFTER : GIVE_UP)) this.finish(this.reached ? 'complete' : 'broke');
+        else if (this.outTime > (this.sideReached[this.sideIndex] ? GIVE_UP_AFTER : GIVE_UP)) {
+          // Giving up on side one still moves on to side two.
+          if (this.onFirstSide()) this.startSwitch();
+          else this.finish(this.reached ? 'complete' : 'broke');
+        }
         else this.coach(4000);
         break;
       case 'switch':
         this.goodTime = inForm ? this.goodTime + dt : 0;
-        if (this.goodTime > 1 && (this.side !== this.sideAtSwitch || this.stateTime > 3)) {
-          this.go('holding'); play('go'); say('Hold', { priority: true });
-        } else if (this.stateTime > 15) this.finish('broke');
+        if (this.goodTime > 1 && (this.side !== this.sideAtSwitch || this.stateTime > 3)) this.resumeSide();
+        else if (this.stateTime > SWITCH_TIMEOUT) this.finish(this.reached ? 'complete' : 'broke');
         break;
     }
+  }
+
+  onFirstSide() { return this.sides === 2 && this.sideIndex === 0; }
+
+  startSwitch() {
+    this.sideAtSwitch = this.side;
+    this.goodTime = 0;
+    this.outTime = 0;
+    this.go('switch');
+    play('tick');
+    say('Switch sides', { priority: true });
+  }
+
+  resumeSide() {
+    this.sideIndex = 1;
+    this.outTime = 0;
+    this.go('holding');
+    play('go');
+    say('Side two. Hold', { priority: true });
+  }
+
+  // Honour mode: the Switch button.
+  switchNow() {
+    if (this.onFirstSide() && (this.state === 'holding' || this.state === 'paused')) this.startSwitch();
   }
 
   formFactor() {
@@ -126,7 +163,8 @@ export class Session {
 
   accrue(dt, factor) {
     this.held += dt;
-    this.points += dt * 10 * this.mult * factor * (this.reached ? 1.5 : 1);
+    this.sideHeld[this.sideIndex] += dt;
+    this.points += dt * 10 * this.mult * factor * (this.sideReached[this.sideIndex] ? 1.5 : 1);
     if (factor > 0) { this.formTime += dt; this.formSum += dt * (this.camera ? this.score : 100); }
   }
 
@@ -141,28 +179,24 @@ export class Session {
     if (this.worst && this.worstTime > 1.2) say(this.worst.cue, { minGap: gap });
   }
 
+  // Spoken and sound milestones for the current side.
   milestoneChecks() {
-    const once = (key, fn) => { if (!this.milestones.has(key)) { this.milestones.add(key); fn(); } };
-    const t = this.target, h = this.held;
-    if (!this.switched && h >= t / 2) {
-      this.switched = true;
-      this.sideAtSwitch = this.side;
-      this.goodTime = 0;
-      this.go('switch');
-      play('tick');
-      say('Switch sides', { priority: true });
-      return;
-    }
-    if (!this.hold.sides && t >= 40) { if (h >= t / 2) once('half', () => say('Halfway')); }
+    const i = this.sideIndex;
+    const once = (key, fn) => { key += ':' + i; if (!this.milestones.has(key)) { this.milestones.add(key); fn(); } };
+    const t = this.sideTarget, h = this.sideHeld[i];
+    if (this.sides === 1 && t >= 40 && h >= t / 2) once('half', () => say('Halfway'));
     if (t - h <= 10 && t >= 30) once('ten', () => say('Ten seconds'));
     for (const n of [3, 2, 1]) if (t - h <= n) once('c' + n, () => play('tick'));
-    if (!this.reached && h >= t) {
-      this.reached = true;
-      this.points += 50 * this.mult * (this.avgForm() / 100);
+    if (!this.sideReached[i] && h >= t) {
+      this.sideReached[i] = true;
+      this.reached = this.sideReached.every(Boolean);
+      this.points += (50 / this.sides) * this.mult * (this.avgForm() / 100);
       play('target');
-      say('Target reached! Keep going for bonus points', { priority: true });
+      say(this.onFirstSide()
+        ? (this.camera ? 'Side one done! Keep going for bonus, then switch sides' : 'Side one done! Keep going for bonus, then tap switch')
+        : 'Target reached! Keep going for bonus points', { priority: true });
     }
-    if (this.reached) {
+    if (this.sideReached[i]) {
       const over = Math.floor((h - t) / 15);
       if (over > 0) once('over' + over, () => say(`Plus ${over * 15} seconds`));
     }
@@ -184,7 +218,7 @@ export class Session {
         this.milestoneChecks();
         break;
       case 'switch':
-        if (this.stateTime > 5) { this.go('holding'); play('go'); }
+        if (this.stateTime > 5) this.resumeSide();
         break;
     }
   }
@@ -202,6 +236,7 @@ export class Session {
     this.result = {
       holdId: this.hold.id, level: this.level, held: this.held, target: this.target,
       points: this.points, avgForm: this.avgForm(), camera: this.camera, reason,
+      reached: this.reached, ...(this.sides === 2 ? { sides: this.sideHeld.slice() } : {}),
     };
     return this.result;
   }
@@ -211,6 +246,8 @@ export class Session {
       state: this.state, held: this.held, target: this.target, points: this.points,
       score: Math.round(this.score), results: this.results, worst: this.worst, reached: this.reached,
       seen: this.seen, stateTime: this.stateTime, side: this.side,
+      sides: this.sides, sideIndex: this.sideIndex, sideHeld: this.sideHeld[this.sideIndex],
+      sideTarget: this.sideTarget, sideReached: this.sideReached[this.sideIndex], canSwitch: this.onFirstSide(),
     };
   }
 }

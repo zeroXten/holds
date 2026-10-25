@@ -35,7 +35,7 @@ export const BADGES = [
   { id: 'early', name: 'Early Bird', desc: 'Train between 4 and 7am' },
 ];
 
-export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, strictness: 'normal', model: 'full' };
+export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, strictness: 'normal', model: 'full' };
 
 const blank = () => ({ version: 1, xp: 0, holds: {}, history: [], days: {}, badges: {}, settings: { ...DEFAULT_SETTINGS } });
 
@@ -114,7 +114,8 @@ export function recordSession(state, s) {
   const hs = holdState(state, s.holdId);
   const before = { rank: rankFor(state.xp), streak: streak(state) };
   const firstToday = !state.days[today];
-  const reached = s.held >= s.target;
+  // One-sided holds only count as reached when both sides hit their target.
+  const reached = s.reached ?? s.held >= s.target;
 
   // Streak bonus: +5% per day of streak (including today), up to +50%.
   const streakAfter = firstToday ? before.streak + 1 : Math.max(before.streak, 1);

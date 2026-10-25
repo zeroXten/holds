@@ -3,6 +3,7 @@ import { figureSVG } from './figure.js';
 import * as P from './progress.js';
 import { Session, STRICTNESS } from './session.js';
 import { CameraSource, DemoSource, loadLandmarker } from './pose.js';
+import { AutoFrame } from './framing.js';
 import * as audio from './audio.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -18,6 +19,8 @@ let hero = null;
 
 const fmt = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const fmtLong = s => s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m ${String(Math.round(s % 60)).padStart(2, '0')}s` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
+// One-sided holds split the target between the sides.
+const targetText = (hold, t) => hold.sides ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
 const viewHint = hold => hold.hint ?? (hold.view === 'front' ? 'Face the camera' : 'Stand side-on to the camera');
 
 function show(id) {
@@ -66,7 +69,7 @@ function renderHero() {
   $('#hero-desc').textContent = lv.desc;
   const best = hs.best[hs.level];
   $('#hero-meta').innerHTML = `
-    <span class="tag strong">${fmtLong(lv.target)} target</span>
+    <span class="tag strong">${targetText(hero, lv.target)}</span>
     <span class="tag">${LEVEL_MULT[hs.level - 1]}× points</span>
     <span class="tag">${hero.camera ? viewHint(hero) : 'Honour system'}</span>
     ${best ? `<span class="tag">Best ${fmtLong(best)}</span>` : ''}`;
@@ -79,7 +82,7 @@ function renderGrid() {
     return `<button class="card" data-hold="${h.id}">
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
-      <span class="card-sub">Lv ${hs.level} · ${fmtLong(h.levels[hs.level - 1].target)}${best ? ` · best ${fmtLong(best)}` : ''}</span>
+      <span class="card-sub">Lv ${hs.level} · ${h.sides ? `${fmtLong(h.levels[hs.level - 1].target / 2)} ×2` : fmtLong(h.levels[hs.level - 1].target)}${best ? ` · best ${fmtLong(best)}` : ''}</span>
       ${pips(hs)}
     </button>`;
   }).join('');
@@ -116,7 +119,7 @@ function renderSheetLevel() {
   $('#hs-desc').textContent = lv.desc;
   const best = hs.best[sheetLevel];
   $('#hs-meta').innerHTML = `
-    <span class="tag strong">${fmtLong(lv.target)} target</span>
+    <span class="tag strong">${targetText(hold, lv.target)}</span>
     <span class="tag">${LEVEL_MULT[sheetLevel - 1]}× points</span>
     ${hold.camera ? `<span class="tag">${viewHint(hold)}</span>` : '<span class="tag">Honour system</span>'}
     ${best ? `<span class="tag">Best ${fmtLong(best)}</span>` : ''}
@@ -138,7 +141,6 @@ async function startSession(hold, level, useCamera) {
   const lv = hold.levels[level - 1];
   $('#s-name').textContent = hold.name;
   $('#s-level').textContent = `Level ${level} · ${lv.name}`;
-  $('#s-target').textContent = ` / ${fmt(lv.target)}`;
   $('#s-ref').innerHTML = figureSVG(hold.figure(level));
   $('#s-error').hidden = true;
   $('#honour-fig').hidden = useCamera;
@@ -170,19 +172,30 @@ async function startSession(hold, level, useCamera) {
     if (run !== myRun) { source.stop(); return; }
   }
   run.source = source;
+  run.framer = new AutoFrame({ enabled: state.settings.autoframe });
+  run.lastFrameAt = performance.now();
   run.session = new Session({ hold, level, camera: useCamera, strictness: state.settings.strictness, now: source ? source.now() : clock() });
   run.wake = await wakeLock();
   if (!useCamera) {
     $('#s-btns').innerHTML = '<button class="btn" id="s-pause">Pause</button><button class="btn primary" id="s-done">Done</button>';
     $('#s-pause').onclick = () => { run.session.togglePause(); $('#s-pause').textContent = run.session.state === 'paused' ? 'Resume' : 'Pause'; };
-    $('#s-done').onclick = () => endSession();
+    $('#s-done').onclick = () => { if (run.session.view().canSwitch && run.session.state !== 'switch') run.session.switchNow(); else endSession(); };
   }
   const loop = () => {
     if (run !== myRun) return;
     const now = source ? source.now() : clock();
     const frame = source?.next() ?? null;
     const v = run.session.tick(now, frame);
-    if (source) drawSkeleton(frame, v, source.mirrored);
+    if (source) {
+      const t = performance.now(), dt = (t - run.lastFrameAt) / 1000;
+      run.lastFrameAt = t;
+      const stage = $('#overlay');
+      const view = run.framer.update(dt, frame, stage.clientWidth, stage.clientHeight, source.mirrored, hudInset());
+      if (view) {
+        placeVideo(view, source.mirrored);
+        drawSkeleton(frame, v, view, source.mirrored);
+      }
+    }
     updateHud(v);
     if (v.state === 'done') return finishSession();
     run.raf = requestAnimationFrame(loop);
@@ -198,11 +211,16 @@ function setStatus(kind, text) {
 
 function updateHud(v) {
   const s = run.session;
-  $('#s-time').textContent = fmt(v.held);
+  // One-sided holds show the current side's time against that side's target.
+  $('#s-time').textContent = fmt(v.sideHeld);
+  $('#s-target').textContent = ` / ${fmt(v.sideTarget)}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}`;
   $('#s-points').textContent = Math.floor(v.points).toLocaleString();
   const bar = $('#s-tbar');
-  bar.style.width = `${Math.min(100, (v.held / v.target) * 100)}%`;
-  bar.classList.toggle('over', v.reached);
+  bar.style.width = `${Math.min(100, (v.sideHeld / v.sideTarget) * 100)}%`;
+  bar.classList.toggle('over', v.sideReached);
+  const done = $('#s-done');
+  if (done) done.textContent = v.canSwitch && v.state !== 'switch' ? 'Switch sides' : 'Done';
   $('#session').dataset.state = v.state;
   $('#s-fill').style.width = `${v.score}%`;
   $('#s-fill').className = `fill ${v.score >= s.thr.start ? 'good' : v.score >= s.thr.hold ? 'warn' : 'bad'}`;
@@ -218,11 +236,12 @@ function updateHud(v) {
       $('#s-cue').textContent = cue || 'Looking good… hold still';
       break;
     case 'holding':
-      setStatus('good', v.reached ? 'Bonus time!' : 'Hold');
-      $('#s-cue').textContent = run.camera ? (v.score >= 90 ? 'Great form' : cue) : (v.reached ? 'Keep going for bonus points' : '');
+      setStatus('good', v.sideReached ? 'Bonus time!' : 'Hold');
+      if (v.sideReached && v.canSwitch) $('#s-cue').textContent = run.camera ? 'Step out of position when you’re ready to switch sides' : 'Tap Switch sides when you’re ready';
+      else $('#s-cue').textContent = run.camera ? (v.score >= 90 ? 'Great form' : cue) : (v.sideReached ? 'Keep going for bonus points' : '');
       break;
     case 'broken': {
-      const left = Math.ceil((v.reached ? 3.5 : 8) - s.outTime);
+      const left = Math.ceil((v.sideReached ? 3.5 : 8) - s.outTime);
       setStatus('bad', v.seen ? `Back into position · ${left}` : `Can’t see you · ${left}`);
       $('#s-cue').textContent = cue;
       break;
@@ -242,7 +261,28 @@ function updateHud(v) {
   }
 }
 
-function drawSkeleton(frame, v, mirrored) {
+// Screen space taken by the timer at the top and the form meter at the bottom.
+function hudInset() {
+  const top = $('#s-tbar').getBoundingClientRect().bottom + 8;
+  const bottom = window.innerHeight - $('.hud-bottom').getBoundingClientRect().top + 8;
+  return { top, bottom };
+}
+
+// Position the video element so it shows the auto-framed part of the picture.
+function placeVideo(view, mirrored) {
+  const el = $('#video');
+  const size = `${view.vw}x${view.vh}`;
+  if (el.dataset.size !== size) {
+    el.dataset.size = size;
+    el.style.width = `${view.vw}px`;
+    el.style.height = `${view.vh}px`;
+  }
+  el.style.transform = mirrored
+    ? `matrix(${-view.s}, 0, 0, ${view.s}, ${view.tx + view.s * view.vw}, ${view.ty})`
+    : `matrix(${view.s}, 0, 0, ${view.s}, ${view.tx}, ${view.ty})`;
+}
+
+function drawSkeleton(frame, v, view, mirrored) {
   const canvas = $('#overlay');
   const dpr = window.devicePixelRatio || 1;
   const cw = canvas.clientWidth, ch = canvas.clientHeight;
@@ -255,10 +295,8 @@ function drawSkeleton(frame, v, mirrored) {
   ctx.clearRect(0, 0, cw, ch);
   const lm = frame?.landmarks;
   if (!lm) return;
-  // Match the video's object-fit: cover.
-  const scale = Math.max(cw / frame.width, ch / frame.height);
-  const ox = (cw - frame.width * scale) / 2, oy = (ch - frame.height * scale) / 2;
-  const pt = p => [(mirrored ? 1 - p.x : p.x) * frame.width * scale + ox, p.y * frame.height * scale + oy];
+  // Same mapping as the video (see placeVideo).
+  const pt = p => [view.tx + view.s * (mirrored ? 1 - p.x : p.x) * view.vw, view.ty + view.s * p.y * view.vh];
 
   // Each joint/bone takes the worst score of the criteria that involve it.
   const jointS = new Map(), boneS = new Map();
@@ -351,7 +389,7 @@ function renderSummary(hold, level, r, o) {
     ? `${o.basePoints.toLocaleString()} × ${o.streakMult.toFixed(2)} streak bonus (${o.streak} day${o.streak === 1 ? '' : 's'})`
     : '';
   $('#sum-stats').innerHTML = `
-    <div><b>${fmtLong(r.held)}</b><small>held of ${fmtLong(r.target)}</small></div>
+    <div><b>${fmtLong(r.held)}</b><small>held of ${fmtLong(r.target)}${r.sides ? `<br>${r.sides.map(t => fmtLong(t)).join(' + ')}` : ''}</small></div>
     ${r.camera ? `<div><b>${Math.round(r.avgForm)}</b><small>average form</small></div>` : '<div><b>—</b><small>honour mode</small></div>'}
     <div><b>${o.pb ? 'New!' : o.prevBest ? fmtLong(o.prevBest) : '—'}</b><small>${o.pb ? 'personal best' : 'best'}</small></div>`;
 
@@ -383,7 +421,7 @@ function encouragement(r, o) {
   if (o.levelUp || o.mastered) return 'Your stance is getting stronger. Keep showing up.';
   if (o.reached && r.camera && r.avgForm >= 90) return 'Excellent form all the way through.';
   if (o.reached) return o.streak > 1 ? `${o.streak} days in a row. Keep the streak alive tomorrow.` : 'Come back tomorrow to build a streak.';
-  const left = r.target - r.held;
+  const left = r.sides ? r.sides.reduce((t, x) => t + Math.max(0, r.target / 2 - x), 0) : r.target - r.held;
   if (o.pb) return `Further than ever. ${fmtLong(left)} to go to reach the target.`;
   return `${fmtLong(left)} short of the target. Rest for a minute and try again, or try an easier level.`;
 }
@@ -445,7 +483,7 @@ function renderProgress() {
 
 function openSettings() {
   const f = $('#settings form');
-  for (const k of ['voice', 'sounds', 'camera']) f.elements[k].checked = state.settings[k];
+  for (const k of ['voice', 'sounds', 'camera', 'autoframe']) f.elements[k].checked = state.settings[k];
   f.elements.strictness.value = state.settings.strictness;
   f.elements.model.value = state.settings.model;
   $('#settings').showModal();

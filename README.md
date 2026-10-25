@@ -11,7 +11,7 @@ A gamified trainer for Shaolin isometric stances. Prop your phone up, step back,
 ## Run locally
 
 ```bash
-python3 -m http.server 8765
+python3 tools/serve.py 8765
 ```
 
 Then open http://localhost:8765. Camera access needs `localhost` or HTTPS.

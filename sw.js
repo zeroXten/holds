@@ -1,10 +1,10 @@
 // Offline support. App files: network first, so updates arrive straight away.
 // MediaPipe library, WASM and model: cache first, since they're versioned and large.
-const APP = 'holds-app-v1';
+const APP = 'holds-app-v3';
 const LIBS = 'holds-libs-v1';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png',
-  'js/app.js', 'js/audio.js', 'js/figure.js', 'js/holds.js', 'js/pose.js', 'js/progress.js', 'js/scoring.js', 'js/session.js',
+  'js/app.js', 'js/audio.js', 'js/figure.js', 'js/framing.js', 'js/holds.js', 'js/pose.js', 'js/progress.js', 'js/scoring.js', 'js/session.js',
 ];
 
 self.addEventListener('install', e => {
@@ -30,7 +30,8 @@ self.addEventListener('fetch', e => {
       return res;
     }));
   } else if (url.origin === location.origin) {
-    e.respondWith(fetch(req).then(res => {
+    // cache: 'no-cache' checks with the server every time, so a deploy never mixes old and new files.
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(APP).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true })));
