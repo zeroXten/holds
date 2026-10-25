@@ -489,9 +489,11 @@ export function recordSession(state, s) {
   const streakMult = 1 + 0.05 * Math.min(streakAfter, 10);
   const coins = Math.round(s.coins * streakMult);
 
+  // Personal bests: seconds held, or cycles for flowing holds.
+  const measure = s.unit === 'cycles' ? s.count : Math.round(s.held * 10) / 10;
   const prevBest = hs.best[s.level] ?? 0;
-  const pb = s.held > prevBest && s.held >= 5;
-  if (pb) hs.best[s.level] = Math.round(s.held * 10) / 10;
+  const pb = measure > prevBest && (s.unit === 'cycles' ? measure >= 1 : measure >= 5);
+  if (pb) hs.best[s.level] = measure;
 
   // Level test-out: pass the next level's target with good form to unlock it now.
   // Passing is free; not passing costs the test price.
@@ -546,7 +548,7 @@ export function recordSession(state, s) {
   check('first', true);
   check('target', reached);
   check('perfect', reached && s.camera && s.avgForm >= 90);
-  check('overtime', s.held >= s.target * 1.5);
+  check('overtime', s.unit === 'cycles' ? s.count >= s.goal * 1.5 : s.held >= s.target * 1.5);
   check('streak3', st >= 3);
   check('streak7', st >= 7);
   check('streak30', st >= 30);

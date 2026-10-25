@@ -412,6 +412,57 @@ export const HOLDS = [
   },
 
   {
+    id: 'sky', name: 'Holding Up the Sky', native: 'Liǎng Shǒu Tuō Tiān', view: 'front', sides: false, camera: true,
+    areas: { upper: 0.5, mobility: 0.5 }, style: 'soft',
+    video: 'ba duan jin two hands hold up the heavens',
+    about: 'The first of the Ba Duan Jin (Eight Brocades). A slow, flowing movement rather than a still hold: the camera counts each full rise and fall. Stretches the whole upper body.',
+    // A flowing hold: levels set a number of slow cycles, a minimum time per cycle,
+    // and how long to pause at the top. See flow.js.
+    flow: {
+      minCycle: [5, 6, 8, 8],
+      dwell: [0.3, 1, 2, 2],
+      low: () => [
+        {
+          id: 'together', label: 'Hands together', cue: 'Interlace your fingers in front of your belly', joints: [15, 16],
+          value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, max: 0.5, soft: 0.4,
+        },
+        {
+          id: 'low', label: 'Hands low', cue: { low: 'Bring your hands down in front of your belly', high: 'Lift your hands to your belly' }, joints: [15, 16],
+          value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.sh.y) / b.torsoLen, min: 0.35, max: 1.05, soft: 0.25,
+        },
+        upright(10, 'Stand tall', 12),
+      ],
+      lowFigure: () => ({ view: 'front', torso: 180, legs: { L: [3, 0], R: [-3, 0] }, arms: { L: [20, -75], R: [-20, 75] } }),
+    },
+    levels: [
+      { name: 'Gentle lift', target: 4, desc: 'Feet hip width, fingers interlaced in front of your belly, palms up. Lift your hands to your chest, turn the palms up and push them overhead. Then open your hands and float them down the sides. Slowly: at least 5 seconds each.' },
+      { name: 'Holding up the sky', target: 6, desc: 'Pause for a moment at the top, arms straight but not locked, stretching up through the palms. At least 6 seconds each.' },
+      { name: 'Slow and full', target: 8, desc: 'Pause for two seconds at the top and look up at your hands. Let each cycle take 8 seconds or more.' },
+      { name: 'On tiptoe', target: 10, desc: 'As you push up, rise onto your toes; lower your heels as your hands come down. Ten slow cycles.' },
+    ],
+    // The high position (palms overhead); the low one is in flow.low.
+    criteria: () => [
+      {
+        id: 'overhead', label: 'Palms overhead', cue: 'Push your palms up to the sky', weight: 1.5, joints: [15, 16],
+        value: b => (b.nose.y - Math.max(b.arms.L.c.y, b.arms.R.c.y)) / b.torsoLen, min: 0.4, soft: 0.35,
+      },
+      {
+        id: 'straight', label: 'Straight arms', cue: 'Straighten your arms', joints: [13, 14],
+        value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 150, soft: 35,
+      },
+      {
+        id: 'together', label: 'Hands together', cue: 'Keep your hands together overhead', joints: [15, 16],
+        value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, max: 1.0, soft: 0.6,
+      },
+      upright(10, 'Stand tall', 12),
+    ],
+    figure: level => ({
+      view: 'front', torso: 180, ...(level === 4 ? { lift: 2 } : {}),
+      legs: { L: [3, 0], R: [-3, 0] }, arms: { L: [172, 196], R: [-172, -196] },
+    }),
+  },
+
+  {
     id: 'sideplank', name: 'Side Plank', native: 'Cè Píngbǎn Zhīchēng', view: 'front', sides: true, camera: true,
     areas: { core: 0.8, upper: 0.2 }, style: 'hard',
     landscape: true,

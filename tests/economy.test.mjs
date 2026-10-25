@@ -93,9 +93,10 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   const over = P.overworked(s, now);
   check('legs flagged after three leg holds', over?.area === 'legs', JSON.stringify(over));
   const rest = P.restingHolds(s, 'legs');
-  check('suggests a soft hold that spares the legs', rest.unlocked[0]?.id === 'weituo', rest.unlocked.map(h => h.id).join());
+  check('suggests soft holds that spare the legs', rest.unlocked.length > 0 && rest.unlocked.every(h => h.style === 'soft' && !P.leansOn(h, 'legs')), rest.unlocked.map(h => h.id).join());
   s.daily = null;
-  check('hold of the day avoids leg holds', P.dailyHold(s).id === 'weituo');
+  const daily = P.dailyHold(s);
+  check('hold of the day avoids leg holds', !P.leansOn(daily, 'legs'), daily.id);
   const picks = new Set(Array.from({ length: 40 }, () => P.pickHold(s).id));
   check('shuffle still works', picks.size >= 1);
 

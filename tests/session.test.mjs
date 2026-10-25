@@ -6,6 +6,7 @@ globalThis.window = {};
 const { HOLDS } = await import('../js/holds.js');
 const { DemoSource } = await import('../js/pose.js');
 const { Session } = await import('../js/session.js');
+const { createSession, FlowSession } = await import('../js/flow.js');
 
 let failures = 0;
 for (const hold of HOLDS.filter(h => h.camera)) {
@@ -15,9 +16,9 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     let t = 0;
     src.t0 = 0;
     src.now = () => t;
-    const s = new Session({ hold, level, camera: true, now: 0 });
+    const s = createSession({ hold, level, camera: true, now: 0 });
     const states = new Set();
-    while (s.state !== 'done' && t < target + 120) {
+    while (s.state !== 'done' && t < (hold.flow ? 400 : target + 120)) {
       t += 1 / 30;
       s.tick(t, src.next());
       states.add(s.state);
@@ -64,6 +65,23 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   const ok = switched && s.sideIndex === 1 && !r.reached && r.sides[1] > 15;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} crane give-up: sides ${r.sides.map(x => x.toFixed(1)).join(' + ')}, reached ${r.reached}`);
+}
+
+// Flowing holds: cycles that are too quick don't count.
+{
+  const hold = HOLDS.find(h => h.id === 'sky');
+  const { syntheticLandmarks, lerpSpec } = await import('../js/figure.js');
+  const low = hold.flow.lowFigure(2), high = hold.figure(2);
+  const s = new FlowSession({ hold, level: 2, camera: true, now: 0 });
+  let t = 0;
+  const run = (secs, spec) => { const f = { landmarks: syntheticLandmarks(spec), width: 720, height: 1280 }; for (const end = t + secs; t < end;) { t += 1 / 30; s.tick(t, f); } };
+  run(2, low);                                  // ready in the start position
+  for (let i = 0; i < 2; i++) { run(1, lerpSpec(low, high, 0.5)); run(1.3, high); run(1, low); }  // 3.3s cycles: too quick
+  const quick = s.count;
+  for (let i = 0; i < 2; i++) { run(3, lerpSpec(low, high, 0.5)); run(2, high); run(3, low); }  // 8s cycles: count
+  const ok = quick === 0 && s.count === 2;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} sky: quick cycles counted ${quick}, slow cycles counted ${s.count - quick}`);
 }
 
 console.log(failures ? `${failures} failure(s)` : 'all passed');

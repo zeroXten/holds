@@ -6,7 +6,8 @@ import {
 import { drawTemple, SCENE_H } from './temple.js';
 import { figureSVG } from './figure.js';
 import * as P from './progress.js';
-import { Session, STRICTNESS } from './session.js';
+import { STRICTNESS } from './session.js';
+import { createSession } from './flow.js';
 import { CameraSource, DemoSource, loadLandmarker } from './pose.js';
 import { AutoFrame } from './framing.js';
 import * as audio from './audio.js';
@@ -33,7 +34,9 @@ const fmtLong = s => s < 60 ? `${Math.round(s)}s`
   : s < 3600 ? `${Math.floor(s / 60)}m${Math.round(s % 60) ? ` ${String(Math.round(s % 60)).padStart(2, '0')}s` : ''}`
   : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
 // One-sided holds split the target between the sides.
-const targetText = (hold, t) => hold.sides ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
+const targetText = (hold, t) => hold.flow ? `${t} slow cycles` : hold.sides ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
+// A best or a target in the hold's own unit: seconds, or cycles for flowing holds.
+const amount = (hold, n) => (hold.flow ? `${n} cycle${n === 1 ? '' : 's'}` : fmtLong(n));
 const videoUrl = hold => `https://www.youtube.com/results?search_query=${encodeURIComponent(hold.video)}`;
 const viewHint = hold => hold.hint ?? (hold.view === 'front' ? 'Face the camera' : 'Stand side-on to the camera');
 
@@ -110,7 +113,7 @@ function renderHero() {
     <span class="tag strong">${targetText(hero, lv.target)}</span>
     <span class="tag">${coinRate(hs.level)}</span>
     <span class="tag">${hero.camera ? viewHint(hero) : 'Honour system'}</span>
-    ${best ? `<span class="tag">Best ${fmtLong(best)}</span>` : ''}`;
+    ${best ? `<span class="tag">Best ${amount(hero, best)}</span>` : ''}`;
 }
 
 function renderGrid() {
@@ -134,7 +137,7 @@ function renderGrid() {
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
       ${kind}
-      <span class="card-sub">Lv ${hs.level} · ${h.sides ? `${fmtLong(h.levels[hs.level - 1].target / 2)} ×2` : fmtLong(h.levels[hs.level - 1].target)}${best ? ` · best ${fmtLong(best)}` : ''}</span>
+      <span class="card-sub">Lv ${hs.level} · ${h.flow ? `${h.levels[hs.level - 1].target} cycles` : h.sides ? `${fmtLong(h.levels[hs.level - 1].target / 2)} ×2` : fmtLong(h.levels[hs.level - 1].target)}${best ? ` · best ${amount(h, best)}` : ''}</span>
       ${pips(hs)}
     </button>`;
   }).join('');
@@ -204,7 +207,7 @@ function renderSheetLevel() {
     <span class="tag">${coinRate(sheetLevel)}</span>
     ${P.isDaily(state, hold.id) ? `<span class="tag strong">Hold of the day: ${DAILY_MULT}× coins</span>` : ''}
     ${hold.camera ? `<span class="tag">${viewHint(hold)}</span>` : '<span class="tag">Honour system</span>'}
-    ${best ? `<span class="tag">Best ${fmtLong(best)}</span>` : ''}
+    ${best ? `<span class="tag">Best ${amount(hold, best)}</span>` : ''}
     ${!locked && sheetLevel === hs.level && !hs.mastered ? pips(hs) : ''}`;
 }
 
@@ -266,7 +269,7 @@ async function startSession(hold, level, useCamera, { test = false } = {}) {
   run.source = source;
   run.framer = new AutoFrame({ enabled: state.settings.autoframe });
   run.lastFrameAt = performance.now();
-  run.session = new Session({
+  run.session = createSession({
     hold, level, camera: useCamera, strictness: state.settings.strictness,
     daily: P.isDaily(state, hold.id), now: source ? source.now() : clock(),
   });
@@ -306,6 +309,7 @@ function setStatus(kind, text) {
 }
 
 function updateHud(v) {
+  if (v.flow) return updateFlowHud(v);
   const s = run.session;
   // One-sided holds show the current side's time against that side's target.
   $('#s-time').textContent = fmt(v.sideHeld);
@@ -367,6 +371,52 @@ function updateHud(v) {
     case 'paused':
       setStatus('wait', 'Paused');
       $('#s-cue').textContent = '';
+      break;
+  }
+}
+
+// Session screen for flowing holds: cycles counted instead of a timer.
+function updateFlowHud(v) {
+  $('#s-time').textContent = v.count;
+  $('#s-target').textContent = ` / ${v.goal}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.daily ? ` · ${DAILY_MULT}× today` : ''}${run.test ? ' · Level test' : ''}`;
+  const whole = Math.floor(v.coins);
+  $('#s-coins').textContent = whole.toLocaleString();
+  $('#s-coin-next').style.width = `${Math.round((v.coins % 1) * 100)}%`;
+  if (whole > run.wholeCoins) { run.wholeCoins = whole; audio.play('point'); }
+  const bar = $('#s-tbar');
+  bar.style.width = `${Math.min(100, (v.count / v.goal) * 100)}%`;
+  bar.classList.toggle('over', v.reached);
+  $('#session').dataset.state = v.state;
+  $('#s-fill').style.width = `${v.score}%`;
+  $('#s-fill').className = `fill ${v.score >= 70 ? 'good' : v.score >= 45 ? 'warn' : 'bad'}`;
+  $('#s-score').textContent = run.camera ? (v.phase === 'up' && v.state === 'flowing' ? `Reach up ${v.score}` : `Hands low ${v.score}`) : '';
+  const done = $('#s-done');
+  if (done) done.textContent = 'Done';
+  const secs = Math.floor(v.cycleTime);
+  switch (v.state) {
+    case 'framing':
+      setStatus('wait', 'Step back so your whole body is in view');
+      $('#s-cue').textContent = `${viewHint(run.hold)}, about 2–3 m from the phone.`;
+      break;
+    case 'ready':
+      setStatus('wait', 'Hands low to begin');
+      $('#s-cue').textContent = v.worst?.cue ?? 'Fingers interlaced in front of your belly, palms up';
+      break;
+    case 'countdown':
+      setStatus('wait', `Get ready · ${Math.ceil(5 - v.stateTime)}`);
+      $('#s-cue').textContent = 'Fingers interlaced in front of your belly, palms up';
+      break;
+    case 'paused':
+      setStatus('wait', 'Paused');
+      $('#s-cue').textContent = '';
+      break;
+    case 'flowing':
+      if (v.tooFast) setStatus('bad', 'Slower');
+      else setStatus(v.reached ? 'bonus' : 'good', v.phase === 'up' ? (v.reached ? `Rise · bonus ×${v.tier.mult}` : 'Rise') : (v.reached ? `Lower · bonus ×${v.tier.mult}` : 'Lower'));
+      $('#s-cue').textContent = v.tooFast
+        ? `At least ${v.minCycle} seconds for each cycle`
+        : `${secs}s${secs < v.minCycle ? ` of at least ${v.minCycle}s` : ''} · ${v.phase === 'up' ? (v.worst && v.phaseTime > 5 ? v.worst.cue : 'palms up, push to the sky') : 'open your hands, float them down'}`;
       break;
   }
 }
@@ -491,7 +541,7 @@ function finishSession() {
 
 function renderSummary(hold, level, r, o) {
   show('summary');
-  const pct = r.held / r.target;
+  const pct = r.unit === 'cycles' ? r.count / r.goal : r.held / r.target;
   $('#sum-kicker').textContent = `${hold.name} · Level ${level}`;
   $('#sum-title').textContent =
     o.levelUp ? `Level ${o.newLevel} unlocked!` :
@@ -525,9 +575,11 @@ function renderSummary(hold, level, r, o) {
   // The big moments get the full-screen treatment, once the summary has appeared.
   setTimeout(() => { if (o.bet) celebrateBet(o.bet); o.milestones.forEach(celebrateMilestone); }, 900);
   $('#sum-stats').innerHTML = `
-    <div><b>${fmtLong(r.held)}</b><small>held of ${fmtLong(r.target)}${r.sides ? `<br>${r.sides.map(t => fmtLong(t)).join(' + ')}` : ''}</small></div>
+    ${r.unit === 'cycles'
+      ? `<div><b>${r.count}</b><small>of ${r.goal} slow cycles</small></div>`
+      : `<div><b>${fmtLong(r.held)}</b><small>held of ${fmtLong(r.target)}${r.sides ? `<br>${r.sides.map(t => fmtLong(t)).join(' + ')}` : ''}</small></div>`}
     ${r.camera ? `<div><b>${Math.round(r.avgForm)}</b><small>average form</small></div>` : '<div><b>—</b><small>honour mode</small></div>'}
-    <div><b>${o.pb ? 'New!' : o.prevBest ? fmtLong(o.prevBest) : '—'}</b><small>${o.pb ? 'personal best' : 'best'}</small></div>`;
+    <div><b>${o.pb ? 'New!' : o.prevBest ? amount(hold, o.prevBest) : '—'}</b><small>${o.pb ? 'personal best' : 'best'}</small></div>`;
 
   const hs = P.holdState(state, hold.id);
   let lvl = '';
@@ -537,7 +589,7 @@ function renderSummary(hold, level, r, o) {
     const need = P.QUALIFY_DAYS - hs.qualDays.length;
     lvl = `<div class="lvl-progress">${pips(hs)}<span>${o.qualified
       ? `Day counted! ${need} more day${need === 1 ? '' : 's'} to unlock level ${level + 1 > 4 ? 'mastery' : level + 1}.`
-      : !o.reached ? `Reach ${fmtLong(r.target)} to count today towards level ${Math.min(level + 1, 4)}.`
+      : !o.reached ? `Reach ${r.unit === 'cycles' ? `${r.goal} slow cycles` : fmtLong(r.target)} to count today towards level ${Math.min(level + 1, 4)}.`
       : r.camera && r.avgForm < P.QUALIFY_FORM ? `Average form ${P.QUALIFY_FORM}+ is needed for the day to count.`
       : 'Today already counted. Come back tomorrow.'}</span></div>`;
   }
@@ -557,6 +609,10 @@ function encouragement(r, o) {
   if (o.levelUp || o.mastered) return 'Your stance is getting stronger. Keep showing up.';
   if (o.reached && r.camera && r.avgForm >= 90) return 'Excellent form all the way through.';
   if (o.reached) return o.streak > 1 ? `${o.streak} days in a row. Keep the streak alive tomorrow.` : 'Come back tomorrow to build a streak.';
+  if (r.unit === 'cycles') {
+    const short = r.goal - r.count;
+    return o.pb ? `More cycles than ever. ${short} to go to the target.` : `${short} cycle${short === 1 ? '' : 's'} short. Slow and steady: each one needs at least a few seconds.`;
+  }
   const left = r.sides ? r.sides.reduce((t, x) => t + Math.max(0, r.target / 2 - x), 0) : r.target - r.held;
   if (o.pb) return `Further than ever. ${fmtLong(left)} to go to reach the target.`;
   return `${fmtLong(left)} short of the target. Rest for a minute and try again, or try an easier level.`;

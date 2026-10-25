@@ -83,6 +83,13 @@ export class DemoSource {
     this.stand = standing(hold.view);
     this.pose = hold.figure(level);
     this.mirrored = true;
+    if (hold.flow) {
+      // Flowing holds: start low, then rise and fall slowly for a couple of cycles past
+      // the goal (lingering at the top), then stand and rest.
+      this.low = hold.flow.lowFigure(level);
+      this.period = hold.flow.minCycle[level - 1] + hold.flow.dwell[level - 1] + 2.5;
+      this.cycles = hold.levels[level - 1].target + 2;
+    }
     // Seconds of wall time for each phase (before speed-up): [start, end, from→to].
     const T = 4.5, B = Math.min(target * 0.4, 25);
     const half = hold.sides ? target / 2 : null;
@@ -106,9 +113,17 @@ export class DemoSource {
     return m;
   }
 
+  flowSpec(t) {
+    const start = 3, end = start + this.period * this.cycles;
+    if (t < start) return this.low;
+    if (t >= end) return lerpSpec(this.low, this.stand, Math.min(1, (t - end) / 1.5));
+    const phase = ((t - start) % this.period) / this.period;
+    return lerpSpec(this.low, this.pose, Math.min(1, 1.5 * (0.5 - 0.5 * Math.cos(2 * Math.PI * phase))));
+  }
+
   next() {
     const t = this.now() - this.t0;
-    const spec = lerpSpec(this.stand, this.pose, this.mix(t));
+    const spec = this.low ? this.flowSpec(t) : lerpSpec(this.stand, this.pose, this.mix(t));
     // Lying-down holds are filmed with the phone in landscape.
     const [width, height] = this.pose.compact ? [1280, 720] : [720, 1280];
     return { landmarks: syntheticLandmarks(spec, { width, height, noise: 0.002 }), width, height };
