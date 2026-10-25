@@ -690,18 +690,25 @@ export const HOLDS = [
     video: 'xie bu rest stance kung fu tutorial',
     about: 'A low, cross-legged “resting” stance, like sitting down with your legs crossed while standing. Used for turning and coiling between moves. The camera can’t judge it reliably, so this one is on your honour.',
     levels: [
-      { name: 'High rest', target: 20, desc: 'Turn your front foot out and step the other foot behind it, up on the ball of the foot, so your legs cross like scissors. Bend both knees a little so your thighs press together. Then switch sides.' },
+      { name: 'High rest', target: 20, desc: 'Turn your front foot out and step the other foot behind it so your legs cross. Both feet stay on the floor: front foot flat, back foot on its toes with the heel up. Bend both knees a little. Then switch sides.' },
       { name: 'Rest', target: 30, desc: 'Sink to about half-squat: your back knee tucks in behind your front calf. Front foot flat, back heel up, chest upright.' },
       { name: 'Low rest', target: 45, desc: 'Sit low, almost onto your back heel, thighs pressed together. Twist your chest towards the front foot.' },
       { name: 'Deep rest', target: 60, desc: 'Fully seated on your back heel, back knee just off the floor. Upright and still.' },
     ],
     criteria: () => [],
     figure: level => {
-      const k = lerp4(level, 0, 1);
+      // Side-on, facing right, both feet on the floor. Front leg: shin upright, foot flat.
+      // Back leg: knee low, tucked in behind the front calf; foot planted behind on its toes.
+      const front = by(level, [40, 55, 68, 78]);
+      const height = 22 * Math.cos(front * DEG) + 22 * Math.cos(5 * DEG);
+      const kneeUp = Math.max(by(level, [14, 10, 6, 3]), height - 21);  // back knee's height off the floor
+      const drop = height - kneeUp;
+      const thigh = Math.atan2(Math.sqrt(22 * 22 - drop * drop), drop) / DEG;
+      const shin = -Math.atan2(Math.sqrt(22 * 22 - kneeUp * kneeUp), kneeUp) / DEG;
       return {
-        view: 'front', torso: 180,
-        legs: { L: [-30 - 40 * k, -5 - 5 * k], R: [35 + 25 * k, 60 + 40 * k] },
-        arms: chambered,
+        view: 'side', torso: 180,
+        legs: { L: [front, 5], R: [thigh, shin] },
+        arms: { L: [-25, 80], R: [-22, 82] },
       };
     },
   },
