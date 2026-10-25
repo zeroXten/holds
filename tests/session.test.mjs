@@ -28,7 +28,7 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     const ok = r && r.reached && r.held >= target && r.avgForm >= 70 && r.reason === 'complete' && sidesOk;
     if (!ok) failures++;
     const sides = r?.sides ? ` (${r.sides.map(t => t.toFixed(1)).join(' + ')})` : '';
-    console.log(`${ok ? 'ok  ' : 'FAIL'} ${hold.id} L${level}: held ${r ? r.held.toFixed(1) : '-'}${sides}/${target}s, form ${r ? Math.round(r.avgForm) : '-'}, ${r ? Math.round(r.points) : '-'} pts, ended "${r?.reason ?? 'never'}" via ${[...states].join('→')}`);
+    console.log(`${ok ? 'ok  ' : 'FAIL'} ${hold.id} L${level}: held ${r ? r.held.toFixed(1) : '-'}${sides}/${target}s, form ${r ? Math.round(r.avgForm) : '-'}, ${r ? Math.round(r.coins * 10) / 10 : "-"} coins, ended "${r?.reason ?? 'never'}" via ${[...states].join('→')}`);
   }
 }
 // Honour mode, one-sided: hold past side one's target, tap Switch, then side two.

@@ -8,7 +8,10 @@
 //
 // Optional spec fields: `head` (angle of the neck→head line, default follows
 // the torso), `lift` (height of the feet above the ground, e.g. resting on a
-// chair), `compact` (lying down, so draw without standing-height padding) and `props` (chairs/benches drawn under joints: { under, w, gap }).
+// chair), `compact` (lying down: no standing-height padding, and the hips turn
+// with the torso so they stack when lying on one side), `ground` (a joint that
+// rests on the floor instead of the feet, with `groundGap` above it) and `props`
+// (chairs/benches drawn under joints: { under, w, gap }).
 
 export const SEG = { torso: 30, neck: 3, headR: 6, upper: 14, fore: 13, thigh: 22, shin: 22 };
 const RAD = Math.PI / 180;
@@ -27,8 +30,9 @@ export function buildJoints(spec) {
   j.head = add(neck, spec.head === undefined ? t : dir(spec.head), SEG.neck + SEG.headR);
   j.lShoulder = add(neck, perp, shoulderHalf);
   j.rShoulder = add(neck, perp, -shoulderHalf);
-  j.lHip = [hipHalf, 0];
-  j.rHip = [-hipHalf, 0];
+  const hipDir = spec.compact ? perp : [1, 0];
+  j.lHip = add(pelvis, hipDir, hipHalf);
+  j.rHip = add(pelvis, hipDir, -hipHalf);
   for (const s of ['l', 'r']) {
     const S = s.toUpperCase();
     const [thigh, shin] = spec.legs[S];
@@ -39,7 +43,9 @@ export function buildJoints(spec) {
     j[s + 'Wrist'] = add(j[s + 'Elbow'], dir(fore), SEG.fore);
   }
   // Stand the figure on the ground (y = 0) and centre it between the feet.
-  const ground = Math.max(j.lAnkle[1], j.rAnkle[1]) + (spec.lift ?? 0);
+  const ground = spec.ground
+    ? j[spec.ground][1] + (spec.groundGap ?? 0)
+    : Math.max(j.lAnkle[1], j.rAnkle[1]) + (spec.lift ?? 0);
   const cx = (j.lAnkle[0] + j.rAnkle[0] + j.pelvis[0] * 2) / 4;
   for (const k in j) j[k] = [j[k][0] - cx, j[k][1] - ground];
   return j;
@@ -65,6 +71,7 @@ export function lerpSpec(a, b, t) {
     view: b.view,
     torso: l(a.torso ?? 180, b.torso ?? 180),
     head: b.head, lift: l(a.lift ?? 0, b.lift ?? 0), props: b.props,
+    compact: b.compact, ground: t > 0.5 ? b.ground : a.ground, groundGap: b.groundGap,
     legs: { L: pair(a.legs.L, b.legs.L), R: pair(a.legs.R, b.legs.R) },
     arms: { L: pair(a.arms.L, b.arms.L), R: pair(a.arms.R, b.arms.R) },
   };

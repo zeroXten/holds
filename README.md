@@ -1,12 +1,14 @@
 # Shaolin Holds
 
-A gamified trainer for Shaolin isometric stances. Prop your phone up, step back, and the front camera watches your stance. You score points for every second you hold good form, with spoken coaching when your form slips.
+A gamified trainer for Shaolin isometric stances. Prop your phone up, step back, and the front camera watches your stance. You earn coins while you hold good form, with spoken coaching when your form slips.
 
 - **Camera form checking** runs entirely on the phone with [MediaPipe Pose Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker). No video leaves the device.
-- **Eleven holds, four levels each:** Horse, Bow, Empty (cat), Crane, Drop, Standing Post, Swallow Balance, Kick Hold, Fist Plank, Iron Bridge and Rest. Each level asks for a deeper or harder position as well as a longer time. Horse stance, for example, starts with thighs about 45° from level and ends with them level. Rest is honour-system only, because the camera can't judge it reliably.
-- **Points:** 10/sec × level multiplier × form factor (0.5× at the threshold, 1.25× at perfect form). Time past the target earns 1.5×, reaching the target gives a bonus, and a daily streak adds up to +50%.
+- **Fifteen holds, four levels each:** Horse, Bow, Empty (cat), Crane, Drop, Standing Post, Swallow Balance, Kick Hold, Fist Plank, Iron Bridge and Rest from Shaolin training, plus four non-Shaolin holds chosen for their all-round value: Side Plank, Bird Dog, Hollow Hold and Deep Squat. Each level asks for a deeper or harder position as well as a longer time. Horse stance, for example, starts with thighs about 45° from level and ends with them level. Rest is honour-system only, because the camera can't judge it reliably.
+- **Coins:** 1 coin per 10 seconds in good form, × the level (1×, 1.25×, 1.5×, 2×) × form (0.75× at the threshold, 1.25× at perfect form). Bonus time past the target pays 1.5×, then 2× from +50%, then 3× from double the target. Reaching the target adds 2 coins, and a daily streak adds up to +50%.
+- **Hold of the day:** picked from your unlocked holds using the date as the seed, so it's the same all day. It earns 3× coins.
+- **Unlocking holds:** Horse and Bow are free. Spend coins to unlock the others; each unlock costs more than the last (20, 30, 45 … 300 coins).
 - **Levelling up:** reach a level's target with 70+ average form on 3 different days to unlock the next level.
-- **Also:** sash ranks from XP, badges, a training heatmap and personal bests. Plain HTML/CSS/JS with no build step. Installs as an app and works offline.
+- **Also:** sash ranks from total coins earned (spending doesn't lower your rank), badges, a training heatmap and personal bests. Plain HTML/CSS/JS with no build step. Installs as an app and works offline.
 
 ## Run locally
 
@@ -25,7 +27,7 @@ Push this folder to a GitHub repository, then go to **Settings → Pages → Dep
 
 ## Using it
 
-- Put the phone 2–3 m away, around waist height. Each stance tells you whether to face the camera or stand side-on. For Iron Bridge and Fist Plank, turn the phone to landscape and put it low to the ground.
+- Put the phone 2–3 m away, around waist height. Each stance tells you whether to face the camera or stand side-on. For the floor holds (Iron Bridge, Fist Plank, Side Plank, Bird Dog, Hollow Hold), turn the phone to landscape and put it low to the ground.
 - Wear fitted clothes and use decent light. Baggy trousers hide your knees.
 - Progress is stored in your browser. On iPhone, **add the app to your home screen**, otherwise Safari may clear its data after a week without use. You can also export a backup from Settings.
 

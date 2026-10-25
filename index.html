@@ -26,13 +26,13 @@
       </button>
       <div class="chips">
         <span class="chip" title="Day streak"><svg viewBox="0 0 24 24" class="ico flame"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-4-1-6.5 1-9.5z"/></svg><b id="streak">0</b></span>
-        <span class="chip" title="Points today"><svg viewBox="0 0 24 24" class="ico"><path d="M12 2l2.9 6.9L22 9.6l-5.5 4.8L18.2 22 12 18.1 5.8 22l1.7-7.6L2 9.6l7.1-.7z"/></svg><b id="today">0</b></span>
+        <span class="chip" title="Coins"><svg viewBox="0 0 24 24" class="ico coin"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9.5 9.5h5v5h-5z"/></svg><b id="wallet">0</b></span>
         <button class="icon-btn" id="settings-btn" aria-label="Settings"><svg viewBox="0 0 24 24" class="ico"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.4 4.7l1.6 1.3-2 3.4-2-.7a7.6 7.6 0 0 1-1.9 1.1l-.3 2.1h-4l-.3-2.1a7.6 7.6 0 0 1-1.9-1.1l-2 .7-2-3.4 1.6-1.3a7.8 7.8 0 0 1 0-2.4L1.6 9.5l2-3.4 2 .7a7.6 7.6 0 0 1 1.9-1.1L7.8 3.6h4l.3 2.1c.7.3 1.3.6 1.9 1.1l2-.7 2 3.4-1.6 1.3c.1.8.1 1.6 0 2.4z"/></svg></button>
       </div>
     </header>
 
     <article class="hero" id="hero">
-      <div class="hero-label">Your hold <button class="text-btn" id="shuffle"><svg viewBox="0 0 24 24" class="ico"><path d="M17 3l4 4-4 4V8h-2.5l-7 9H3v-2h3.5l7-9H17zM3 7h4.5l2 2.6-1.3 1.6L6.5 9H3zm11.5 8H17v-3l4 4-4 4v-3h-3.5l-2-2.6 1.3-1.6z"/></svg>Shuffle</button></div>
+      <div class="hero-label"><span id="hero-kicker">Hold of the day</span> <button class="text-btn" id="shuffle"><svg viewBox="0 0 24 24" class="ico"><path d="M17 3l4 4-4 4V8h-2.5l-7 9H3v-2h3.5l7-9H17zM3 7h4.5l2 2.6-1.3 1.6L6.5 9H3zm11.5 8H17v-3l4 4-4 4v-3h-3.5l-2-2.6 1.3-1.6z"/></svg>Shuffle</button></div>
       <div class="hero-body">
         <div class="hero-fig" id="hero-fig"></div>
         <div class="hero-info">
@@ -43,7 +43,8 @@
           <div class="meta" id="hero-meta"></div>
         </div>
       </div>
-      <button class="btn primary big" id="hero-start">Start</button>
+      <div class="row hero-btns"><button class="btn primary big" id="hero-start">Start</button></div>
+      <button class="text-btn back-daily" id="back-daily" hidden>Back to the hold of the day</button>
     </article>
 
     <div id="intro" class="intro" hidden>
@@ -51,7 +52,8 @@
       <ol>
         <li>Prop your phone up 2–3&nbsp;m away, about waist height, screen facing you.</li>
         <li>Step back until your whole body is in view. The camera checks your stance as you hold it.</li>
-        <li>You score points for every second in good form. Better form scores more.</li>
+        <li>You earn a coin for every 10 seconds in good form, and faster in bonus time past the target.</li>
+        <li>The hold of the day earns 3× coins. Spend coins to unlock new holds.</li>
         <li>Hit the target on 3 different days to unlock the next level.</li>
       </ol>
       <p class="small">The camera is only used on your phone. No video leaves the device.</p>
@@ -86,7 +88,7 @@
       <div class="hud-top">
         <button class="icon-btn hud-x" id="end-btn" aria-label="End session"><svg viewBox="0 0 24 24" class="ico"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7l-1.4-1.4L9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3z"/></svg></button>
         <div class="hud-title"><strong id="s-name"></strong><small id="s-level"></small></div>
-        <div class="hud-pts"><b id="s-points">0</b><small>pts</small></div>
+        <div class="hud-coins" id="s-coins-box"><svg viewBox="0 0 24 24" class="ico coin"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9.5 9.5h5v5h-5z"/></svg><b id="s-coins">0</b><span class="coin-next"><i id="s-coin-next"></i></span></div>
       </div>
       <div class="timer"><span id="s-time">0:00</span><span class="of" id="s-target"></span></div>
       <div class="tbar"><i id="s-tbar"></i></div>
@@ -111,7 +113,7 @@
     <div class="sum-inner">
       <p class="sum-kicker" id="sum-kicker"></p>
       <h1 id="sum-title"></h1>
-      <div class="sum-points"><span id="sum-points">0</span><small>points</small></div>
+      <div class="sum-points"><span id="sum-coins">0</span><small>coins</small></div>
       <p class="sum-breakdown" id="sum-breakdown"></p>
       <div class="sum-stats" id="sum-stats"></div>
       <div class="sum-level" id="sum-level"></div>
@@ -136,6 +138,10 @@
           <p id="hs-desc"></p>
           <div class="meta" id="hs-meta"></div>
         </div>
+      </div>
+      <div class="unlock-box" id="hs-unlock" hidden>
+        <p id="hs-unlock-msg"></p>
+        <button type="button" class="btn primary big" id="hs-buy"></button>
       </div>
       <label class="toggle" id="hs-cam-row"><input type="checkbox" id="hs-cam"><span>Use camera to check form</span></label>
       <button class="btn primary big" id="hs-start" value="start">Start</button>

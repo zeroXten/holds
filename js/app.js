@@ -1,4 +1,5 @@
-import { HOLDS, holdById, LEVEL_MULT } from './holds.js';
+import { HOLDS, holdById } from './holds.js';
+import { LEVEL_MULT, DAILY_MULT, BONUS_TIERS } from './economy.js';
 import { figureSVG } from './figure.js';
 import * as P from './progress.js';
 import { Session, STRICTNESS } from './session.js';
@@ -15,7 +16,11 @@ const clock = () => performance.now() / 1000 * SPEED;
 
 let state = P.load();
 audio.configure(state.settings);
-let hero = null;
+let hero = null;       // the hold in the big card: the hold of the day, or a shuffled pick
+
+const COIN = '<svg viewBox="0 0 24 24" class="ico coin"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9.5 9.5h5v5h-5z"/></svg>';
+const LOCK = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3z"/></svg>';
+const coinRate = level => `${LEVEL_MULT[level - 1]}× coins`;
 
 const fmt = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const fmtLong = s => s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m ${String(Math.round(s % 60)).padStart(2, '0')}s` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
@@ -46,21 +51,26 @@ function pips(hs) {
 // ---------- Home ----------
 
 function renderHome() {
-  const r = P.rankFor(state.xp);
+  const r = P.rankFor(state.lifetime);
   $('#sash').style.setProperty('--sash', r.color);
   $('#rank-name').textContent = r.name;
   $('#xp-fill').style.width = `${Math.round(r.progress * 100)}%`;
-  $('#xp-text').textContent = r.next ? `${state.xp.toLocaleString()} / ${r.next.xp.toLocaleString()} XP` : `${state.xp.toLocaleString()} XP`;
+  $('#xp-text').textContent = r.next ? `${state.lifetime.toLocaleString()} / ${r.next.coins.toLocaleString()} coins earned` : `${state.lifetime.toLocaleString()} coins earned`;
   $('#streak').textContent = P.streak(state);
-  $('#today').textContent = (state.days[P.dayKey()]?.points ?? 0).toLocaleString();
+  $('#wallet').textContent = state.coins.toLocaleString();
   $('#intro').hidden = state.history.length > 0;
-  hero ??= P.pickHold(state);
+  const daily = P.dailyHold(state);
+  if (!hero || !P.isUnlocked(state, hero.id)) hero = daily;
   renderHero();
   renderGrid();
 }
 
 function renderHero() {
   const hs = P.holdState(state, hero.id);
+  const daily = P.isDaily(state, hero.id);
+  $('#hero').classList.toggle('daily', daily);
+  $('#hero-kicker').innerHTML = daily ? `Hold of the day <span class="mult">${DAILY_MULT}× coins</span>` : 'Random pick';
+  $('#back-daily').hidden = daily;
   const lv = hero.levels[hs.level - 1];
   $('#hero-fig').innerHTML = figureSVG(hero.figure(hs.level));
   $('#hero-name').textContent = hero.name;
@@ -70,16 +80,25 @@ function renderHero() {
   const best = hs.best[hs.level];
   $('#hero-meta').innerHTML = `
     <span class="tag strong">${targetText(hero, lv.target)}</span>
-    <span class="tag">${LEVEL_MULT[hs.level - 1]}× points</span>
+    <span class="tag">${coinRate(hs.level)}</span>
     <span class="tag">${hero.camera ? viewHint(hero) : 'Honour system'}</span>
     ${best ? `<span class="tag">Best ${fmtLong(best)}</span>` : ''}`;
 }
 
 function renderGrid() {
+  const price = P.unlockPrice(state);
   $('#grid').innerHTML = HOLDS.map(h => {
     const hs = P.holdState(state, h.id);
     const best = hs.best[hs.level];
-    return `<button class="card" data-hold="${h.id}">
+    if (!P.isUnlocked(state, h.id)) {
+      return `<button class="card locked ${state.coins >= price ? 'affordable' : ''}" data-hold="${h.id}">
+        ${figureSVG(h.figure(1))}
+        <span class="card-name">${h.name}</span>
+        <span class="card-sub price">${LOCK} ${COIN} ${price}</span>
+      </button>`;
+    }
+    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''}" data-hold="${h.id}">
+      ${P.isDaily(state, h.id) ? `<span class="card-flag">${DAILY_MULT}× today</span>` : ''}
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
       <span class="card-sub">Lv ${hs.level} · ${h.sides ? `${fmtLong(h.levels[hs.level - 1].target / 2)} ×2` : fmtLong(h.levels[hs.level - 1].target)}${best ? ` · best ${fmtLong(best)}` : ''}</span>
@@ -99,7 +118,6 @@ function openHold(hold) {
   $('#hs-name').textContent = hold.name;
   $('#hs-native').textContent = hold.native;
   $('#hs-about').textContent = hold.about;
-  $('#hs-cam-row').hidden = !hold.camera;
   $('#hs-cam').checked = state.settings.camera;
   renderSheetLevel();
   $('#hold-sheet').showModal();
@@ -107,6 +125,21 @@ function openHold(hold) {
 
 function renderSheetLevel() {
   const hold = sheetHold, hs = P.holdState(state, hold.id);
+  // Locked holds show what they cost instead of the level picker and Start.
+  const locked = !P.isUnlocked(state, hold.id);
+  $('#hs-unlock').hidden = !locked;
+  $('#hs-levels').hidden = locked;
+  $('#hs-start').hidden = locked;
+  $('#hs-cam-row').hidden = locked || !hold.camera;
+  if (locked) {
+    const price = P.unlockPrice(state), short = price - state.coins;
+    $('#hs-unlock-msg').innerHTML = short > 0
+      ? `Unlock this hold for <b>${price} coins</b>. You have ${state.coins}, so ${short} more to go.`
+      : `Unlock this hold for <b>${price} coins</b>. You have ${state.coins}.`;
+    $('#hs-buy').innerHTML = `${COIN} Unlock for ${price}`;
+    $('#hs-buy').disabled = short > 0;
+    sheetLevel = 1;
+  }
   const unlocked = hs.mastered ? 4 : hs.level;
   $('#hs-levels').innerHTML = hold.levels.map((l, i) => {
     const n = i + 1, locked = n > unlocked;
@@ -120,11 +153,22 @@ function renderSheetLevel() {
   const best = hs.best[sheetLevel];
   $('#hs-meta').innerHTML = `
     <span class="tag strong">${targetText(hold, lv.target)}</span>
-    <span class="tag">${LEVEL_MULT[sheetLevel - 1]}× points</span>
+    <span class="tag">${coinRate(sheetLevel)}</span>
+    ${P.isDaily(state, hold.id) ? `<span class="tag strong">Hold of the day: ${DAILY_MULT}× coins</span>` : ''}
     ${hold.camera ? `<span class="tag">${viewHint(hold)}</span>` : '<span class="tag">Honour system</span>'}
     ${best ? `<span class="tag">Best ${fmtLong(best)}</span>` : ''}
-    ${sheetLevel === hs.level && !hs.mastered ? pips(hs) : ''}`;
+    ${!locked && sheetLevel === hs.level && !hs.mastered ? pips(hs) : ''}`;
 }
+
+$('#hs-buy').onclick = () => {
+  const badges = P.unlockHold(state, sheetHold.id);
+  if (!badges) return;
+  audio.unlock();
+  audio.play('level');
+  toast(`${sheetHold.name} unlocked!${badges.length ? ` Badge: ${badges.map(b => b.name).join(', ')}` : ''}`);
+  renderSheetLevel();
+  renderHome();
+};
 
 // ---------- Session ----------
 
@@ -174,7 +218,11 @@ async function startSession(hold, level, useCamera) {
   run.source = source;
   run.framer = new AutoFrame({ enabled: state.settings.autoframe });
   run.lastFrameAt = performance.now();
-  run.session = new Session({ hold, level, camera: useCamera, strictness: state.settings.strictness, now: source ? source.now() : clock() });
+  run.session = new Session({
+    hold, level, camera: useCamera, strictness: state.settings.strictness,
+    daily: P.isDaily(state, hold.id), now: source ? source.now() : clock(),
+  });
+  run.wholeCoins = 0;
   run.wake = await wakeLock();
   if (!useCamera) {
     $('#s-btns').innerHTML = '<button class="btn" id="s-pause">Pause</button><button class="btn primary" id="s-done">Done</button>';
@@ -214,8 +262,19 @@ function updateHud(v) {
   // One-sided holds show the current side's time against that side's target.
   $('#s-time').textContent = fmt(v.sideHeld);
   $('#s-target').textContent = ` / ${fmt(v.sideTarget)}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}`;
-  $('#s-points').textContent = Math.floor(v.points).toLocaleString();
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}`;
+  // Whole coins, plus a bar filling towards the next one; a chime and a pop as each lands.
+  const whole = Math.floor(v.coins);
+  $('#s-coins').textContent = whole.toLocaleString();
+  $('#s-coin-next').style.width = `${Math.round((v.coins % 1) * 100)}%`;
+  if (whole > run.wholeCoins) {
+    run.wholeCoins = whole;
+    audio.play('point');
+    const box = $('#s-coins-box');
+    box.classList.remove('pop');
+    void box.offsetWidth;
+    box.classList.add('pop');
+  }
   const bar = $('#s-tbar');
   bar.style.width = `${Math.min(100, (v.sideHeld / v.sideTarget) * 100)}%`;
   bar.classList.toggle('over', v.sideReached);
@@ -236,9 +295,10 @@ function updateHud(v) {
       $('#s-cue').textContent = cue || 'Looking good… hold still';
       break;
     case 'holding':
-      setStatus('good', v.sideReached ? 'Bonus time!' : 'Hold');
+      setStatus(v.tier.tier ? 'bonus' : 'good', v.tier.tier ? `Bonus ×${v.tier.mult} coins` : 'Hold');
       if (v.sideReached && v.canSwitch) $('#s-cue').textContent = run.camera ? 'Step out of position when you’re ready to switch sides' : 'Tap Switch sides when you’re ready';
-      else $('#s-cue').textContent = run.camera ? (v.score >= 90 ? 'Great form' : cue) : (v.sideReached ? 'Keep going for bonus points' : '');
+      else if (v.tier.tier && v.tier.tier < 3 && (!run.camera || v.score >= 90)) $('#s-cue').textContent = `Bonus level ${v.tier.tier}. Keep going for ×${BONUS_TIERS[v.tier.tier].mult}`;
+      else $('#s-cue').textContent = run.camera ? (v.score >= 90 ? 'Great form' : cue) : (v.sideReached ? 'Keep going for bonus coins' : '');
       break;
     case 'broken': {
       const left = Math.ceil((v.sideReached ? 3.5 : 8) - s.outTime);
@@ -384,10 +444,16 @@ function renderSummary(hold, level, r, o) {
     o.reached ? 'Target reached!' :
     o.pb ? 'New personal best!' :
     pct >= 0.75 ? 'So close!' : 'Good effort';
-  countUp($('#sum-points'), o.points);
-  $('#sum-breakdown').textContent = o.streakMult > 1
-    ? `${o.basePoints.toLocaleString()} × ${o.streakMult.toFixed(2)} streak bonus (${o.streak} day${o.streak === 1 ? '' : 's'})`
-    : '';
+  countUp($('#sum-coins'), o.coins);
+  const notes = [
+    ...(r.daily ? [`hold of the day ${DAILY_MULT}×`] : []),
+    ...(o.streakMult > 1 ? [`${o.streak}-day streak +${Math.round((o.streakMult - 1) * 100)}%`] : []),
+  ];
+  // What to do with the coins: the next unlock, or just the wallet.
+  const wallet = o.nextUnlock
+    ? (o.wallet >= o.nextUnlock ? `You have ${o.wallet} coins: enough to unlock a new hold!` : `You have ${o.wallet} coins. ${o.nextUnlock - o.wallet} more to unlock a new hold.`)
+    : `You have ${o.wallet} coins.`;
+  $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${wallet}`;
   $('#sum-stats').innerHTML = `
     <div><b>${fmtLong(r.held)}</b><small>held of ${fmtLong(r.target)}${r.sides ? `<br>${r.sides.map(t => fmtLong(t)).join(' + ')}` : ''}</small></div>
     ${r.camera ? `<div><b>${Math.round(r.avgForm)}</b><small>average form</small></div>` : '<div><b>—</b><small>honour mode</small></div>'}
@@ -395,7 +461,7 @@ function renderSummary(hold, level, r, o) {
 
   const hs = P.holdState(state, hold.id);
   let lvl = '';
-  if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${fmtLong(hold.levels[o.newLevel - 1].target)} target, ${LEVEL_MULT[o.newLevel - 1]}× points.</div>`;
+  if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${targetText(hold, hold.levels[o.newLevel - 1].target)}, ${coinRate(o.newLevel)}.</div>`;
   else if (o.mastered) lvl = '<div class="banner">You’ve completed every level of this stance.</div>';
   else if (level === hs.level && !hs.mastered) {
     const need = P.QUALIFY_DAYS - hs.qualDays.length;
@@ -442,11 +508,11 @@ const medal = () => '<svg viewBox="0 0 24 24" class="medal"><circle cx="12" cy="
 
 function renderProgress() {
   show('progress');
-  const r = P.rankFor(state.xp), t = P.totals(state);
+  const r = P.rankFor(state.lifetime), t = P.totals(state);
   $('#rank-card').innerHTML = `
     <span class="sash big" style="--sash:${r.color}"></span>
     <div><h2>${r.name}</h2><span class="xpbar"><i style="width:${Math.round(r.progress * 100)}%"></i></span>
-    <small>${state.xp.toLocaleString()} XP${r.next ? ` · ${(r.next.xp - state.xp).toLocaleString()} to ${r.next.name}` : ''}</small></div>`;
+    <small>${state.lifetime.toLocaleString()} coins earned${r.next ? ` · ${(r.next.coins - state.lifetime).toLocaleString()} to ${r.next.name}` : ''}</small></div>`;
   $('#stats').innerHTML = `
     <div><b>${fmtLong(t.time)}</b><small>total held</small></div>
     <div><b>${t.sessions}</b><small>sessions</small></div>
@@ -457,13 +523,13 @@ function renderProgress() {
   const weeks = 16, today = new Date();
   const start = new Date(today);
   start.setDate(today.getDate() - ((today.getDay() + 6) % 7) - (weeks - 1) * 7);
-  const max = Math.max(1, ...Object.values(state.days).map(d => d.points));
+  const max = Math.max(1, ...Object.values(state.days).map(d => d.coins));
   let cells = '';
   for (let i = 0; i < weeks * 7; i++) {
     const d = new Date(start); d.setDate(start.getDate() + i);
     const key = P.dayKey(d), day = state.days[key];
-    const lvl = d > today ? 'future' : day ? `l${Math.min(4, 1 + Math.floor((day.points / max) * 3.999))}` : '';
-    cells += `<i class="${lvl}" title="${key}${day ? `: ${day.points} pts, ${fmtLong(day.time)}` : ''}"></i>`;
+    const lvl = d > today ? 'future' : day ? `l${Math.min(4, 1 + Math.floor((day.coins / max) * 3.999))}` : '';
+    cells += `<i class="${lvl}" title="${key}${day ? `: ${day.coins} coins, ${fmtLong(day.time)}` : ''}"></i>`;
   }
   $('#heatmap').innerHTML = cells;
 
@@ -474,7 +540,7 @@ function renderProgress() {
     const d = new Date(h.at);
     return `<li><span><b>${hold?.name ?? h.holdId}</b> <small>Lv ${h.level}</small></span>
       <span>${fmtLong(h.held)}${h.held >= h.target ? ' ✓' : ''}</span>
-      <span>${h.avgForm ?? '—'}</span><span>+${h.points}</span>
+      <span>${h.avgForm ?? '—'}</span><span>+${h.coins}</span>
       <small class="when">${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</small></li>`;
   }).join('') : '<li class="empty">No sessions yet.</li>';
 }
@@ -511,7 +577,7 @@ $('#import-file').onchange = async e => {
   if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    if (data.version !== 1 || typeof data.xp !== 'number') throw new Error('Not a Shaolin Holds backup');
+    if (!P.isBackup(data)) throw new Error('Not a Shaolin Holds backup');
     if (!confirm('Replace your current progress with this backup?')) return;
     localStorage.setItem('holds.v1', JSON.stringify(data));
     state = P.load();
@@ -523,7 +589,7 @@ $('#import-file').onchange = async e => {
   e.target.value = '';
 };
 $('#reset').onclick = () => {
-  if (!confirm('Delete all progress, points and badges? This can’t be undone.')) return;
+  if (!confirm('Delete all progress, coins, unlocked holds and badges? This can’t be undone.')) return;
   const settings = state.settings;
   try { localStorage.removeItem('holds.v1'); } catch {}
   state = P.load();
@@ -537,6 +603,7 @@ $('#reset').onclick = () => {
 // ---------- Wiring ----------
 
 $('#shuffle').onclick = () => { hero = P.pickHold(state, hero.id); renderHero(); };
+$('#back-daily').onclick = () => { hero = P.dailyHold(state); renderHero(); };
 $('#hero-start').onclick = () => {
   const hs = P.holdState(state, hero.id);
   startSession(hero, hs.level, hero.camera && state.settings.camera);

@@ -117,6 +117,7 @@ p { margin: 0; }
   padding: 6px 10px; border-radius: 999px; font-size: .9rem;
 }
 .chip .ico { width: 16px; height: 16px; color: var(--gold); }
+.ico.coin { color: var(--gold); }
 .chip .flame { color: var(--accent); }
 
 /* ---------- Intro ---------- */
@@ -146,6 +147,13 @@ p { margin: 0; }
   text-transform: uppercase; letter-spacing: .12em; font-size: .75rem; color: var(--muted); font-weight: 700;
 }
 .hero-label .text-btn { text-transform: none; letter-spacing: 0; font-size: .9rem; }
+#hero-kicker { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.hero-label .mult {
+  padding: 2px 8px; border-radius: 999px; letter-spacing: .04em; white-space: nowrap;
+  background: var(--gold); color: #1a0f08;
+}
+.hero.daily { border-color: color-mix(in srgb, var(--gold) 60%, var(--line)); }
+.back-daily { display: block; margin: 8px auto 0; }
 .hero-body { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 16px; align-items: center; margin: 6px 0 16px; }
 .hero-fig { cursor: pointer; background: var(--surface-2); border-radius: 16px; padding: 10px; aspect-ratio: 4 / 5; display: grid; place-items: center; }
 .hero h1 { font-size: clamp(1.6rem, 6vw, 2.3rem); line-height: 1.05; }
@@ -181,6 +189,22 @@ p { margin: 0; }
 .card-name { font-family: var(--display); font-weight: 700; font-size: 1.05rem; }
 .card-sub { font-size: .8rem; color: var(--muted); }
 .card:active { transform: scale(.98); }
+.card { position: relative; }
+.card.daily { border-color: var(--gold); }
+.card-flag {
+  position: absolute; top: 8px; right: 8px; z-index: 1; font-size: .72rem; font-weight: 700;
+  padding: 2px 8px; border-radius: 999px; background: var(--gold); color: #1a0f08;
+}
+.card.locked .figure { opacity: .3; }
+.card.locked .card-name { color: var(--muted); }
+.card-sub.price { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: .9rem; }
+.card-sub.price .ico { width: 15px; height: 15px; }
+.card.affordable { border-color: var(--gold); }
+.card.affordable .price { color: var(--gold); }
+.unlock-box { display: grid; gap: 10px; }
+.unlock-box .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.unlock-box .btn .ico { color: currentColor; }
+.unlock-box .btn:disabled { opacity: .45; cursor: not-allowed; }
 .foot { text-align: center; margin-top: 18px; }
 
 /* ---------- Sheets ---------- */
@@ -240,9 +264,16 @@ body.demo .stage video { display: none; }
 .hud-title { display: grid; text-align: center; line-height: 1.2; }
 .hud-title strong { font-family: var(--display); font-size: 1.1rem; }
 .hud-title small { opacity: .75; }
-.hud-pts { text-align: right; font-variant-numeric: tabular-nums; }
-.hud-pts b { font-size: 1.5rem; color: #ffcf73; }
-.hud-pts small { display: block; opacity: .7; font-size: .7rem; margin-top: -4px; }
+.hud-coins {
+  display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 6px;
+  font-variant-numeric: tabular-nums; justify-items: end;
+}
+.hud-coins .coin { width: 26px; height: 26px; color: #ffcf73; }
+.hud-coins b { font-size: 1.6rem; color: #ffcf73; line-height: 1; }
+.coin-next { grid-column: 1 / -1; width: 100%; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .2); overflow: hidden; }
+.coin-next i { display: block; height: 100%; width: 0; background: #ffcf73; }
+.hud-coins.pop { animation: coinpop .45s cubic-bezier(.2, 1.8, .4, 1); }
+@keyframes coinpop { 40% { transform: scale(1.35); } }
 
 .timer {
   font-variant-numeric: tabular-nums; font-weight: 800; line-height: 1;
@@ -262,6 +293,7 @@ body.demo .stage video { display: none; }
 }
 .status:empty { display: none; }
 .status.good { background: rgba(60, 160, 85, .85); }
+.status.bonus { background: linear-gradient(90deg, #d9962b, #f06a2c); color: #1a0f08; }
 .status.bad { background: rgba(200, 55, 45, .88); animation: pulse .8s ease-in-out infinite alternate; }
 .status.wait { background: rgba(0, 0, 0, .5); }
 @keyframes pulse { to { transform: scale(1.04); } }

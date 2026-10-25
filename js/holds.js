@@ -9,7 +9,6 @@ import { kneeDrop, lean, dist, mid } from './scoring.js';
 import { legReaching } from './figure.js';
 
 const HIPS_SHOULDERS = [11, 12, 23, 24];
-export const LEVEL_MULT = [1, 1.5, 2.2, 3];
 
 const upright = (max, cue = 'Chest up, back straight', soft = 15) => ({
   id: 'upright', label: 'Upright back', cue, value: b => b.torsoLean, max, soft, joints: HIPS_SHOULDERS,
@@ -272,6 +271,215 @@ export const HOLDS = [
       legs: { L: [6, -2], R: [-6, 2] },
       arms: level === 1 ? { L: [25, -80], R: [-25, 80] } : { L: [45, -95], R: [-45, 95] },
     }),
+  },
+
+  {
+    id: 'sideplank', name: 'Side Plank', native: 'Cè Bǎn', view: 'front', sides: true, camera: true,
+    hint: 'Turn the phone sideways (landscape), low to the ground, with your front facing it',
+    about: 'Not strictly Shaolin, but one of the best holds for the sides of the core and a stable spine.',
+    levels: [
+      { name: 'Knee side plank', target: 40, desc: 'On one forearm, elbow under the shoulder, knees bent. Lift your hips so shoulders, hips and knees make one line. Then switch sides.' },
+      { name: 'Side plank', target: 60, desc: 'On your forearm with your legs straight and feet stacked. One straight line from shoulders to feet.' },
+      { name: 'Straight-arm side plank', target: 60, desc: 'Up on your hand with the arm locked straight, hand under the shoulder.' },
+      { name: 'Star side plank', target: 40, desc: 'Straight-arm side plank with the top leg lifted high and the top arm reaching to the sky.' },
+    ],
+    criteria: level => {
+      const end = level === 1 ? kneesMid : level === 4 ? b => (b.la.y > b.ra.y ? b.la : b.ra) : anklesMid;
+      const lowerArm = b => (b.arms.L.c.y > b.arms.R.c.y ? b.arms.L : b.arms.R);
+      return [
+        {
+          id: 'line', label: 'Straight body', weight: 2, joints: [11, 12, 23, 24, 25, 26, 27, 28],
+          cue: { high: 'Lift your hips', low: 'Lower your hips into a straight line' },
+          value: b => hipSag(b, end(b)), min: -0.06, max: 0.04, soft: 0.06,
+        },
+        {
+          id: 'down', label: 'In the side plank', cue: 'Get down into the side plank', weight: 2, joints: [11, 12, 27, 28],
+          value: b => tilt(b.sh, end(b)), max: by(level, [40, 30, 38, 40]), soft: 20,
+        },
+        ...(level >= 3 ? [{
+          id: 'arm', label: 'Straight supporting arm', cue: 'Straighten your supporting arm', joints: [13, 14],
+          value: b => lowerArm(b).angle, min: 155, soft: 30,
+        }] : []),
+        ...(level === 4 ? [
+          {
+            id: 'leg', label: 'Top leg lifted', cue: 'Lift your top leg higher', joints: [27, 28],
+            value: b => Math.abs(b.la.y - b.ra.y) / b.torsoLen, min: 0.9, soft: 0.4,
+          },
+          {
+            id: 'reach', label: 'Top arm up', cue: 'Reach your top arm to the sky', joints: [15, 16],
+            value: b => (Math.min(b.ls.y, b.rs.y) - Math.min(b.arms.L.c.y, b.arms.R.c.y)) / b.torsoLen, min: 0.5, soft: 0.4,
+          },
+        ] : []),
+      ];
+    },
+    figure: level => {
+      // Lying on the right side facing the camera, head to the left. Solve the body's
+      // tilt so the supporting elbow (or hand) and the knees (or feet) both touch the floor.
+      const arm = level >= 3 ? 27 : 14, legToFloor = level === 1 ? 22 : 44;
+      let a = 15;
+      for (let i = 0; i < 4; i++) a = Math.asin((arm + 3 * Math.cos(a * DEG)) / (30 + legToFloor)) / DEG;
+      const body = 90 - a;
+      const legs = level === 1 ? [body, 200] : [body, body];
+      return {
+        view: 'front', compact: true, torso: -(90 + a),
+        ...(level === 1 ? { ground: 'rKnee' } : {}),
+        legs: { R: legs, L: level === 4 ? [body + 30, body + 30] : legs },
+        arms: { R: level >= 3 ? [0, 0] : [0, -90], L: level === 4 ? [180, 180] : [body, body] },
+      };
+    },
+  },
+
+  {
+    id: 'birddog', name: 'Bird Dog', native: 'Niǎo Gǒu', view: 'side', sides: true, camera: true,
+    hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
+    about: 'Not strictly Shaolin, but a gentle, highly rated hold for the lower back and a core that resists twisting.',
+    levels: [
+      { name: 'Leg reach', target: 30, desc: 'On hands and knees, hands under shoulders. Reach one leg straight back, level with your back. Then switch legs.' },
+      { name: 'Bird dog', target: 40, desc: 'Reach the opposite arm forward too, so arm, back and leg make one long level line.' },
+      { name: 'Long bird dog', target: 60, desc: 'The same, held longer. Keep your hips square and your back flat.' },
+      { name: 'Plank bird dog', target: 40, desc: 'From a high plank on hands and toes, lift one leg and the opposite arm level. Supporting leg straight.' },
+    ],
+    criteria: level => {
+      const reachArm = b => (lean(b.arms.L.a, b.arms.L.c) > lean(b.arms.R.a, b.arms.R.c) ? b.arms.L : b.arms.R);
+      return [
+        {
+          id: 'leg', label: 'Leg level', cue: 'Lift your leg level with your back', weight: 1.5, joints: s => s.main.idx,
+          value: (b, s) => lean(s.main.a, s.main.c), min: by(level, [70, 75, 80, 80]), soft: 20,
+        },
+        {
+          id: 'legStraight', label: 'Straight leg', cue: 'Straighten your back leg', joints: s => s.main.idx,
+          value: (b, s) => s.main.angle, min: 155, soft: 25,
+        },
+        {
+          id: 'flat', label: 'Flat back', cue: 'Keep your back flat', joints: HIPS_SHOULDERS,
+          value: b => tilt(b.sh, b.hip), max: 15, soft: 15,
+        },
+        ...(level > 1 ? [
+          {
+            id: 'arm', label: 'Arm forward', cue: 'Reach your arm forward, level with your back', weight: 1.5, joints: [13, 14, 15, 16],
+            value: b => lean(reachArm(b).a, reachArm(b).c), min: by(level, [0, 70, 80, 80]), soft: 20,
+          },
+          {
+            id: 'armStraight', label: 'Straight arm', cue: 'Straighten your reaching arm', joints: [13, 14],
+            value: b => reachArm(b).angle, min: 150, soft: 30,
+          },
+        ] : []),
+        ...(level === 4 ? [{
+          id: 'support', label: 'Knee off the floor', cue: 'Straighten your supporting leg, knee off the floor', joints: s => s.other.idx,
+          value: (b, s) => s.other.angle, min: 160, soft: 20,
+        }] : []),
+      ];
+    },
+    figure: level => {
+      // Side-on, facing right. Hands under shoulders; hips over the knee (or a straight leg to the toes).
+      const reach = level > 1 ? [90, 90] : [2, 2];
+      if (level === 4) {
+        return { view: 'side', compact: true, torso: 90, legs: { L: [-90, -90], R: [-52, -52] }, arms: { R: [0, 0], L: reach } };
+      }
+      return {
+        view: 'side', compact: true, torso: 90 + Math.asin(5 / 30) / DEG,
+        legs: { L: [-90, -90], R: [0, -90] },
+        arms: { R: [0, 0], L: reach },
+      };
+    },
+  },
+
+  {
+    id: 'hollow', name: 'Hollow Hold', native: 'Kōng Xīn', view: 'side', sides: false, camera: true,
+    hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
+    about: 'Borrowed from gymnastics: lower back pressed into the floor, shoulders and legs lifted. Builds the front of the core.',
+    levels: [
+      { name: 'Tuck hollow', target: 30, desc: 'On your back, knees pulled in, feet off the floor. Lift your shoulders and press your lower back down.' },
+      { name: 'High hollow', target: 30, desc: 'Straighten your legs, feet high (about 45°). Shoulders lifted, arms reaching towards your feet.' },
+      { name: 'Hollow hold', target: 45, desc: 'Lower your straight legs until your feet hover just off the floor. Lower back stays pressed down.' },
+      { name: 'Full hollow', target: 45, desc: 'Low legs, with your arms reaching overhead past your ears.' },
+    ],
+    criteria: level => [
+      {
+        id: 'shoulders', label: 'Shoulders lifted', weight: 1.5, joints: HIPS_SHOULDERS,
+        cue: { low: 'Lift your shoulders off the floor', high: 'Lower your shoulders a little' },
+        value: b => (b.hip.y - b.sh.y) / b.torsoLen, min: 0.2, max: 0.7, soft: 0.15,
+      },
+      {
+        id: 'legs', label: 'Leg height', weight: 1.5, joints: [23, 24, 27, 28],
+        cue: { low: 'Lift your feet higher', high: 'Lower your legs' },
+        value: b => (b.hip.y - anklesMid(b).y) / ((b.legs.L.len + b.legs.R.len) / 2),
+        ...by(level, [{ min: 0.1, max: 1.2 }, { min: 0.45, max: 0.95 }, { min: 0.12, max: 0.45 }, { min: 0.12, max: 0.45 }]), soft: 0.15,
+      },
+      level === 1 ? {
+        id: 'tuck', label: 'Knees in', cue: 'Pull your knees in', joints: [25, 26],
+        value: b => Math.max(b.legs.L.angle, b.legs.R.angle), max: 110, soft: 30,
+      } : {
+        id: 'straight', label: 'Straight legs', cue: 'Straighten your legs', joints: [25, 26],
+        value: b => Math.min(b.legs.L.angle, b.legs.R.angle), min: 160, soft: 20,
+      },
+      ...(level === 4 ? [{
+        id: 'reach', label: 'Arms overhead', cue: 'Reach your arms past your head', joints: [13, 14, 15, 16],
+        value: b => (dist(b.hip, mid(b.arms.L.c, b.arms.R.c)) - dist(b.hip, b.sh)) / b.torsoLen, min: 0.6, soft: 0.4,
+      }] : []),
+    ],
+    figure: level => {
+      // On the back, head to the left, resting on the lower back.
+      const up = 20;
+      const legs = by(level, [[165, 75], [125, 125], [105, 105], [105, 105]]);
+      const arms = level === 4 ? [-(90 + up + 5), -(90 + up + 5)] : [90, 90];
+      return {
+        view: 'side', compact: true, torso: -(90 + up), ground: 'pelvis', groundGap: 5,
+        legs: { L: legs, R: legs }, arms: { L: arms, R: arms },
+      };
+    },
+  },
+
+  {
+    id: 'squat', name: 'Deep Squat', native: 'Dūn', view: 'side', sides: false, camera: true,
+    about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier.',
+    levels: [
+      { name: 'Supported squat', target: 30, desc: 'Feet a little wider than your hips, toes slightly out. Hold a door frame or post and sink until your thighs are level.' },
+      { name: 'Deep squat', target: 45, desc: 'Let go and sink all the way: hips below your knees, heels flat on the floor.' },
+      { name: 'Prayer squat', target: 60, desc: 'Deep squat with your palms together at your chest, elbows pressing your knees out. Chest up.' },
+      { name: 'Overhead squat', target: 60, desc: 'Deep squat with both arms straight overhead. Heels down, chest proud.' },
+    ],
+    criteria: level => [
+      {
+        id: 'depth', label: 'Depth', cue: 'Sink lower, hips below your knees', weight: 2, joints: [23, 24, 25, 26],
+        value: b => Math.max(kneeDrop(b.legs.L), kneeDrop(b.legs.R)), max: by(level, [0.15, -0.1, -0.1, -0.1]), soft: 0.25,
+      },
+      {
+        id: 'heels', label: 'Heels down', cue: 'Keep your heels down', joints: [29, 30, 31, 32],
+        value: b => Math.max(b.P[31].y - b.P[29].y, b.P[32].y - b.P[30].y) / ((b.legs.L.lowerLen + b.legs.R.lowerLen) / 2), max: 0.12, soft: 0.15,
+      },
+      upright(by(level, [55, 45, 45, 45]), 'Lift your chest', 20),
+      ...(level === 3 ? [
+        {
+          id: 'hands', label: 'Hands at chest', cue: 'Bring your palms together at your chest', joints: [15, 16],
+          value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.sh.y) / b.torsoLen, min: -0.2, max: 0.6, soft: 0.25,
+        },
+        {
+          id: 'elbows', label: 'Elbows bent', cue: 'Bend your elbows, palms together', joints: [13, 14],
+          value: b => Math.max(b.arms.L.angle, b.arms.R.angle), max: 120, soft: 30,
+        },
+      ] : []),
+      ...(level === 4 ? [
+        {
+          id: 'overhead', label: 'Arms overhead', cue: 'Reach your arms straight overhead', joints: [15, 16],
+          value: b => (b.nose.y - Math.min(b.arms.L.c.y, b.arms.R.c.y)) / b.torsoLen, min: 0.3, soft: 0.3,
+        },
+        {
+          id: 'armStraight', label: 'Straight arms', cue: 'Straighten your arms', joints: [13, 14],
+          value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 150, soft: 30,
+        },
+      ] : []),
+    ],
+    figure: level => {
+      // Side-on, facing right: knees forward over the toes, hips sitting back and low.
+      const thigh = level === 1 ? 85 : 100;
+      const arms = by(level, [[90, 90], [80, 85], [40, 150], [175, 178]]);
+      return {
+        view: 'side', torso: 145,
+        legs: { L: [thigh, -25], R: [thigh, -25] },
+        arms: { L: arms, R: [arms[0] - 3, arms[1] - 3] },
+      };
+    },
   },
 
   {

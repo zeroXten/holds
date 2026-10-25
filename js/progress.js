@@ -1,21 +1,24 @@
-// Progress kept in localStorage: XP, levels, streaks, personal bests, badges.
+// Progress kept in localStorage: coins, unlocked holds, the hold of the day,
+// levels, streaks, personal bests and badges.
 
-import { HOLDS, LEVEL_MULT } from './holds.js';
+import { HOLDS } from './holds.js';
+import { STARTER_HOLDS, UNLOCK_PRICES } from './economy.js';
 
 const KEY = 'holds.v1';
 export const QUALIFY_DAYS = 3;   // days hitting the target (with good form) to level up
 export const QUALIFY_FORM = 70;  // minimum average form for a camera session to count
 
+// Ranks go by coins earned over all time (spending doesn't lower your rank).
 export const RANKS = [
-  { xp: 0, name: 'White Sash', color: '#f4efe6' },
-  { xp: 2500, name: 'Yellow Sash', color: '#f2c230' },
-  { xp: 7500, name: 'Orange Sash', color: '#ee8a2a' },
-  { xp: 15000, name: 'Green Sash', color: '#4f9d4a' },
-  { xp: 30000, name: 'Blue Sash', color: '#3a73c9' },
-  { xp: 50000, name: 'Purple Sash', color: '#7d4fc0' },
-  { xp: 80000, name: 'Brown Sash', color: '#8a5a32' },
-  { xp: 120000, name: 'Red Sash', color: '#c8322b' },
-  { xp: 180000, name: 'Black Sash', color: '#1d1a17' },
+  { coins: 0, name: 'White Sash', color: '#f4efe6' },
+  { coins: 50, name: 'Yellow Sash', color: '#f2c230' },
+  { coins: 150, name: 'Orange Sash', color: '#ee8a2a' },
+  { coins: 300, name: 'Green Sash', color: '#4f9d4a' },
+  { coins: 600, name: 'Blue Sash', color: '#3a73c9' },
+  { coins: 1000, name: 'Purple Sash', color: '#7d4fc0' },
+  { coins: 1600, name: 'Brown Sash', color: '#8a5a32' },
+  { coins: 2400, name: 'Red Sash', color: '#c8322b' },
+  { coins: 3500, name: 'Black Sash', color: '#1d1a17' },
 ];
 
 export const BADGES = [
@@ -33,22 +36,47 @@ export const BADGES = [
   { id: 'min30', name: 'Half Hour', desc: 'Hold for 30 minutes in total' },
   { id: 'min120', name: 'Two Hours', desc: 'Hold for 2 hours in total' },
   { id: 'early', name: 'Early Bird', desc: 'Train between 4 and 7am' },
+  { id: 'unlock', name: 'New Stance', desc: 'Unlock a hold with coins' },
+  { id: 'collector', name: 'Full Set', desc: 'Unlock every hold' },
+  { id: 'daily', name: 'Daily Devotion', desc: 'Reach the target on the hold of the day' },
 ];
 
 export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, strictness: 'normal', model: 'full' };
 
-const blank = () => ({ version: 1, xp: 0, holds: {}, history: [], days: {}, badges: {}, settings: { ...DEFAULT_SETTINGS } });
+const blank = () => ({
+  version: 2, coins: 0, lifetime: 0, unlocked: [...STARTER_HOLDS], purchased: [], daily: null,
+  holds: {}, history: [], days: {}, badges: {}, settings: { ...DEFAULT_SETTINGS },
+});
+
+// Version 1 had points (about 80 per coin) and every hold open. Convert the
+// points, and keep any hold already practised unlocked.
+const POINTS_PER_COIN = 80;
+function migrate(data) {
+  if (data.version === 1) {
+    const toCoins = p => Math.round((p ?? 0) / POINTS_PER_COIN);
+    data.lifetime = data.coins = toCoins(data.xp);
+    delete data.xp;
+    data.unlocked = [...new Set([...STARTER_HOLDS, ...Object.keys(data.holds ?? {}).filter(id => data.holds[id].sessions)])];
+    data.purchased = [];
+    for (const h of data.history ?? []) { h.coins = toCoins(h.points); delete h.points; }
+    for (const d of Object.values(data.days ?? {})) { d.coins = toCoins(d.points); delete d.points; }
+    data.version = 2;
+  }
+  return data;
+}
 
 export function load() {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const data = JSON.parse(raw);
+      const data = migrate(JSON.parse(raw));
       return { ...blank(), ...data, settings: { ...DEFAULT_SETTINGS, ...data.settings } };
     }
   } catch { /* storage unavailable or corrupt: start fresh */ }
   return blank();
 }
+
+export const isBackup = data => (data?.version === 1 && typeof data.xp === 'number') || (data?.version === 2 && typeof data.coins === 'number');
 
 export function save(state) {
   try { localStorage.setItem(KEY, JSON.stringify(state)); return true; } catch { return false; }
@@ -74,12 +102,61 @@ export function streak(state, today = dayKey()) {
   return n;
 }
 
-export function rankFor(xp) {
+export function rankFor(coins) {
   let i = 0;
-  while (i + 1 < RANKS.length && xp >= RANKS[i + 1].xp) i++;
+  while (i + 1 < RANKS.length && coins >= RANKS[i + 1].coins) i++;
   const next = RANKS[i + 1];
-  return { ...RANKS[i], index: i, next, progress: next ? (xp - RANKS[i].xp) / (next.xp - RANKS[i].xp) : 1 };
+  return { ...RANKS[i], index: i, next, progress: next ? (coins - RANKS[i].coins) / (next.coins - RANKS[i].coins) : 1 };
 }
+
+// ---- Unlocking holds ----
+
+export const isUnlocked = (state, id) => state.unlocked.includes(id);
+export const unlockPrice = state => UNLOCK_PRICES[Math.min(state.purchased.length, UNLOCK_PRICES.length - 1)];
+
+// Spends coins on a hold. Returns the badges earned, or null if it can't be bought.
+export function unlockHold(state, id) {
+  const price = unlockPrice(state);
+  if (isUnlocked(state, id) || state.coins < price) return null;
+  state.coins -= price;
+  state.unlocked.push(id);
+  state.purchased.push(id);
+  const earned = [];
+  const today = dayKey();
+  for (const [badge, cond] of [['unlock', true], ['collector', HOLDS.every(h => isUnlocked(state, h.id))]]) {
+    if (cond && !state.badges[badge]) { state.badges[badge] = today; earned.push(BADGES.find(b => b.id === badge)); }
+  }
+  save(state);
+  return earned;
+}
+
+// ---- Hold of the day ----
+
+// Small seeded random number generator (mulberry32), seeded from the date.
+function seeded(str) {
+  let h = 2166136261;
+  for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return () => {
+    h = (h + 0x6d2b79f5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// The same for the whole day: a date-seeded shuffle of all holds, taking the
+// first one you've unlocked. Saved, so unlocking a hold mid-day doesn't change it.
+export function dailyHold(state, today = dayKey()) {
+  if (state.daily?.day === today && isUnlocked(state, state.daily.holdId)) return HOLDS.find(h => h.id === state.daily.holdId);
+  const rand = seeded(today);
+  const order = HOLDS.map(h => [rand(), h]).sort((a, b) => a[0] - b[0]).map(([, h]) => h);
+  const hold = order.find(h => isUnlocked(state, h.id)) ?? HOLDS[0];
+  state.daily = { day: today, holdId: hold.id };
+  save(state);
+  return hold;
+}
+
+export const isDaily = (state, id) => state.daily?.day === dayKey() && state.daily.holdId === id;
 
 export function totals(state) {
   const time = state.history.reduce((t, h) => t + h.held, 0);
@@ -92,11 +169,11 @@ export function totals(state) {
   return { time, sessions: state.history.length, bestStreak };
 }
 
-// Random hold for today's session, favouring ones not practised lately.
+// Random unlocked hold, favouring ones not practised lately.
 export function pickHold(state, exclude) {
   const today = dayKey();
   const weights = HOLDS.map(h => {
-    if (h.id === exclude) return 0;
+    if (h.id === exclude || !isUnlocked(state, h.id)) return 0;
     const hs = holdState(state, h.id);
     let days = 7;
     if (hs.last) days = Math.min(7, Math.round((new Date(today) - new Date(hs.last)) / 864e5));
@@ -112,7 +189,7 @@ export function recordSession(state, s) {
   const today = dayKey();
   const hold = HOLDS.find(h => h.id === s.holdId);
   const hs = holdState(state, s.holdId);
-  const before = { rank: rankFor(state.xp), streak: streak(state) };
+  const before = { rank: rankFor(state.lifetime), streak: streak(state) };
   const firstToday = !state.days[today];
   // One-sided holds only count as reached when both sides hit their target.
   const reached = s.reached ?? s.held >= s.target;
@@ -120,7 +197,7 @@ export function recordSession(state, s) {
   // Streak bonus: +5% per day of streak (including today), up to +50%.
   const streakAfter = firstToday ? before.streak + 1 : Math.max(before.streak, 1);
   const streakMult = 1 + 0.05 * Math.min(streakAfter, 10);
-  const points = Math.round(s.points * streakMult);
+  const coins = Math.round(s.coins * streakMult);
 
   const prevBest = hs.best[s.level] ?? 0;
   const pb = s.held > prevBest && s.held >= 5;
@@ -142,13 +219,14 @@ export function recordSession(state, s) {
   hs.last = today;
   state.holds[s.holdId] = hs;
 
-  state.xp += points;
-  const day = state.days[today] ?? { points: 0, time: 0, sessions: 0 };
-  day.points += points; day.time += s.held; day.sessions++;
+  state.coins += coins;
+  state.lifetime += coins;
+  const day = state.days[today] ?? { coins: 0, time: 0, sessions: 0 };
+  day.coins += coins; day.time += s.held; day.sessions++;
   state.days[today] = day;
   state.history.push({
     at: new Date().toISOString(), holdId: s.holdId, level: s.level, held: Math.round(s.held * 10) / 10,
-    target: s.target, avgForm: s.camera ? Math.round(s.avgForm) : null, points, camera: s.camera,
+    target: s.target, avgForm: s.camera ? Math.round(s.avgForm) : null, coins, camera: s.camera, daily: !!s.daily,
   });
   if (state.history.length > 1000) state.history.splice(0, state.history.length - 1000);
 
@@ -171,13 +249,15 @@ export function recordSession(state, s) {
   check('min30', t.time >= 1800);
   check('min120', t.time >= 7200);
   check('early', new Date().getHours() >= 4 && new Date().getHours() < 7);
+  check('daily', reached && s.daily);
 
   save(state);
+  // The cheapest locked hold's price, to nudge towards the next unlock.
+  const locked = HOLDS.filter(h => !isUnlocked(state, h.id));
   return {
-    points, basePoints: Math.round(s.points), streakMult, streak: st, reached, pb, prevBest,
+    coins, baseCoins: s.coins, streakMult, streak: st, reached, pb, prevBest,
     qualified, qualDays: hs.qualDays.length, levelUp, mastered, newLevel: hs.level,
-    badges: earn, rankUp: rankFor(state.xp).index > before.rank.index, rank: rankFor(state.xp),
+    badges: earn, rankUp: rankFor(state.lifetime).index > before.rank.index, rank: rankFor(state.lifetime),
+    wallet: state.coins, nextUnlock: locked.length ? unlockPrice(state) : null,
   };
 }
-
-export { LEVEL_MULT };

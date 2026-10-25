@@ -9,7 +9,8 @@
 // position (or tap Switch in honour mode).
 
 import { makeBody, scorePose, visible } from './scoring.js';
-import { LEVEL_MULT, requiredFor } from './holds.js';
+import { requiredFor } from './holds.js';
+import { COIN_SECONDS, LEVEL_MULT, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { play, say } from './audio.js';
 
 export const STRICTNESS = {
@@ -22,19 +23,19 @@ const GRACE = 1.5;        // seconds out of form that still count
 const GIVE_UP = 8;        // seconds out of form before the session ends
 const GIVE_UP_AFTER = 3.5; // ...once the target has been reached
 const SWITCH_TIMEOUT = 15; // seconds allowed to change sides
-const HONOUR_FORM = 0.7;  // points factor without the camera
 
 export class Session {
-  constructor({ hold, level, camera, strictness = 'normal', now }) {
-    Object.assign(this, { hold, level, camera, now0: now, last: now });
+  constructor({ hold, level, camera, strictness = 'normal', daily = false, now }) {
+    Object.assign(this, { hold, level, camera, daily, now0: now, last: now });
     this.target = hold.levels[level - 1].target;
-    this.mult = LEVEL_MULT[level - 1];
+    // Coins per second before form and bonus-time multipliers.
+    this.mult = LEVEL_MULT[level - 1] * (daily ? DAILY_MULT : 1);
     this.thr = STRICTNESS[strictness];
     this.required = requiredFor(hold, level);
     this.state = camera ? 'framing' : 'countdown';
     this.stateTime = 0;
     this.held = 0;
-    this.points = 0;
+    this.coins = 0;
     this.score = 0;
     this.formTime = 0;
     this.formSum = 0;
@@ -57,7 +58,9 @@ export class Session {
   go(state) { this.state = state; this.stateTime = 0; }
 
   tick(now, frame) {
-    const dt = Math.min(Math.max(now - this.last, 0), 0.25);
+    // Capped so a pause (switching apps) doesn't count, but loose enough that slow phones
+    // at a few frames per second still get full time.
+    const dt = Math.min(Math.max(now - this.last, 0), 1);
     this.last = now;
     this.stateTime += dt;
     if (this.state === 'done') return this.view();
@@ -100,7 +103,7 @@ export class Session {
       case 'holding':
         if (inForm) {
           this.outTime = 0;
-          this.accrue(dt, this.formFactor());
+          this.accrue(dt, formFactor(this.score));
           this.coach(6000);
         } else {
           this.outTime += dt;
@@ -156,15 +159,11 @@ export class Session {
     if (this.onFirstSide() && (this.state === 'holding' || this.state === 'paused')) this.startSwitch();
   }
 
-  formFactor() {
-    // 50 → 0.5x, 100 → 1.25x
-    return Math.max(0.5, Math.min(1.25, 0.5 + 0.75 * (this.score - 50) / 50));
-  }
-
   accrue(dt, factor) {
     this.held += dt;
-    this.sideHeld[this.sideIndex] += dt;
-    this.points += dt * 10 * this.mult * factor * (this.sideReached[this.sideIndex] ? 1.5 : 1);
+    const i = this.sideIndex;
+    this.sideHeld[i] += dt;
+    this.coins += (dt / COIN_SECONDS) * this.mult * factor * bonusTier(this.sideHeld[i], this.sideTarget).mult;
     if (factor > 0) { this.formTime += dt; this.formSum += dt * (this.camera ? this.score : 100); }
   }
 
@@ -190,16 +189,15 @@ export class Session {
     if (!this.sideReached[i] && h >= t) {
       this.sideReached[i] = true;
       this.reached = this.sideReached.every(Boolean);
-      this.points += (50 / this.sides) * this.mult * (this.avgForm() / 100);
+      this.coins += (TARGET_BONUS / this.sides) * this.mult * (this.avgForm() / 100);
       play('target');
       say(this.onFirstSide()
         ? (this.camera ? 'Side one done! Keep going for bonus, then switch sides' : 'Side one done! Keep going for bonus, then tap switch')
-        : 'Target reached! Keep going for bonus points', { priority: true });
+        : 'Target reached! Bonus coins from here', { priority: true });
     }
-    if (this.sideReached[i]) {
-      const over = Math.floor((h - t) / 15);
-      if (over > 0) once('over' + over, () => say(`Plus ${over * 15} seconds`));
-    }
+    const tier = bonusTier(h, t).tier;
+    if (tier === 2) once('tier2', () => { play('target'); say('Bonus level two. Double coins!', { priority: true }); });
+    if (tier === 3) once('tier3', () => { play('level'); say('Bonus level three. Triple coins!', { priority: true }); });
   }
 
   avgForm() { return this.formTime ? this.formSum / this.formTime : 0; }
@@ -235,7 +233,7 @@ export class Session {
     play('end');
     this.result = {
       holdId: this.hold.id, level: this.level, held: this.held, target: this.target,
-      points: this.points, avgForm: this.avgForm(), camera: this.camera, reason,
+      coins: this.coins, daily: this.daily, avgForm: this.avgForm(), camera: this.camera, reason,
       reached: this.reached, ...(this.sides === 2 ? { sides: this.sideHeld.slice() } : {}),
     };
     return this.result;
@@ -243,7 +241,8 @@ export class Session {
 
   view() {
     return {
-      state: this.state, held: this.held, target: this.target, points: this.points,
+      state: this.state, held: this.held, target: this.target, coins: this.coins, daily: this.daily,
+      tier: bonusTier(this.sideHeld[this.sideIndex], this.sideTarget),
       score: Math.round(this.score), results: this.results, worst: this.worst, reached: this.reached,
       seen: this.seen, stateTime: this.stateTime, side: this.side,
       sides: this.sides, sideIndex: this.sideIndex, sideHeld: this.sideHeld[this.sideIndex],
