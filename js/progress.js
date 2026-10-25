@@ -44,7 +44,7 @@ export const BADGES = [
   { id: 'daily', name: 'Daily Devotion', desc: 'Reach the target on the hold of the day' },
 ];
 
-export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, strictness: 'normal', model: 'full' };
+export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full' };
 
 const blank = () => ({
   version: 2, coins: 0, lifetime: 0, unlocked: [...STARTER_HOLDS], purchased: [], daily: null,

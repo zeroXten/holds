@@ -77,7 +77,7 @@ export function scorePose(hold, level, body) {
       const value = c.value(body, side);
       const { s, dir } = criterionScore(c, value);
       const joints = typeof c.joints === 'function' ? c.joints(side) : c.joints;
-      return { id: c.id, label: c.label, value, s, weight: c.weight ?? 1, cue: dir ? cueFor(c, dir) : null, joints };
+      return { id: c.id, label: c.label, value, min: c.min, max: c.max, s, weight: c.weight ?? 1, cue: dir ? cueFor(c, dir) : null, joints };
     });
     const wsum = results.reduce((t, r) => t + r.weight, 0);
     const mean = results.reduce((t, r) => t + r.s * r.weight, 0) / wsum;

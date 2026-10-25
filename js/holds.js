@@ -46,6 +46,11 @@ const kneesMid = b => mid(b.legs.L.b, b.legs.R.b);
 const anklesMid = b => mid(b.la, b.ra);
 const DEG = Math.PI / 180;
 
+// How far the hand furthest from the middle of the body is from it, in shoulder widths.
+// "Hands together in front of you" for the camera: about 0.1–0.35 with fingers linked
+// or palms pressed, about 0.65 or more with the arms hanging at your sides.
+const handsOffCentre = b => Math.max(Math.abs(b.arms.L.c.x - b.sh.x), Math.abs(b.arms.R.c.x - b.sh.x)) / b.shoulderW;
+
 const chambered = { L: [25, -10], R: [-25, 10] };
 const by = (level, values) => values[level - 1];
 const lerp4 = (level, a, b) => a + (b - a) * (level - 1) / 3;
@@ -310,7 +315,7 @@ export const HOLDS = [
       ...(level === 1 ? [
         {
           id: 'together', label: 'Palms together', cue: 'Bring your palms together', joints: [15, 16],
-          value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, max: 0.45, soft: 0.4,
+          value: handsOffCentre, max: 0.35, soft: 0.25,
         },
         {
           id: 'chest', label: 'Hands at chest', joints: [15, 16], cue: { low: 'Raise your hands to your chest', high: 'Lower your hands to your chest' },
@@ -424,7 +429,7 @@ export const HOLDS = [
       low: () => [
         {
           id: 'together', label: 'Hands together', cue: 'Bring your hands together in front of your belly', joints: [11, 12, 13, 14, 15, 16],
-          value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, max: 0.8, soft: 0.5,
+          value: handsOffCentre, max: 0.4, soft: 0.2,
         },
         {
           id: 'low', label: 'Hands at belly', cue: { low: 'Bring your hands down in front of your belly', high: 'Lift your hands to your belly' }, joints: [11, 12, 13, 14, 15, 16],
@@ -452,7 +457,7 @@ export const HOLDS = [
       },
       {
         id: 'together', label: 'Hands together', cue: 'Keep your hands together overhead', joints: [11, 12, 13, 14, 15, 16],
-        value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, max: 1.0, soft: 0.6,
+        value: handsOffCentre, max: 0.6, soft: 0.35,
       },
       upright(10, 'Stand tall', 12),
     ],

@@ -46,5 +46,28 @@ for (const id of ['horse', 'bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'si
   console.log(`${ok ? 'ok  ' : 'FAIL'} bridge: sagging scores ${r.score}, cue "${cue}"`);
 }
 
+// Holding Up the Sky's start position with realistic hands: fingers linked in front of
+// the belly leave the wrists a good way apart (here 0.5 shoulder widths), which must pass;
+// arms hanging at the sides must not.
+{
+  const hold = HOLDS.find(h => h.id === 'sky');
+  const low = { criteria: hold.flow.low, sides: false };
+  const lm = syntheticLandmarks(hold.flow.lowFigure(1), { width: W, height: H });
+  const sw = Math.abs(lm[11].x - lm[12].x), cx = (lm[11].x + lm[12].x) / 2;
+  const spread = (k) => lm.map((p, i) => ([15, 17, 19, 21].includes(i) ? { ...p, x: cx + sw * k / 2 } : [16, 18, 20, 22].includes(i) ? { ...p, x: cx - sw * k / 2 } : p));
+  const linked = scorePose(low, 1, makeBody(spread(0.5), W, H)).score;
+  const apart = scorePose(low, 1, makeBody(spread(0.7), W, H)).score;
+  const hanging = scorePose(low, 1, makeBody(syntheticLandmarks(standing('front'), { width: W, height: H }), W, H)).score;
+  // Overhead: arms straight up at shoulder width (the natural push) must pass.
+  const highLm = syntheticLandmarks(hold.figure(1), { width: W, height: H });
+  const hsw = Math.abs(highLm[11].x - highLm[12].x), hcx = (highLm[11].x + highLm[12].x) / 2;
+  const up = highLm.map((p, i) => ([15, 17, 19, 21].includes(i) ? { ...p, x: hcx + hsw / 2 } : [16, 18, 20, 22].includes(i) ? { ...p, x: hcx - hsw / 2 } : p));
+  const overhead = scorePose({ criteria: hold.criteria, sides: false }, 1, makeBody(up, W, H)).score;
+  console.log(`     sky overhead with hands shoulder-width apart: ${overhead}`);
+  const ok = linked >= 85 && apart >= 70 && hanging < 50 && overhead >= 85;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} sky start position: wrists 0.5 apart ${linked}, 0.7 apart ${apart}, arms hanging ${hanging}`);
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);

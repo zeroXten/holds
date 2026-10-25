@@ -312,8 +312,12 @@ function setStatus(kind, text) {
 // What the camera is checking right now, ticked or crossed, so it's clear what to fix.
 function renderChecks(v) {
   const show = run.camera && ['ready', 'holding', 'broken', 'flowing'].includes(v.state) && v.seen && v.results;
+  // With "show check measurements" on, each check also shows its value and target.
+  const num = n => (Math.abs(n) >= 10 ? Math.round(n) : n.toFixed(2));
+  const range = r => (r.min !== undefined && r.max !== undefined ? `${num(r.min)}–${num(r.max)}` : r.min !== undefined ? `≥ ${num(r.min)}` : `≤ ${num(r.max)}`);
+  const detail = r => (state.settings.showValues ? ` <small>${num(r.value)} (${range(r)})</small>` : '');
   const html = show ? [...new Map(v.results.map(r => [r.label, r])).values()].map(r =>
-    `<span class="chk ${r.s >= 0.85 ? 'ok' : r.s >= 0.5 ? 'meh' : 'bad'}">${r.s >= 0.85 ? '✓' : '✗'} ${r.label}</span>`).join('') : '';
+    `<span class="chk ${r.s >= 0.85 ? 'ok' : r.s >= 0.5 ? 'meh' : 'bad'}">${r.s >= 0.85 ? '✓' : '✗'} ${r.label}${detail(r)}</span>`).join('') : '';
   const el = $('#s-checks');
   if (el.dataset.html !== html) { el.dataset.html = html; el.innerHTML = html; }
 }
@@ -751,7 +755,7 @@ function openSettings() {
   $('#version').textContent = `Version ${VERSION}`;
   checkVersion();
   const f = $('#settings form');
-  for (const k of ['voice', 'sounds', 'camera', 'autoframe']) f.elements[k].checked = state.settings[k];
+  for (const k of ['voice', 'sounds', 'camera', 'autoframe', 'showValues']) f.elements[k].checked = state.settings[k];
   f.elements.strictness.value = state.settings.strictness;
   f.elements.model.value = state.settings.model;
   $('#settings').showModal();
