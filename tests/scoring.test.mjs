@@ -19,12 +19,12 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${hold.id} L${level}: figure ${r.score} noisy ${noisy.score} standing ${stand.score} ${weak}`);
   }
   // A deeper level's figure should also pass easier levels (some holds' levels change the position, e.g. knees to straight legs, rather than deepening it).
-  if (['post', 'plank', 'squat', 'sideplank', 'hollow'].includes(hold.id)) continue;
+  if (['post', 'plank', 'squat', 'sideplank', 'hollow', 'weituo', 'stars'].includes(hold.id)) continue;
   const r = score(hold, 1, hold.figure(4));
   if (r.score < 90) { failures++; console.log(`FAIL ${hold.id}: L4 figure scores ${r.score} at L1`); }
 }
 // Levels must actually get harder: an easier level's pose shouldn't pass the next level.
-for (const id of ['horse', 'bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank', 'hollow', 'squat']) {
+for (const id of ['horse', 'bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank', 'hollow', 'squat', 'feet']) {
   const hold = HOLDS.find(h => h.id === id);
   for (let level = 1; level < 4; level++) {
     const r = score(hold, level + 1, hold.figure(level));

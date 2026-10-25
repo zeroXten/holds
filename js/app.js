@@ -1,4 +1,4 @@
-import { HOLDS, holdById } from './holds.js';
+import { HOLDS, holdById, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
   LEVEL_MULT, DAILY_MULT, BONUS_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
   REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice,
@@ -24,10 +24,14 @@ let hero = null;       // the hold in the big card: the hold of the day, or a sh
 
 const COIN = '<svg viewBox="0 0 24 24" class="ico coin"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9.5 9.5h5v5h-5z"/></svg>';
 const LOCK = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3z"/></svg>';
+// "Soft · Arms & shoulders · Balance": style, then areas from most to least worked.
+const areaTags = hold => [STYLES[hold.style], ...Object.entries(hold.areas).sort((a, b) => b[1] - a[1]).map(([a]) => AREAS[a])];
 const coinRate = level => `${LEVEL_MULT[level - 1]}× coins`;
 
 const fmt = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-const fmtLong = s => s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m ${String(Math.round(s % 60)).padStart(2, '0')}s` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
+const fmtLong = s => s < 60 ? `${Math.round(s)}s`
+  : s < 3600 ? `${Math.floor(s / 60)}m${Math.round(s % 60) ? ` ${String(Math.round(s % 60)).padStart(2, '0')}s` : ''}`
+  : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
 // One-sided holds split the target between the sides.
 const targetText = (hold, t) => hold.sides ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
 const videoUrl = hold => `https://www.youtube.com/results?search_query=${encodeURIComponent(hold.video)}`;
@@ -111,20 +115,25 @@ function renderHero() {
 
 function renderGrid() {
   const price = P.unlockPrice(state);
+  const over = P.overworked(state);
   $('#grid').innerHTML = HOLDS.map(h => {
+    const tired = over && P.leansOn(h, over.area);
+    const kind = `<span class="card-kind ${h.style}">${STYLES[h.style]} · ${AREAS[mainArea(h)]}</span>`;
     const hs = P.holdState(state, h.id);
     const best = hs.best[hs.level];
     if (!P.isUnlocked(state, h.id)) {
       return `<button class="card locked ${state.coins >= price ? 'affordable' : ''}" data-hold="${h.id}">
         ${figureSVG(h.figure(1))}
         <span class="card-name">${h.name}</span>
+        ${kind}
         <span class="card-sub price">${LOCK} ${COIN} ${price}</span>
       </button>`;
     }
-    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''}" data-hold="${h.id}">
-      ${P.isDaily(state, h.id) ? `<span class="card-flag">${DAILY_MULT}× today</span>` : ''}
+    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''} ${tired ? 'tired' : ''}" data-hold="${h.id}">
+      ${P.isDaily(state, h.id) ? `<span class="card-flag">${DAILY_MULT}× today</span>` : tired ? `<span class="card-flag rest">${over.name} resting</span>` : ''}
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
+      ${kind}
       <span class="card-sub">Lv ${hs.level} · ${h.sides ? `${fmtLong(h.levels[hs.level - 1].target / 2)} ×2` : fmtLong(h.levels[hs.level - 1].target)}${best ? ` · best ${fmtLong(best)}` : ''}</span>
       ${pips(hs)}
     </button>`;
@@ -142,6 +151,7 @@ function openHold(hold) {
   $('#hs-name').textContent = hold.name;
   $('#hs-native').textContent = hold.native;
   $('#hs-about').textContent = hold.about;
+  $('#hs-areas').innerHTML = areaTags(hold).map((t, i) => `<span class="tag ${i === 0 ? `style-${hold.style}` : ''}">${t}</span>`).join('');
   $('#hs-video').href = videoUrl(hold);
   $('#hs-cam').checked = state.settings.camera;
   renderSheetLevel();
@@ -573,6 +583,10 @@ function renderProgress() {
     <span class="sash big" style="--sash:${r.color}"></span>
     <div><h2>${r.name}</h2><span class="xpbar"><i style="width:${Math.round(r.progress * 100)}%"></i></span>
     <small>${state.lifetime.toLocaleString()} coins earned${r.next ? ` · ${(r.next.coins - state.lifetime).toLocaleString()} to ${r.next.name}` : ''}</small></div>`;
+  const week = P.areaLoad(state, { days: 7 });
+  const top = Math.max(1, ...Object.values(week));
+  $('#area-bars').innerHTML = Object.entries(AREAS).map(([a, name]) => `
+    <div class="area-row"><span>${name}</span><span class="area-bar"><i style="width:${Math.round((week[a] / top) * 100)}%"></i></span></div>`).join('');
   $('#stats').innerHTML = `
     <div><b>${fmtLong(t.time)}</b><small>total held</small></div>
     <div><b>${t.sessions}</b><small>sessions</small></div>
@@ -760,6 +774,16 @@ function renderHomeCards() {
       <div class="row"><button class="btn" data-act="dismiss-repair">Let it go</button><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div>
     </div>`);
   }
+  const over = P.overworked(state);
+  if (over) {
+    const { unlocked, locked } = P.restingHolds(state, over.area);
+    const [work, rest] = AREA_WORDS[over.area];
+    const picks = (unlocked.length ? unlocked : locked).map(h => `<button class="chip-btn" data-open-hold="${h.id}">${h.name}${unlocked.length ? '' : ` ${LOCK}`}</button>`).join('');
+    cards.push(`<div class="home-card rest-hint">
+      <p><b>You’ve done a lot of ${work} lately.</b> Give ${rest} a rest and try ${unlocked.length ? 'one of these' : 'unlocking one of these'}:</p>
+      <div class="chip-row">${picks}</div>
+    </div>`);
+  }
   const bp = P.betProgress(state);
   if (bp) cards.push(betCard(bp));
   $('#home-cards').innerHTML = cards.join('');
@@ -889,6 +913,11 @@ document.addEventListener('click', e => {
   if (msg) { toast(msg); audio.play(/built|unlocked|repaired/.test(msg) ? 'level' : 'point'); }
   document.documentElement.dataset.scene = state.temple.theme;
   if (document.body.dataset.screen === 'shop') renderShop(); else renderHome();
+});
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-open-hold]');
+  if (b) openHold(holdById(b.dataset.openHold));
 });
 
 $('#shop-tabs').onclick = e => { const t = e.target.closest('[data-tab]'); if (t) { shopTab = t.dataset.tab; renderShop(); } };

@@ -1,10 +1,10 @@
 // Progress kept in localStorage: coins, unlocked holds, the hold of the day,
 // levels, streaks, personal bests and badges.
 
-import { HOLDS } from './holds.js';
+import { HOLDS, AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
-  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
 } from './economy.js';
 
 const KEY = 'holds.v1';
@@ -80,6 +80,8 @@ export function load() {
     if (raw) {
       const data = migrate(JSON.parse(raw));
       const fresh = blank();
+      // Starter holds added since this save was made are free too.
+      data.unlocked = [...new Set([...(data.unlocked ?? []), ...STARTER_HOLDS])];
       return {
         ...fresh, ...data,
         settings: { ...DEFAULT_SETTINGS, ...data.settings },
@@ -370,6 +372,48 @@ export function unlockHold(state, id) {
   return earned;
 }
 
+// ---- Body areas: spotting when one part of you has done a lot lately ----
+
+const LOAD_HALF_LIFE = 24;  // hours for a session's work to count half as much
+const OVERWORKED = 90;      // recent work (seconds × level) in one area that counts as a lot
+const OVERWORKED_SHARE = 0.5;
+export const LEANS_ON = 0.5;  // a hold "leans on" an area if it gets at least this weight
+
+// Work per body area from recent sessions: seconds held × level multiplier, split by the
+// hold's area weights, fading by half every day. `days` counts back without fading.
+export function areaLoad(state, { now = Date.now(), days = null } = {}) {
+  const load = Object.fromEntries(Object.keys(AREAS).map(a => [a, 0]));
+  for (const h of state.history) {
+    const hold = HOLDS.find(x => x.id === h.holdId);
+    if (!hold || !h.at) continue;
+    const hours = (now - new Date(h.at)) / 3.6e6;
+    if (hours < 0 || hours > (days ? days * 24 : LOAD_HALF_LIFE * 4)) continue;
+    const work = h.held * LEVEL_MULT[(h.level ?? 1) - 1] * (days ? 1 : 0.5 ** (hours / LOAD_HALF_LIFE));
+    for (const [area, k] of Object.entries(hold.areas)) load[area] += work * k;
+  }
+  return load;
+}
+
+// The area doing most of the recent work, if it's doing a lot of it, or null.
+export function overworked(state, now = Date.now()) {
+  const load = areaLoad(state, { now });
+  const total = Object.values(load).reduce((a, b) => a + b, 0);
+  const [area, work] = Object.entries(load).sort((a, b) => b[1] - a[1])[0];
+  return work >= OVERWORKED && work / total >= OVERWORKED_SHARE ? { area, name: AREAS[area], work } : null;
+}
+
+export const leansOn = (hold, area) => (hold.areas[area] ?? 0) >= LEANS_ON;
+
+// Holds that spare an overworked area: unlocked ones first (soft ones first among
+// those), least recently done first.
+export function restingHolds(state, area, n = 3) {
+  const last = id => holdState(state, id).last ?? '';
+  const spare = HOLDS.filter(h => (h.areas[area] ?? 0) <= 0.2);
+  const order = (a, b) => (a.style === 'soft' ? 0 : 1) - (b.style === 'soft' ? 0 : 1) || last(a.id).localeCompare(last(b.id));
+  const unlocked = spare.filter(h => isUnlocked(state, h.id)).sort(order);
+  return { unlocked: unlocked.slice(0, n), locked: unlocked.length ? [] : spare.filter(h => !isUnlocked(state, h.id)).sort(order).slice(0, n) };
+}
+
 // ---- Hold of the day ----
 
 // Small seeded random number generator (mulberry32), seeded from the date.
@@ -384,13 +428,16 @@ function seeded(str) {
   };
 }
 
-// The same for the whole day: a date-seeded shuffle of all holds, taking the
-// first one you've unlocked. Saved, so unlocking a hold mid-day doesn't change it.
+// The same for the whole day: a date-seeded shuffle of all holds, taking the first
+// one you've unlocked (skipping any that lean on an area you've overworked, if there's
+// another choice). Saved, so it doesn't change later in the day.
 export function dailyHold(state, today = dayKey()) {
   if (state.daily?.day === today && isUnlocked(state, state.daily.holdId)) return HOLDS.find(h => h.id === state.daily.holdId);
   const rand = seeded(today);
   const order = HOLDS.map(h => [rand(), h]).sort((a, b) => a[0] - b[0]).map(([, h]) => h);
-  const hold = order.find(h => isUnlocked(state, h.id)) ?? HOLDS[0];
+  const over = overworked(state);
+  const open = order.filter(h => isUnlocked(state, h.id));
+  const hold = (over && open.find(h => !leansOn(h, over.area))) || open[0] || HOLDS[0];
   state.daily = { day: today, holdId: hold.id };
   save(state);
   return hold;
@@ -412,12 +459,14 @@ export function totals(state) {
 // Random unlocked hold, favouring ones not practised lately.
 export function pickHold(state, exclude) {
   const today = dayKey();
+  const over = overworked(state);
   const weights = HOLDS.map(h => {
     if (h.id === exclude || !isUnlocked(state, h.id)) return 0;
     const hs = holdState(state, h.id);
     let days = 7;
     if (hs.last) days = Math.min(7, Math.round((new Date(today) - new Date(hs.last)) / 864e5));
-    return 1 + days + (hs.mastered ? 0 : 2) + (h.camera ? 1 : 0);
+    // Much less likely to pick a hold that leans on an overworked area.
+    return (1 + days + (hs.mastered ? 0 : 2) + (h.camera ? 1 : 0)) * (over && leansOn(h, over.area) ? 0.15 : 1);
   });
   let r = Math.random() * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < HOLDS.length; i++) { r -= weights[i]; if (r <= 0) return HOLDS[i]; }

@@ -51,7 +51,7 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   const d1 = P.dailyHold(s, '2026-10-26'), d2 = P.dailyHold(s, '2026-10-26');
   check('daily is unlocked and stable', STARTER_HOLDS.includes(d1.id) && d1 === d2, d1.id);
   const days = new Set(Array.from({ length: 14 }, (_, i) => { s.daily = null; return P.dailyHold(s, `2026-11-${String(i + 1).padStart(2, '0')}`).id; }));
-  check('daily varies by date', days.size === 2, [...days].join(', '));
+  check('daily varies by date', days.size === STARTER_HOLDS.length, [...days].join(', '));
 
   // Unlocking: can't afford, then can; price rises.
   check('cannot unlock when broke', P.unlockHold(s, 'crane') === null && !P.isUnlocked(s, 'crane'));
@@ -78,6 +78,35 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   check('migrated coins', s.version === 2 && s.coins === 100 && s.lifetime === 100, `${s.coins} coins`);
   check('practised holds stay unlocked', P.isUnlocked(s, 'drop') && P.isUnlocked(s, 'horse') && P.isUnlocked(s, 'bow') && !P.isUnlocked(s, 'cat'));
   check('history and days converted', s.history[0].coins === 5 && s.days['2026-10-24'].coins === 10);
+}
+
+// Body areas: a run of leg holds flags legs, and suggestions spare them.
+{
+  store.clear();
+  const s = P.load();
+  const now = Date.now(), ago = h => new Date(now - h * 3.6e6).toISOString();
+  s.history.push(
+    { holdId: 'horse', level: 1, held: 40, at: ago(2) },
+    { holdId: 'bow', level: 1, held: 35, at: ago(1.5) },
+    { holdId: 'horse', level: 1, held: 30, at: ago(1) },
+  );
+  const over = P.overworked(s, now);
+  check('legs flagged after three leg holds', over?.area === 'legs', JSON.stringify(over));
+  const rest = P.restingHolds(s, 'legs');
+  check('suggests a soft hold that spares the legs', rest.unlocked[0]?.id === 'weituo', rest.unlocked.map(h => h.id).join());
+  s.daily = null;
+  check('hold of the day avoids leg holds', P.dailyHold(s).id === 'weituo');
+  const picks = new Set(Array.from({ length: 40 }, () => P.pickHold(s).id));
+  check('shuffle still works', picks.size >= 1);
+
+  store.clear();
+  const old = P.load();
+  old.history.push({ holdId: 'horse', level: 1, held: 300, at: ago(24 * 5) });
+  check('old sessions fade out', P.overworked(old, now) === null);
+  store.clear();
+  const mixed = P.load();
+  mixed.history.push({ holdId: 'horse', level: 1, held: 40, at: ago(1) }, { holdId: 'hollow', level: 1, held: 60, at: ago(1) }, { holdId: 'weituo', level: 1, held: 60, at: ago(1) });
+  check('balanced training not flagged', P.overworked(mixed, now) === null);
 }
 
 console.log(failures ? `${failures} failure(s)` : 'all passed');

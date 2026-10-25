@@ -1,6 +1,9 @@
 // The holds. Each has four levels (a position and a target time), a stick figure
 // per level, and the criteria the camera uses to judge form.
 //
+// `areas` says what a hold works, as weights that add up to 1 (used to spot when one
+// part of you has done a lot lately). `style` is 'hard' (external strength) or 'soft'
+// (internal: qigong-style standing work).
 // `video` is a YouTube search for demonstrations of the stance. `landscape` marks wide
 // or lying-down holds that fit the camera far better with the phone turned sideways.
 //
@@ -50,6 +53,7 @@ const lerp4 = (level, a, b) => a + (b - a) * (level - 1) / 3;
 export const HOLDS = [
   {
     id: 'horse', name: 'Horse Stance', native: 'Mǎ Bù', view: 'front', sides: false, camera: true,
+    areas: { legs: 1 }, style: 'hard',
     video: 'ma bu horse stance kung fu tutorial',
     about: 'The foundation stance. Builds leg strength, a stable root and patience.',
     levels: [
@@ -90,6 +94,7 @@ export const HOLDS = [
 
   {
     id: 'bow', name: 'Bow Stance', native: 'Gōng Bù', view: 'side', sides: true, camera: true,
+    areas: { legs: 1 }, style: 'hard',
     hint: 'Turn the phone sideways (landscape) and stand side-on to it',
     landscape: true,
     video: 'gong bu bow stance kung fu tutorial',
@@ -134,6 +139,7 @@ export const HOLDS = [
 
   {
     id: 'cat', name: 'Empty Stance', native: 'Xū Bù', view: 'side', sides: true, camera: true,
+    areas: { legs: 0.7, balance: 0.3 }, style: 'hard',
     video: 'xu bu empty stance cat stance kung fu tutorial',
     about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly.',
     levels: [
@@ -175,6 +181,7 @@ export const HOLDS = [
 
   {
     id: 'crane', name: 'Crane Stance', native: 'Dú Lì Bù', view: 'side', sides: true, camera: true,
+    areas: { balance: 0.6, legs: 0.4 }, style: 'hard',
     video: 'du li bu crane stance kung fu',
     about: 'Standing on one leg with the other knee raised: balance, focus and hip strength.',
     levels: [
@@ -210,6 +217,7 @@ export const HOLDS = [
 
   {
     id: 'drop', name: 'Drop Stance', native: 'Pū Bù', view: 'front', sides: true, camera: true,
+    areas: { legs: 0.7, mobility: 0.3 }, style: 'hard',
     hint: 'Turn the phone sideways (landscape) and face it',
     landscape: true,
     video: 'pu bu drop stance kung fu tutorial',
@@ -249,6 +257,7 @@ export const HOLDS = [
 
   {
     id: 'post', name: 'Standing Post', native: 'Zhàn Zhuāng', view: 'front', sides: false, camera: true,
+    areas: { legs: 0.4, upper: 0.6 }, style: 'soft',
     video: 'zhan zhuang standing post holding the ball',
     about: '"Holding the ball". A quiet standing meditation that slowly builds deep endurance in the legs and shoulders.',
     levels: [
@@ -287,7 +296,124 @@ export const HOLDS = [
   },
 
   {
+    id: 'weituo', name: 'Wei Tuo Presents the Pestle', native: 'Wéi Tuó Xiàn Chǔ', view: 'front', sides: false, camera: true,
+    areas: { upper: 0.8, balance: 0.2 }, style: 'soft',
+    video: 'yi jin jing wei tuo presents the pestle',
+    about: 'The first three postures of the Yi Jin Jing, the Shaolin “muscle-tendon changing” classic. Gentle on the legs; the work is in the arms, shoulders and slow breathing.',
+    levels: [
+      { name: 'Frontways', target: 60, desc: 'Stand tall, feet about a fist apart, knees soft. Palms together (or one hand cupped in the other) in front of your chest. Breathe slowly through the nose.' },
+      { name: 'Sideways', target: 45, desc: 'Weight onto the balls of your feet. Arms straight out to the sides at shoulder height, palms up.' },
+      { name: 'Upwards', target: 45, desc: 'Arms straight overhead, palms up as if holding up the sky, fingertips about a fist apart. Look up at your hands.' },
+      { name: 'Upwards on tiptoe', target: 60, desc: 'Palms up overhead and rise onto your toes, knees straight. Hold steady and keep breathing slowly.' },
+    ],
+    criteria: level => [
+      ...(level === 1 ? [
+        {
+          id: 'together', label: 'Palms together', cue: 'Bring your palms together', joints: [15, 16],
+          value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, max: 0.45, soft: 0.4,
+        },
+        {
+          id: 'chest', label: 'Hands at chest', joints: [15, 16], cue: { low: 'Raise your hands to your chest', high: 'Lower your hands to your chest' },
+          value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.sh.y) / b.torsoLen, min: -0.05, max: 0.55, soft: 0.25,
+        },
+      ] : level === 2 ? [
+        ...armsAtShoulders({ low: 'Raise your arms to shoulder height', high: 'Lower your arms to shoulder height' }),
+        {
+          id: 'wide', label: 'Arms wide', cue: 'Stretch your arms out wide', joints: [15, 16],
+          value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, min: 3, soft: 1,
+        },
+      ] : [
+        {
+          id: 'overhead', label: 'Palms overhead', cue: 'Push your palms up overhead', weight: 1.5, joints: [15, 16],
+          value: b => (b.nose.y - Math.max(b.arms.L.c.y, b.arms.R.c.y)) / b.torsoLen, min: 0.35, soft: 0.35,
+        },
+        {
+          id: 'straight', label: 'Straight arms', cue: 'Straighten your elbows', joints: [13, 14],
+          value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 145, soft: 35,
+        },
+      ]),
+      upright(8, 'Stand tall', 12),
+    ],
+    figure: level => ({
+      view: 'front', torso: 180, ...(level === 4 ? { lift: 2 } : {}),
+      legs: { L: [3, 0], R: [-3, 0] },
+      arms: by(level, [{ L: [15, -115], R: [-15, 115] }, { L: [90, 90], R: [-90, -90] }, { L: [178, 188], R: [-178, -188] }, { L: [178, 188], R: [-178, -188] }]),
+    }),
+  },
+
+  {
+    id: 'stars', name: 'Plucking the Stars', native: 'Zhāi Xīng Huàn Dǒu', view: 'front', sides: true, camera: true,
+    areas: { upper: 0.6, mobility: 0.4 }, style: 'soft',
+    video: 'yi jin jing plucking stars posture',
+    about: 'A Yi Jin Jing posture: one hand reaches up above your head, the other rests behind your back. Opens the shoulders and sides gently.',
+    levels: [
+      { name: 'Reaching up', target: 30, desc: 'Feet hip width, knees soft. Raise one hand above your head, palm facing down towards it. Bend the other arm and rest the back of that hand on your lower back. Then switch sides.' },
+      { name: 'Plucking the stars', target: 60, desc: 'Reach the top hand higher, elbow gently rounded, and look up at your palm. Turn your chest slightly towards the arm behind your back.' },
+      { name: 'Long reach', target: 90, desc: 'The same, held longer. Breathe slowly and let the shoulders soften.' },
+      { name: 'Still as the night', target: 120, desc: 'Two minutes, one per side. Completely still, gaze on the raised palm.' },
+    ],
+    criteria: level => {
+      // Only the raised arm: the hand behind your back is hidden from the camera.
+      const top = b => (b.arms.L.c.y < b.arms.R.c.y ? b.arms.L : b.arms.R);
+      return [
+        {
+          id: 'reach', label: 'Hand above head', cue: 'Reach your hand higher above your head', weight: 2, joints: () => [13, 14, 15, 16],
+          value: b => (b.nose.y - top(b).c.y) / b.torsoLen, min: level === 1 ? 0.1 : 0.25, soft: 0.3,
+        },
+        {
+          id: 'over', label: 'Hand over your head', cue: 'Bring the raised hand over your head', joints: () => [15, 16],
+          value: b => Math.abs(top(b).c.x - b.nose.x) / b.shoulderW, max: 1.1, soft: 0.6,
+        },
+        {
+          id: 'round', label: 'Rounded arm', cue: { low: 'Soften the elbow a little less', high: 'Round the raised arm a little' }, joints: () => [13, 14],
+          value: b => top(b).angle, min: 95, max: 172, soft: 25,
+        },
+        upright(15, 'Stand tall'),
+      ];
+    },
+    figure: () => ({
+      view: 'front', torso: 180,
+      legs: { L: [4, 0], R: [-4, 0] },
+      arms: { L: [160, -130], R: [-20, 70] },
+    }),
+  },
+
+  {
+    id: 'feet', name: 'Hands to Feet', native: 'Liǎng Shǒu Pān Zú', view: 'side', sides: false, camera: true,
+    areas: { mobility: 0.7, core: 0.3 }, style: 'soft',
+    video: 'ba duan jin two hands hold the feet',
+    about: 'From the Ba Duan Jin (Eight Brocades): a slow forward fold, said to strengthen the kidneys and waist. In plain terms, it stretches the back and hamstrings.',
+    levels: [
+      { name: 'Hands to knees', target: 30, desc: 'Feet hip width. Fold forward from the hips with your legs as straight as is comfortable, hands sliding down to your knees. Let your head hang.' },
+      { name: 'Hands to shins', target: 45, desc: 'Fold further, hands down to your shins. Breathe out as you sink.' },
+      { name: 'Hands to ankles', target: 60, desc: 'Hands to your ankles, legs straight, back long.' },
+      { name: 'Holding the feet', target: 60, desc: 'Hold your toes or put your palms by your feet. Only go as far as feels good.' },
+    ],
+    criteria: level => [
+      {
+        id: 'reach', label: 'Reach', cue: 'Fold a little further, reaching down your legs', weight: 2, joints: [15, 16, 25, 26],
+        value: b => (mid(b.arms.L.c, b.arms.R.c).y - kneesMid(b).y) / ((b.legs.L.lowerLen + b.legs.R.lowerLen) / 2),
+        min: by(level, [-0.25, 0.35, 0.7, 0.95]), soft: 0.3,
+      },
+      {
+        id: 'fold', label: 'Hinged forward', cue: 'Fold forward from your hips', joints: HIPS_SHOULDERS,
+        value: b => b.torsoLean, min: by(level, [55, 80, 100, 115]), soft: 20,
+      },
+      {
+        id: 'legs', label: 'Long legs', cue: 'Keep your legs as straight as is comfortable', joints: [25, 26],
+        value: b => Math.min(b.legs.L.angle, b.legs.R.angle), min: 155, soft: 25,
+      },
+    ],
+    figure: level => {
+      // Side-on, facing right, folded forward from the hips, arms hanging down.
+      const fold = by(level, [75, 100, 117, 125]);
+      return { view: 'side', torso: 180 - fold, legs: { L: [0, 0], R: [0, 0] }, arms: { L: [0, 0], R: [-2, -2] } };
+    },
+  },
+
+  {
     id: 'sideplank', name: 'Side Plank', native: 'Cè Píngbǎn Zhīchēng', view: 'front', sides: true, camera: true,
+    areas: { core: 0.8, upper: 0.2 }, style: 'hard',
     landscape: true,
     video: 'side plank progression tutorial',
     hint: 'Turn the phone sideways (landscape), low to the ground, with your front facing it',
@@ -346,6 +472,7 @@ export const HOLDS = [
 
   {
     id: 'birddog', name: 'Bird Dog', native: 'Niǎo Gǒu Shì', view: 'side', sides: true, camera: true,
+    areas: { core: 0.7, balance: 0.3 }, style: 'hard',
     landscape: true,
     video: 'bird dog exercise how to',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
@@ -403,6 +530,7 @@ export const HOLDS = [
 
   {
     id: 'hollow', name: 'Hollow Hold', native: '', view: 'side', sides: false, camera: true,
+    areas: { core: 1 }, style: 'hard',
     landscape: true,
     video: 'hollow body hold progression',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
@@ -451,6 +579,7 @@ export const HOLDS = [
 
   {
     id: 'squat', name: 'Deep Squat', native: 'Shēn Dūn', view: 'side', sides: false, camera: true,
+    areas: { mobility: 0.6, legs: 0.4 }, style: 'hard',
     video: 'deep squat hold mobility how to',
     about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier.',
     levels: [
@@ -504,6 +633,7 @@ export const HOLDS = [
 
   {
     id: 'bridge', name: 'Iron Bridge', native: '', view: 'side', sides: false, camera: true,
+    areas: { core: 0.7, legs: 0.3 }, style: 'hard',
     landscape: true,
     video: 'iron bridge between two chairs bodyweight hold',
     hint: 'Turn the phone sideways (landscape), low to the ground, and lie side-on to it',
@@ -558,6 +688,7 @@ export const HOLDS = [
 
   {
     id: 'swallow', name: 'Swallow Balance', native: 'Yàn Shì Píng Héng', view: 'side', sides: true, camera: true,
+    areas: { balance: 0.4, legs: 0.4, core: 0.2 }, style: 'hard',
     hint: 'Turn the phone sideways (landscape) and stand side-on to it',
     landscape: true,
     video: 'yan shi ping heng swallow balance wushu',
@@ -603,6 +734,7 @@ export const HOLDS = [
 
   {
     id: 'kick', name: 'Kick Hold', native: 'Dēng Tuǐ', view: 'side', sides: true, camera: true,
+    areas: { legs: 0.5, balance: 0.3, mobility: 0.2 }, style: 'hard',
     hint: 'Turn the phone sideways (landscape) and stand side-on to it',
     landscape: true,
     video: 'deng tui heel kick kung fu',
@@ -640,6 +772,7 @@ export const HOLDS = [
 
   {
     id: 'plank', name: 'Fist Plank', native: '', view: 'side', sides: false, camera: true,
+    areas: { core: 0.6, upper: 0.4 }, style: 'hard',
     landscape: true,
     video: 'knuckle plank fist plank',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
@@ -701,6 +834,7 @@ export const HOLDS = [
 
   {
     id: 'rest', name: 'Rest Stance', native: 'Xiē Bù', view: 'side', sides: true, camera: true,
+    areas: { legs: 0.7, mobility: 0.3 }, style: 'hard',
     video: 'xie bu rest stance kung fu tutorial',
     about: 'A low, cross-legged “resting” stance, like sitting down with your legs crossed while standing. Used for turning and coiling between moves. The camera checks that you’re low with both knees bent; it can’t see the legs cross, so keep that part honest.',
     levels: [
@@ -740,6 +874,16 @@ export const HOLDS = [
 ];
 
 export const holdById = id => HOLDS.find(h => h.id === id);
+
+export const AREAS = { legs: 'Legs', core: 'Core', upper: 'Arms & shoulders', balance: 'Balance', mobility: 'Mobility' };
+export const STYLES = { hard: 'Hard', soft: 'Soft' };
+// For sentences: "a lot of <work> lately. Give <rest> a rest".
+export const AREA_WORDS = {
+  legs: ['leg work', 'your legs'], core: ['core work', 'your core'], upper: ['arm and shoulder work', 'your arms and shoulders'],
+  balance: ['balance work', 'those muscles'], mobility: ['stretching', 'those muscles'],
+};
+// The area a hold works most.
+export const mainArea = hold => Object.entries(hold.areas).sort((x, y) => y[1] - x[1])[0][0];
 
 // Landmarks that must be visible for the camera to judge a hold.
 export const REQUIRED = [11, 12, 23, 24, 25, 26, 27, 28];
