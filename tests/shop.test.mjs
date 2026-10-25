@@ -87,8 +87,8 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('unbroken week lost on a missed day', u.bet === null);
 }
 
-// Bonus time bet: steps are relative to each hold's target, add up across sessions,
-// and pay as they're reached.
+// Bonus time bet: steps are relative to the hold's target, must be reached within a
+// single hold (they don't add up across holds), and pay as they're reached.
 {
   const s = fresh(100);
   const today = P.dayKey();
@@ -97,9 +97,11 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   const a = rec(0.3);
   check('no step at 0.3×', a.betSteps.length === 0 && s.coins === 90);
   const b = rec(0.3);
-  check('half again reached across two holds', b.betSteps.length === 1 && b.betSteps[0].name === 'Half again' && s.coins === 110, `coins ${s.coins}`);
-  const c = rec(0.5);
-  check('double reached', c.betSteps.length === 1 && c.betSteps[0].name === 'Double' && s.coins === 125, `coins ${s.coins}`);
+  check('two short holds don\'t add up', b.betSteps.length === 0 && s.coins === 90, `coins ${s.coins}`);
+  const c = rec(0.6);
+  check('half again in one hold', c.betSteps.length === 1 && c.betSteps[0].name === 'Half again' && s.coins === 110, `coins ${s.coins}`);
+  const d = rec(1.2);
+  check('double in one hold', d.betSteps.length === 1 && d.betSteps[0].name === 'Double' && s.coins === 125, `coins ${s.coins}`);
   const r = P.settleBet(s, P.addDays(today, 1), { notify: false });
   check('time up after two steps is a win, paid as it went', r.result === 'won' && r.payout === 35 && s.coins === 125 && s.betLog[0].payout === 35, JSON.stringify({ result: r.result, payout: r.payout, coins: s.coins }));
 }

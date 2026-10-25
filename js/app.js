@@ -763,6 +763,7 @@ function openSettings() {
   const f = $('#settings form');
   for (const k of ['voice', 'sounds', 'camera', 'autoframe', 'showValues']) f.elements[k].checked = state.settings[k];
   f.elements.strictness.value = state.settings.strictness;
+  f.elements.appearance.value = state.settings.appearance;
   f.elements.model.value = state.settings.model;
   $('#settings').showModal();
 }
@@ -772,8 +773,17 @@ $('#settings form').addEventListener('change', e => {
   if (!el.name) return;
   state.settings[el.name] = el.type === 'checkbox' ? el.checked : el.value;
   audio.configure(state.settings);
+  applyAppearance();
   P.save(state);
 });
+
+// Light or dark from Settings, or follow the phone ("system").
+function applyAppearance() {
+  const a = state.settings.appearance;
+  if (a === 'light' || a === 'dark') document.documentElement.dataset.theme = a;
+  else delete document.documentElement.dataset.theme;
+}
+applyAppearance();
 
 $('#export').onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });

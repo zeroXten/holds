@@ -49,7 +49,7 @@ export const BETS = [
   // Bonus time pays in steps as you reach them, rather than all at the end.
   {
     id: 'bonus', name: 'Bonus time', stake: 10, payout: 100, days: 1,
-    desc: 'Hold past your targets today. Bonus time is measured against each hold’s own target and adds up across sessions. Pays at each step: half again, double, twice over and four times over.',
+    desc: 'Hold past your target today, all in one hold. Bonus time is measured against that hold’s own target. Pays at each step: half again, double, twice over and four times over.',
     // `x`: bonus time as a multiple of the target (0.5 = half the target's length again).
     steps: [{ x: 0.5, name: 'Half again', coins: 20 }, { x: 1, name: 'Double', coins: 15 }, { x: 2, name: 'Twice over', coins: 25 }, { x: 4, name: 'Four times over', coins: 40 }],
   },

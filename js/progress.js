@@ -44,7 +44,7 @@ export const BADGES = [
   { id: 'daily', name: 'Daily Devotion', desc: 'Reach the target on the hold of the day' },
 ];
 
-export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full' };
+export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full', appearance: 'system' };
 
 const blank = () => ({
   version: 2, coins: 0, lifetime: 0, unlocked: [...STARTER_HOLDS], purchased: [], daily: null,
@@ -280,11 +280,11 @@ export function betProgress(state) {
   return { def, frac: p[0] / p[1], text: p[2], end: b.end };
 }
 
-// Bonus so far as a multiple of the target, e.g. "0.6× your targets in bonus · next: Double (1×, +15)".
+// Today's best single hold, as a multiple of its target, e.g. "Best hold: 0.6× its target in bonus · next: Double (1×, +15)".
 function bonusProgress(def, b) {
   const next = def.steps[b.paid], x = b.bonus ?? 0, top = def.steps.at(-1).x;
   return [Math.min(x, top), top,
-    next ? `${x.toFixed(1)}× your targets in bonus · next: ${next.name} (${next.x}×, +${next.coins})` : `${x.toFixed(1)}× in bonus · every step reached`];
+    next ? `Best hold: ${x.toFixed(1)}× its target in bonus · next: ${next.name} (${next.x}×, +${next.coins})` : `Best hold: ${x.toFixed(1)}× in bonus · every step reached`];
 }
 
 function betWon(state) {
@@ -558,7 +558,8 @@ export function recordSession(state, s) {
     if (!b.days.includes(today)) b.days.push(today);
     if ((b.id === 'form90' && reached && s.camera && s.avgForm >= 90) || (b.id === 'pb' && pb)) b.done = true;
     if (b.id === 'bonus') {
-      b.bonus = (b.bonus ?? 0) + (s.bonus ?? 0);
+      // Steps are reached within a single hold, so keep today's best, not a running total.
+      b.bonus = Math.max(b.bonus ?? 0, s.bonus ?? 0);
       const steps = betDef('bonus').steps;
       while (b.paid < steps.length && b.bonus >= steps[b.paid].x) {
         const step = steps[b.paid];

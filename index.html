@@ -14,6 +14,13 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Light/dark from Settings, applied before the page draws (app.js keeps it in sync).
+    try {
+      const a = JSON.parse(localStorage.getItem('holds.v1') || '{}').settings?.appearance;
+      if (a === 'light' || a === 'dark') document.documentElement.dataset.theme = a;
+    } catch {}
+  </script>
 </head>
 <body>
 
@@ -193,6 +200,9 @@
       <label class="toggle"><input type="checkbox" name="showValues"><span>Show check measurements (for tuning)</span></label>
       <label class="field"><span>Form strictness</span>
         <select name="strictness"><option value="relaxed">Relaxed</option><option value="normal">Normal</option><option value="strict">Strict</option></select>
+      </label>
+      <label class="field"><span>Appearance</span>
+        <select name="appearance"><option value="system">Match my phone</option><option value="light">Light</option><option value="dark">Dark</option></select>
       </label>
       <label class="field"><span>Pose model</span>
         <select name="model"><option value="full">Accurate (larger download)</option><option value="lite">Fast (older phones)</option></select>
