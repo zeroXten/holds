@@ -71,6 +71,8 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
     P.recordSession(s, { holdId, level: 1, held: 31, target: 30, coins: 0, avgForm: 0, camera: false, reached: true });
   }
   check('bet won after 3 holds', s.bet === null && s.coins === 90 + 25, `coins ${s.coins}`);
+  check('no second bet the same day', !P.placeBet(s, 'form90', today) && P.betBlocker(s, 'form90', today).startsWith('One bet a day'));
+  check('a new bet the next day', P.placeBet(s, 'form90', P.addDays(today, 1)));
   check('bet logged', s.betLog[0]?.result === 'won' && s.betLog[0].payout === 25 && s.lifetime >= 25);
 
   const t = fresh(100);

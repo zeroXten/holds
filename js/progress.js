@@ -240,18 +240,21 @@ export function cancelRest(state, day, today = dayKey()) {
 
 export const betDef = id => BETS.find(b => b.id === id);
 
-export function betBlocker(state, id) {
+// One bet a day, won or lost, so an easy bet can't be farmed by placing it again and again.
+export function betBlocker(state, id, today = dayKey()) {
   const def = betDef(id);
   if (state.bet) return 'Finish your current bet first.';
+  if (state.lastBetDay === today) return 'One bet a day: the next one opens tomorrow.';
   if (id === 'holds3' && HOLDS.filter(h => isUnlocked(state, h.id)).length < 3) return 'Needs 3 unlocked holds.';
   if (state.coins < def.stake) return `Needs ${def.stake} coins.`;
   return null;
 }
 
 export function placeBet(state, id, today = dayKey()) {
-  if (betBlocker(state, id)) return false;
+  if (betBlocker(state, id, today)) return false;
   const def = betDef(id);
   state.coins -= def.stake;
+  state.lastBetDay = today;
   state.bet = { id, start: today, end: addDays(today, def.days - 1), holds: [], time: 0, days: [], done: false };
   save(state);
   return true;

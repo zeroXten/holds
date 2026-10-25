@@ -985,10 +985,12 @@ function shopBets() {
   const bp = P.betProgress(state);
   const recent = state.betLog.length ? `<h3>Recent results</h3><ul class="history bets-log">${betLogHTML(5)}</ul>` : '';
   if (bp) return `<p class="shop-intro">Your coins are on the line. Finish this bet before placing another.</p>${betCard(bp)}${recent}`;
-  return `<p class="shop-intro">Bet on yourself: stake coins, and win more back if you do it in time. Only training after you place the bet counts.</p>
+  const todayDone = state.lastBetDay === P.dayKey();
+  return `<p class="shop-intro">Bet on yourself: stake coins, and win more back if you do it in time. One bet a day; only training after you place it counts.</p>
+  ${todayDone ? '<div class="home-card"><p><b>You’ve had today’s bet.</b> The next one opens tomorrow.</p></div>' : ''}
   <ul class="shop-list">${BETS.map(b => {
     const block = P.betBlocker(state, b.id);
-    return `<li><div><b>${b.name}</b><small>${b.desc} Stake ${b.stake}, win ${b.payout}.</small>${block && !block.startsWith('Needs ' + b.stake) ? `<small class="blocked">${block}</small>` : ''}</div>
+    return `<li><div><b>${b.name}</b><small>${b.desc} Stake ${b.stake}, win ${b.payout}.</small>${block && !todayDone && !block.startsWith('Needs ' + b.stake) ? `<small class="blocked">${block}</small>` : ''}</div>
       <button class="btn buy" data-act="bet" data-id="${b.id}" ${block ? 'disabled' : ''}>Bet ${b.stake}</button></li>`;
   }).join('')}</ul>${recent}`;
 }
