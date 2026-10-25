@@ -611,3 +611,8 @@ button.chip { cursor: pointer; }
   .checks { justify-content: flex-start; max-width: 100%; margin-top: 0; }
   .chk { font-size: 12px; padding: 3px 8px; }
 }
+
+/* ---------- Version ---------- */
+.version { font-size: .82rem; color: var(--muted); text-align: center; margin-top: 4px; }
+.version .fresh { color: var(--good); }
+.version .stale { color: var(--warn); font-weight: 700; }

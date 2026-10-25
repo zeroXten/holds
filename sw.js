@@ -1,10 +1,11 @@
 // Offline support. App files: network first, so updates arrive straight away.
 // MediaPipe library, WASM and model: cache first, since they're versioned and large.
-const APP = 'holds-app-v16';
+const VERSION = '1.0.0';  // keep in step with js/version.js
+const APP = `holds-app-${VERSION}`;
 const LIBS = 'holds-libs-v1';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png',
-  'js/app.js', 'js/audio.js', 'js/economy.js', 'js/figure.js', 'js/pixel.js', 'js/temple.js', 'js/framing.js', 'js/flow.js', 'js/holds.js', 'js/pose.js', 'js/progress.js', 'js/scoring.js', 'js/session.js',
+  'js/app.js', 'js/version.js', 'js/audio.js', 'js/economy.js', 'js/figure.js', 'js/pixel.js', 'js/temple.js', 'js/framing.js', 'js/flow.js', 'js/holds.js', 'js/pose.js', 'js/progress.js', 'js/scoring.js', 'js/session.js',
 ];
 
 self.addEventListener('install', e => {

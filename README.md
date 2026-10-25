@@ -26,6 +26,10 @@ Then open http://localhost:8765. Camera access needs `localhost` or HTTPS.
 - `?demo` replaces the camera with a scripted stick figure, so you can try the whole flow on a laptop. `?demo=fast` runs it at 5× speed.
 - `npm test` checks that every hold's stick figure passes its own form criteria, that standing upright fails them, and that each level is harder than the one before. It then runs a scripted demo session for every hold and level.
 
+## Versions
+
+The version (semver) lives in `js/version.js`, and is shown at the bottom of Settings, which also checks online for a newer one. Bump it for every release, in `js/version.js`, `sw.js` and `package.json` together; `npm test` checks they match.
+
 ## Deploy to GitHub Pages
 
 Push this folder to a GitHub repository, then go to **Settings → Pages → Deploy from a branch → `main` / root**. The site is served at `https://<user>.github.io/<repo>/`.

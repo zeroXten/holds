@@ -11,6 +11,7 @@ import { createSession } from './flow.js';
 import { CameraSource, DemoSource, loadLandmarker } from './pose.js';
 import { AutoFrame } from './framing.js';
 import * as audio from './audio.js';
+import { VERSION } from './version.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -725,8 +726,30 @@ $('#install-btn').onclick = async () => {
   renderInstall();
 };
 
+// Compares this version with the newest one online, so you know you're testing the latest.
+async function checkVersion() {
+  const el = $('#version-check');
+  el.className = '';
+  el.textContent = '· checking for updates…';
+  try {
+    const text = await (await fetch(`js/version.js?check=${Date.now()}`, { cache: 'no-store' })).text();
+    const latest = text.match(/VERSION = '([^']+)'/)?.[1];
+    if (!latest) throw new Error();
+    const newer = latest.split('.').map(Number).some((n, i, a) => {
+      const mine = VERSION.split('.').map(Number);
+      return a.slice(0, i).every((m, j) => m === mine[j]) && n > mine[i];
+    });
+    el.className = newer ? 'stale' : 'fresh';
+    el.textContent = newer ? `· ${latest} is available: close and reopen the app to update` : '· latest version';
+  } catch {
+    el.textContent = '· couldn’t check for updates (offline?)';
+  }
+}
+
 function openSettings() {
   renderInstall();
+  $('#version').textContent = `Version ${VERSION}`;
+  checkVersion();
   const f = $('#settings form');
   for (const k of ['voice', 'sounds', 'camera', 'autoframe']) f.elements[k].checked = state.settings[k];
   f.elements.strictness.value = state.settings.strictness;
