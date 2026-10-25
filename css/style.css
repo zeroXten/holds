@@ -512,3 +512,12 @@ button.chip { cursor: pointer; }
 :root[data-scene="autumn"] { --accent: #c4561c; --gold: #e8a040; }
 :root[data-scene="night"] { --accent: #5b74e8; --gold: #f0c860; }
 :root[data-scene="snow"] { --accent: #3a7ab8; --gold: #d8a848; }
+
+/* ---------- Install ---------- */
+.install-box {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 1px solid var(--line);
+}
+.install-box > div { display: grid; gap: 2px; flex: 1; }
+.install-box small { color: var(--muted); font-size: .85rem; }
+.install-box .btn { min-height: 42px; padding: 8px 18px; }

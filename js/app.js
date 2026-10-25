@@ -593,7 +593,36 @@ function renderProgress() {
 
 // ---------- Settings ----------
 
+// ---------- Installing as an app ----------
+
+// Chrome, Edge and Android offer an install prompt we can trigger; Safari doesn't,
+// so iPhone gets the Add to Home Screen steps instead.
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; renderInstall(); });
+window.addEventListener('appinstalled', () => { installPrompt = null; renderInstall(); toast('Installed! Open it from your home screen.'); });
+
+const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function renderInstall() {
+  const msg = $('#install-msg'), btn = $('#install-btn');
+  btn.hidden = true;
+  if (isInstalled()) msg.textContent = 'Installed. You’re using the app.';
+  else if (installPrompt) { msg.textContent = 'Opens full screen from your home screen, works offline, and keeps your progress safe.'; btn.hidden = false; }
+  else if (isIOS()) msg.innerHTML = 'In Safari, tap the <b>Share</b> button (the square with an arrow), then <b>Add to Home Screen</b>. This also stops Safari clearing your progress.';
+  else msg.textContent = 'Use your browser’s menu and choose “Install app” or “Add to Home screen”.';
+}
+
+$('#install-btn').onclick = async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => {});
+  installPrompt = null;
+  renderInstall();
+};
+
 function openSettings() {
+  renderInstall();
   const f = $('#settings form');
   for (const k of ['voice', 'sounds', 'camera', 'autoframe']) f.elements[k].checked = state.settings[k];
   f.elements.strictness.value = state.settings.strictness;
