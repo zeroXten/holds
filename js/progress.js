@@ -80,6 +80,8 @@ export function load() {
     if (raw) {
       const data = migrate(JSON.parse(raw));
       const fresh = blank();
+      // A running "new personal best" bet (now retired) gets its stake back.
+      if (data.bet?.id === 'pb') { data.coins = (data.coins ?? 0) + 10; data.bet = null; data.notices = [...(data.notices ?? []), 'The personal best bet has been retired: your 10-coin stake is back.']; }
       // Starter holds added since this save was made are free too.
       data.unlocked = [...new Set([...(data.unlocked ?? []), ...STARTER_HOLDS])];
       return {
@@ -243,6 +245,7 @@ export const betDef = id => BETS.find(b => b.id === id);
 // One bet a day, won or lost, so an easy bet can't be farmed by placing it again and again.
 export function betBlocker(state, id, today = dayKey()) {
   const def = betDef(id);
+  if (def.retired) return 'This bet has been retired.';
   if (state.bet) return 'Finish your current bet first.';
   if (state.lastBetDay === today) return 'One bet a day: the next one opens tomorrow.';
   if (id === 'holds3' && HOLDS.filter(h => isUnlocked(state, h.id)).length < 3) return 'Needs 3 unlocked holds.';
@@ -255,7 +258,7 @@ export function placeBet(state, id, today = dayKey()) {
   const def = betDef(id);
   state.coins -= def.stake;
   state.lastBetDay = today;
-  state.bet = { id, start: today, end: addDays(today, def.days - 1), holds: [], time: 0, days: [], done: false };
+  state.bet = { id, start: today, end: addDays(today, def.days - 1), holds: [], time: 0, days: [], done: false, bonus: 0, paid: 0, paidCoins: 0 };
   save(state);
   return true;
 }
@@ -266,19 +269,28 @@ export function betProgress(state) {
   if (!b) return null;
   const def = betDef(b.id);
   const p = {
-    holds3: [b.holds.length, 3, `${b.holds.length} of 3 holds`],
-    time10: [Math.min(b.time, 600), 600, `${Math.floor(b.time / 60)} of 10 minutes`],
-    form90: [b.done ? 1 : 0, 1, b.done ? 'Done' : 'Not yet'],
-    pb: [b.done ? 1 : 0, 1, b.done ? 'Done' : 'Not yet'],
-    week5: [b.days.length, 5, `${b.days.length} of 5 days`],
-    streak7: [b.days.length, 7, `${b.days.length} of 7 days`],
-  }[b.id];
+    holds3: () => [b.holds.length, 3, `${b.holds.length} of 3 holds`],
+    time10: () => [Math.min(b.time, 600), 600, `${Math.floor(b.time / 60)} of 10 minutes`],
+    form90: () => [b.done ? 1 : 0, 1, b.done ? 'Done' : 'Not yet'],
+    pb: () => [b.done ? 1 : 0, 1, b.done ? 'Done' : 'Not yet'],
+    bonus: () => bonusProgress(def, b),
+    week5: () => [b.days.length, 5, `${b.days.length} of 5 days`],
+    streak7: () => [b.days.length, 7, `${b.days.length} of 7 days`],
+  }[b.id]();
   return { def, frac: p[0] / p[1], text: p[2], end: b.end };
+}
+
+// Bonus so far as a multiple of the target, e.g. "0.6× your targets in bonus · next: Double (1×, +15)".
+function bonusProgress(def, b) {
+  const next = def.steps[b.paid], x = b.bonus ?? 0, top = def.steps.at(-1).x;
+  return [Math.min(x, top), top,
+    next ? `${x.toFixed(1)}× your targets in bonus · next: ${next.name} (${next.x}×, +${next.coins})` : `${x.toFixed(1)}× in bonus · every step reached`];
 }
 
 function betWon(state) {
   const b = state.bet;
   switch (b.id) {
+    case 'bonus': return b.paid >= betDef('bonus').steps.length;
     case 'holds3': return b.holds.length >= 3;
     case 'time10': return b.time >= 600;
     case 'form90': case 'pb': return b.done;
@@ -308,13 +320,18 @@ export function settleBet(state, today = dayKey(), { notify = true } = {}) {
   }
   if (!result) return null;
   const progress = betProgress(state).text;
-  if (result === 'won') { state.coins += def.payout; state.lifetime += def.payout; }
-  if (notify) state.notices.push(result === 'won' ? `Bet won: ${def.name}! +${def.payout} coins.` : `Bet lost: ${def.name}. Better luck next time.`);
-  state.betLog.unshift({ id: def.id, result, stake: def.stake, payout: def.payout, progress, at: new Date().toISOString() });
+  let payout = def.payout;
+  if (def.steps) {
+    // Stepped bets have paid out as each step was reached; time up after at least one is a win.
+    payout = b.paidCoins ?? 0;
+    if (result === 'lost' && b.paid > 0) result = 'won';
+  } else if (result === 'won') { state.coins += def.payout; state.lifetime += def.payout; }
+  if (notify) state.notices.push(result === 'won' ? `Bet won: ${def.name}! +${payout} coins.` : `Bet lost: ${def.name}. Better luck next time.`);
+  state.betLog.unshift({ id: def.id, result, stake: def.stake, payout, progress, at: new Date().toISOString() });
   state.betLog.splice(30);
   state.bet = null;
   save(state);
-  return { result, def, progress };
+  return { result, def, progress, payout, steps: def.steps ? b.paid : null };
 }
 
 // ---- The temple ----
@@ -533,12 +550,25 @@ export function recordSession(state, s) {
   if (state.history.length > 1000) state.history.splice(0, state.history.length - 1000);
 
   // Bet progress, then settle it (the stake was paid when the bet was placed).
+  const betSteps = [];  // bonus time steps reached in this session
   if (state.bet) {
     const b = state.bet;
     if (reached && !b.holds.includes(s.holdId)) b.holds.push(s.holdId);
     b.time += s.held;
     if (!b.days.includes(today)) b.days.push(today);
     if ((b.id === 'form90' && reached && s.camera && s.avgForm >= 90) || (b.id === 'pb' && pb)) b.done = true;
+    if (b.id === 'bonus') {
+      b.bonus = (b.bonus ?? 0) + (s.bonus ?? 0);
+      const steps = betDef('bonus').steps;
+      while (b.paid < steps.length && b.bonus >= steps[b.paid].x) {
+        const step = steps[b.paid];
+        state.coins += step.coins;
+        state.lifetime += step.coins;
+        b.paidCoins = (b.paidCoins ?? 0) + step.coins;
+        b.paid++;
+        betSteps.push({ ...step, n: b.paid, of: steps.length });
+      }
+    }
   }
   const bet = settleBet(state, today, { notify: false });  // the summary screen shows it
   const milestones = claimMilestones(state, today);
@@ -569,7 +599,7 @@ export function recordSession(state, s) {
   const locked = HOLDS.filter(h => !isUnlocked(state, h.id));
   return {
     coins, baseCoins: s.coins, streakMult, streak: st, reached, pb, prevBest,
-    qualified, qualDays: hs.qualDays.length, levelUp, mastered, newLevel: hs.level, test, bet, milestones,
+    qualified, qualDays: hs.qualDays.length, levelUp, mastered, newLevel: hs.level, test, bet, betSteps, milestones,
     badges: earn, rankUp: rankFor(state.lifetime).index > before.rank.index, rank: rankFor(state.lifetime),
     wallet: state.coins, nextUnlock: locked.length ? unlockPrice(state) : null,
   };

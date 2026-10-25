@@ -236,6 +236,8 @@ export class Session {
       holdId: this.hold.id, level: this.level, held: this.held, target: this.target,
       coins: this.coins, daily: this.daily, avgForm: this.avgForm(), camera: this.camera, reason,
       reached: this.reached, ...(this.sides === 2 ? { sides: this.sideHeld.slice() } : {}),
+      // Time held past the target (per side) as a fraction of the target, for the bonus time bet.
+      bonus: this.sideHeld.reduce((t, h) => t + Math.max(0, h - this.sideTarget), 0) / this.target,
     };
     return this.result;
   }

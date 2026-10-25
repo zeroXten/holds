@@ -87,6 +87,34 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('unbroken week lost on a missed day', u.bet === null);
 }
 
+// Bonus time bet: steps are relative to each hold's target, add up across sessions,
+// and pay as they're reached.
+{
+  const s = fresh(100);
+  const today = P.dayKey();
+  check('place bonus bet', P.placeBet(s, 'bonus', today) && s.coins === 90);
+  const rec = bonus => P.recordSession(s, { holdId: 'horse', level: 1, held: 30 + bonus * 30, target: 30, coins: 0, avgForm: 0, camera: false, reached: true, bonus });
+  const a = rec(0.3);
+  check('no step at 0.3×', a.betSteps.length === 0 && s.coins === 90);
+  const b = rec(0.3);
+  check('half again reached across two holds', b.betSteps.length === 1 && b.betSteps[0].name === 'Half again' && s.coins === 110, `coins ${s.coins}`);
+  const c = rec(0.5);
+  check('double reached', c.betSteps.length === 1 && c.betSteps[0].name === 'Double' && s.coins === 125, `coins ${s.coins}`);
+  const r = P.settleBet(s, P.addDays(today, 1), { notify: false });
+  check('time up after two steps is a win, paid as it went', r.result === 'won' && r.payout === 35 && s.coins === 125 && s.betLog[0].payout === 35, JSON.stringify({ result: r.result, payout: r.payout, coins: s.coins }));
+}
+
+// The personal best bet is retired: can't be placed, and a running one is refunded.
+{
+  const s = fresh(50);
+  check('personal best bet retired', !P.placeBet(s, 'pb') && P.betBlocker(s, 'pb').includes('retired'));
+  store.clear();
+  store.set('holds.v1', JSON.stringify({ version: 2, coins: 40, lifetime: 40, unlocked: [], purchased: [], holds: {}, history: [], days: {}, badges: {}, settings: {},
+    bet: { id: 'pb', start: '2026-10-25', end: '2026-10-25', holds: [], time: 0, days: [], done: false } }));
+  const t = P.load();
+  check('running personal best bet refunded', t.bet === null && t.coins === 50 && t.notices.some(n => n.includes('retired')));
+}
+
 // Level test-out: pass to jump a level for free; fail and pay.
 {
   const s = fresh(100);

@@ -46,7 +46,15 @@ export const BETS = [
   { id: 'holds3', name: 'Three holds today', desc: 'Reach the target on 3 different holds today.', stake: 10, payout: 25, days: 1 },
   { id: 'time10', name: 'Ten minutes today', desc: 'Hold for 10 minutes in total today.', stake: 15, payout: 40, days: 1 },
   { id: 'form90', name: 'Perfect form', desc: 'Reach a target with 90+ average form today (camera on).', stake: 10, payout: 25, days: 1 },
-  { id: 'pb', name: 'New personal best', desc: 'Beat one of your personal bests today.', stake: 10, payout: 25, days: 1 },
+  // Bonus time pays in steps as you reach them, rather than all at the end.
+  {
+    id: 'bonus', name: 'Bonus time', stake: 10, payout: 100, days: 1,
+    desc: 'Hold past your targets today. Bonus time is measured against each hold’s own target and adds up across sessions. Pays at each step: half again, double, twice over and four times over.',
+    // `x`: bonus time as a multiple of the target (0.5 = half the target's length again).
+    steps: [{ x: 0.5, name: 'Half again', coins: 20 }, { x: 1, name: 'Double', coins: 15 }, { x: 2, name: 'Twice over', coins: 25 }, { x: 4, name: 'Four times over', coins: 40 }],
+  },
+  // Retired (too easy to win while your bests are new); kept so old bets and history still read.
+  { id: 'pb', name: 'New personal best', desc: 'Beat one of your personal bests today.', stake: 10, payout: 25, days: 1, retired: true },
   { id: 'week5', name: 'Five-day week', desc: 'Train on 5 of the next 7 days.', stake: 40, payout: 100, days: 7 },
   { id: 'streak7', name: 'Unbroken week', desc: 'Train every day for 7 days. Planned rest days count; freezes don’t.', stake: 50, payout: 125, days: 7 },
 ];

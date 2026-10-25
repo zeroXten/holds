@@ -583,7 +583,9 @@ function renderSummary(hold, level, r, o) {
   const wallet = o.nextUnlock
     ? (o.wallet >= o.nextUnlock ? `You have ${o.wallet} coins: enough to unlock a new hold!` : `You have ${o.wallet} coins. ${o.nextUnlock - o.wallet} more to unlock a new hold.`)
     : `You have ${o.wallet} coins.`;
-  const betLine = o.bet?.result === 'won' ? `Plus ${o.bet.def.payout} coins from your bet.<br>` : '';
+  const stepCoins = o.betSteps.reduce((t, st) => t + st.coins, 0);
+  const betLine = stepCoins ? `Plus ${stepCoins} coins from your bonus time bet.<br>`
+    : o.bet?.result === 'won' && !o.bet.def.steps ? `Plus ${o.bet.payout ?? o.bet.def.payout} coins from your bet.<br>` : '';
   $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${betLine}${wallet}`;
   // Level test, bet and streak milestone results.
   const extra = [];
@@ -597,7 +599,11 @@ function renderSummary(hold, level, r, o) {
   $('#sum-extra').innerHTML = extra.join('');
   if (o.test?.passed) setTimeout(() => audio.play('level'), 300);
   // The big moments get the full-screen treatment, once the summary has appeared.
-  setTimeout(() => { if (o.bet) celebrateBet(o.bet); o.milestones.forEach(celebrateMilestone); }, 900);
+  setTimeout(() => {
+    o.betSteps.forEach(celebrateBetStep);
+    if (o.bet) celebrateBet(o.bet);
+    o.milestones.forEach(celebrateMilestone);
+  }, 900);
   $('#sum-stats').innerHTML = `
     ${r.unit === 'cycles'
       ? `<div><b>${r.count}</b><small>of ${r.goal} slow cycles</small></div>`
@@ -842,11 +848,20 @@ function nextCelebration() { celebrations.shift(); showCelebration(); }
 $('#cel-ok').onclick = nextCelebration;
 
 function celebrateBet(r) {
-  if (r.result === 'won') {
+  const payout = r.payout ?? r.def.payout;
+  if (r.result === 'won' && r.def.steps) {
+    // Stepped bets have already paid (and celebrated) each step; this is the wrap-up.
+    const all = r.steps >= r.def.steps.length;
     celebrate({
-      win: true, kicker: 'Bet won', title: r.def.name, coins: r.def.payout,
-      msg: `You staked ${r.def.stake} and won ${r.def.payout}. Paid into your wallet.`,
-      say: `Bet won! Plus ${r.def.payout} coins`,
+      win: true, kicker: all ? 'Bet complete' : 'Bet finished', title: r.def.name, coins: payout,
+      msg: `${all ? 'Every step reached' : `${r.steps} of ${r.def.steps.length} steps reached`}: ${payout} coins in all for a ${r.def.stake}-coin stake, paid as you went.`,
+      say: all ? `Bet complete! ${payout} coins in all` : undefined,
+    });
+  } else if (r.result === 'won') {
+    celebrate({
+      win: true, kicker: 'Bet won', title: r.def.name, coins: payout,
+      msg: `You staked ${r.def.stake} and won ${payout}. Paid into your wallet.`,
+      say: `Bet won! Plus ${payout} coins`,
     });
   } else {
     celebrate({
@@ -855,6 +870,15 @@ function celebrateBet(r) {
       ok: 'Not now', alt: { label: 'New bet', go: () => openShop('bets') },
     });
   }
+}
+
+// A step of the bonus time bet, paid the moment it's reached.
+function celebrateBetStep(st) {
+  celebrate({
+    win: true, kicker: `Bonus time · step ${st.n} of ${st.of}`, title: `${st.name}!`, coins: st.coins,
+    msg: st.n < st.of ? 'Paid into your wallet. Keep holding past your targets for the next step.' : 'The last step: paid into your wallet.',
+    say: `${st.name}! Plus ${st.coins} coins`,
+  });
 }
 
 function celebrateMilestone(m) {
@@ -988,7 +1012,7 @@ function shopBets() {
   const todayDone = state.lastBetDay === P.dayKey();
   return `<p class="shop-intro">Bet on yourself: stake coins, and win more back if you do it in time. One bet a day; only training after you place it counts.</p>
   ${todayDone ? '<div class="home-card"><p><b>You’ve had today’s bet.</b> The next one opens tomorrow.</p></div>' : ''}
-  <ul class="shop-list">${BETS.map(b => {
+  <ul class="shop-list">${BETS.filter(b => !b.retired).map(b => {
     const block = P.betBlocker(state, b.id);
     return `<li><div><b>${b.name}</b><small>${b.desc} Stake ${b.stake}, win ${b.payout}.</small>${block && !todayDone && !block.startsWith('Needs ' + b.stake) ? `<small class="blocked">${block}</small>` : ''}</div>
       <button class="btn buy" data-act="bet" data-id="${b.id}" ${block ? 'disabled' : ''}>Bet ${b.stake}</button></li>`;

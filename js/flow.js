@@ -194,6 +194,7 @@ export class FlowSession {
       holdId: this.hold.id, level: this.level, held: this.held, target: this.goal * this.minCycle,
       coins: this.coins, daily: this.daily, avgForm: this.avgForm(), camera: this.camera, reason, reached: this.reached,
       unit: 'cycles', count: this.count, goal: this.goal,
+      bonus: Math.max(0, this.count - this.goal) / this.goal,  // extra cycles as a fraction of the goal
     };
     return this.result;
   }

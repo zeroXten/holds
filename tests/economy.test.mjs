@@ -40,6 +40,9 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   const daily = honour('horse', 1, 30.05, { daily: true });
   check('hold of the day', near(daily.coins, r.coins * DAILY_MULT, 0.3), `${daily.coins.toFixed(2)} vs ${(r.coins * DAILY_MULT).toFixed(2)}`);
   const lvl4 = honour('horse', 4, 30.05);
+  const b45 = honour('horse', 1, 45), side = honour('bow', 1, 40);
+  check('bonus as a fraction of the target', near(b45.bonus, 0.5, 0.02), b45.bonus.toFixed(2));
+  check('two-sided bonus measured against the whole target', near(side.bonus, 25 / 30, 0.03), side.bonus.toFixed(2));  // 40s on side one of a 15s-per-side hold
   const hard = honour('horse', 1, 20), soft = honour('weituo', 1, 20);
   check('soft holds earn half', near(soft.coins, hard.coins / 2, 0.05), `${soft.coins.toFixed(2)} vs ${hard.coins.toFixed(2)} in 20s`);
   check('level 4 earns faster', near(lvl4.coins, 3 * 0.75 * 2, 0.1), `${lvl4.coins.toFixed(2)} coins in 30s`);
