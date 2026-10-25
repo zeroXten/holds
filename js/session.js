@@ -8,7 +8,7 @@
 // its own target and bonus time; side one switches over once you drop out of
 // position (or tap Switch in honour mode).
 
-import { makeBody, scorePose, visible } from './scoring.js';
+import { makeBody, scorePose, visible, viewing } from './scoring.js';
 import { requiredFor } from './holds.js';
 import { COIN_SECONDS, coinRateFor, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { play, say } from './audio.js';
@@ -71,10 +71,11 @@ export class Session {
   // --- camera mode ---
   tickCamera(dt, frame) {
     const lm = frame?.landmarks;
-    const seen = !!lm && visible(lm, this.required);
+    const view = viewing(this.hold);
+    const seen = !!lm && visible(lm, this.required, view);
     let results = null;
     if (seen) {
-      const r = scorePose(this.hold, this.level, makeBody(lm, frame.width, frame.height));
+      const r = scorePose(this.hold, this.level, makeBody(lm, frame.width, frame.height, view));
       const k = 1 - Math.exp(-dt / 0.25);
       this.score += (r.score - this.score) * k;
       results = r.results;

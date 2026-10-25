@@ -30,8 +30,21 @@ function limb(P, a, b, c) {
 }
 
 // Landmarks are normalised; convert to pixels so angles aren't skewed by aspect ratio.
-export function makeBody(landmarks, width, height) {
-  const P = landmarks.map(p => ({ x: p.x * width, y: p.y * height, v: p.visibility ?? 1 }));
+// Left/right partners: shoulders, elbows, wrists, hands, hips, knees, ankles, heels, toes.
+const PAIRS = [[11, 12], [13, 14], [15, 16], [17, 18], [19, 20], [21, 22], [23, 24], [25, 26], [27, 28], [29, 30], [31, 32]];
+const PARTNER = new Map(PAIRS.flatMap(([a, b]) => [[a, b], [b, a]]));
+const SEEN = 0.5;  // visibility at which the camera is confident about a point
+
+// `fillHidden`: for side-on holds where both sides do the same thing, a point hidden
+// behind the body takes its visible partner's position instead of the camera's guess.
+export function makeBody(landmarks, width, height, { fillHidden = false } = {}) {
+  let P = landmarks.map(p => ({ x: p.x * width, y: p.y * height, v: p.visibility ?? 1 }));
+  if (fillHidden) {
+    P = P.map((p, i) => {
+      const q = P[PARTNER.get(i)];
+      return q && p.v < SEEN && q.v >= SEEN ? { ...q } : p;
+    });
+  }
   const b = {
     P,
     nose: P[LM.nose], ls: P[LM.lShoulder], rs: P[LM.rShoulder],
@@ -59,12 +72,22 @@ function criterionScore(c, v) {
 
 const cueFor = (c, dir) => (typeof c.cue === 'string' ? c.cue : c.cue[dir]);
 
-export function visible(landmarks, indices, minVis = 0.5) {
-  return indices.every(i => {
+// Whether the camera can see the points a hold needs. `eitherSide`: side-on, the far arm
+// and leg are hidden behind the body, so seeing one of each left/right pair is enough.
+export function visible(landmarks, indices, { eitherSide = false } = {}) {
+  const ok = i => {
     const p = landmarks[i];
-    return p && (p.visibility ?? 1) >= minVis && p.x > -0.02 && p.x < 1.02 && p.y > -0.02 && p.y < 1.02;
-  });
+    return p && (p.visibility ?? 1) >= SEEN && p.x > -0.02 && p.x < 1.02 && p.y > -0.02 && p.y < 1.02;
+  };
+  return indices.every(i => ok(i) || (eitherSide && PARTNER.has(i) && ok(PARTNER.get(i))));
 }
+
+// How a hold should read the camera: side-on holds only need the near side, and
+// side-on holds where both sides match fill hidden points from the near side.
+export const viewing = hold => ({
+  eitherSide: hold.view === 'side',
+  fillHidden: hold.view === 'side' && !hold.sides,
+});
 
 // Scores a body against a hold level. For one-sided holds every leg assignment
 // is tried and the best wins, so either leg can lead.

@@ -6,7 +6,7 @@
 // Camera states: framing → ready (waiting in the start position) → flowing → done
 // Honour states: countdown → flowing (paused) → done
 
-import { makeBody, scorePose, visible } from './scoring.js';
+import { makeBody, scorePose, visible, viewing } from './scoring.js';
 import { requiredFor } from './holds.js';
 import { COIN_SECONDS, coinRateFor, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { Session } from './session.js';
@@ -66,12 +66,13 @@ export class FlowSession {
 
   tickCamera(dt, frame) {
     const lm = frame?.landmarks;
-    const seen = !!lm && visible(lm, this.required);
+    const view = viewing(this.hold);
+    const seen = !!lm && visible(lm, this.required, view);
     this.seen = seen;
     const k = 1 - Math.exp(-dt / 0.2);
     let results = { low: null, high: null };
     if (seen) {
-      const body = makeBody(lm, frame.width, frame.height);
+      const body = makeBody(lm, frame.width, frame.height, view);
       // Hand height: 0 at the shoulders, about 1 at the hips, negative above the shoulders.
       this.hands = ((body.arms.L.c.y + body.arms.R.c.y) / 2 - body.sh.y) / body.torsoLen;
       for (const p of ['low', 'high']) {

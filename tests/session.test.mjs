@@ -84,5 +84,24 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   console.log(`${ok ? 'ok  ' : 'FAIL'} sky: quick cycles counted ${quick}, slow cycles counted ${s.count - quick}`);
 }
 
+// Side-on holds with the far side hidden: the camera reports those points as low
+// visibility with poor guesses. Matching holds should still score from the near side,
+// and one-sided ones should still be judged rather than "can't see you".
+{
+  const { syntheticLandmarks } = await import('../js/figure.js');
+  const far = [12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32];
+  const hide = lm => lm.map((p, i) => (far.includes(i) ? { ...p, x: p.x + 0.08, y: p.y - 0.05, visibility: 0.15 } : p));
+  for (const id of ['feet', 'squat', 'bow', 'crane']) {
+    const hold = HOLDS.find(h => h.id === id);
+    const s = createSession({ hold, level: 2, camera: true, now: 0 });
+    const frame = { landmarks: hide(syntheticLandmarks(hold.figure(2))), width: 720, height: 1280 };
+    let t = 0, v;
+    for (; t < 6; t += 1 / 30) v = s.tick(t, frame);
+    const ok = v.seen && v.state !== 'framing' && (hold.sides || v.score >= 90);
+    if (!ok) failures++;
+    console.log(`${ok ? 'ok  ' : 'FAIL'} ${id}: far side hidden → seen ${v.seen}, state ${v.state}, score ${v.score}`);
+  }
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);
