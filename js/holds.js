@@ -52,7 +52,7 @@ export const HOLDS = [
     video: 'ma bu horse stance kung fu tutorial',
     about: 'The foundation stance. Builds leg strength, a stable root and patience.',
     levels: [
-      { name: 'High horse', target: 30, desc: 'Feet about twice shoulder width and parallel, toes forward, fists at your hips. Sink until your thighs slope about 45° down from level.' },
+      { name: 'High horse', target: 30, desc: 'Feet about twice shoulder width, toes forward or turned out slightly, knees pointing the same way as your toes. Fists at your hips. Sink until your thighs slope about 45° down from level.' },
       { name: 'Mid horse', target: 45, desc: 'Sink lower: thighs about 30° from level. Knees pushed out over your toes.' },
       { name: 'Low horse', target: 60, desc: 'Thighs within about 15° of level. Back upright, chest open.' },
       { name: 'Full horse', target: 90, desc: 'Thighs level with the floor. Arms straight out to the sides at shoulder height.' },
