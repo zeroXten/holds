@@ -52,7 +52,7 @@ export const HOLDS = [
     video: 'ma bu horse stance kung fu tutorial',
     about: 'The foundation stance. Builds leg strength, a stable root and patience.',
     levels: [
-      { name: 'High horse', target: 30, desc: 'Feet about twice shoulder width, toes forward, fists at your hips. Sink until your thighs slope about 45° down from level.' },
+      { name: 'High horse', target: 30, desc: 'Feet about twice shoulder width and parallel, toes forward, fists at your hips. Sink until your thighs slope about 45° down from level.' },
       { name: 'Mid horse', target: 45, desc: 'Sink lower: thighs about 30° from level. Knees pushed out over your toes.' },
       { name: 'Low horse', target: 60, desc: 'Thighs within about 15° of level. Back upright, chest open.' },
       { name: 'Full horse', target: 90, desc: 'Thighs level with the floor. Arms straight out to the sides at shoulder height.' },
@@ -92,7 +92,7 @@ export const HOLDS = [
     video: 'gong bu bow stance kung fu tutorial',
     about: 'A long forward stance: front leg bent like a bow, back leg straight like the arrow.',
     levels: [
-      { name: 'Short bow', target: 30, desc: 'Long step forward. Bend the front knee, back leg straight, both heels down. Then switch legs.' },
+      { name: 'Short bow', target: 30, desc: 'Long step forward, front toes pointing ahead, back foot turned out about 45°. Bend the front knee, keep the back leg straight and both heels down. Then switch legs.' },
       { name: 'Bow', target: 45, desc: 'Lower: front knee over the ankle, back leg locked straight.' },
       { name: 'Deep bow', target: 60, desc: 'Front thigh nearly level. Hips square, back upright.' },
       { name: 'Pushing bow', target: 90, desc: 'Front thigh level. Arms straight in front at shoulder height, palms pushing.' },
@@ -134,7 +134,7 @@ export const HOLDS = [
     video: 'xu bu empty stance cat stance kung fu tutorial',
     about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly.',
     levels: [
-      { name: 'High cat', target: 30, desc: 'Weight on the back leg, knee bent. Front foot forward, just the toes touching. Then switch legs.' },
+      { name: 'High cat', target: 30, desc: 'Almost all your weight on the back leg: knee bent, foot flat and turned out about 45°. Front foot forward with just the toes resting lightly, knee slightly bent. Hips square. Then switch legs.' },
       { name: 'Cat', target: 45, desc: 'Sit lower on the back leg. Front foot light enough to lift at any moment.' },
       { name: 'Low cat', target: 60, desc: 'Back thigh sinking towards level. Hips over the back heel.' },
       { name: 'Deep cat', target: 75, desc: 'As low as you can while staying upright, front leg long and light.' },
@@ -175,8 +175,8 @@ export const HOLDS = [
     video: 'du li bu crane stance kung fu',
     about: 'Standing on one leg with the other knee raised: balance, focus and hip strength.',
     levels: [
-      { name: 'Knee lift', target: 30, desc: 'Stand on one leg, raise the other knee towards hip height. Then switch legs.' },
-      { name: 'Crane', target: 45, desc: 'Raised thigh close to level, toes pointing down, standing leg straight.' },
+      { name: 'Knee lift', target: 30, desc: 'Stand on one leg, knee soft rather than locked, and raise the other knee towards hip height. Then switch legs.' },
+      { name: 'Crane', target: 45, desc: 'Raised thigh level with the floor, lower leg tucked in under the knee, toes pointing down. Standing leg straight but not locked.' },
       { name: 'High crane', target: 60, desc: 'Raised thigh level or higher. Hands together at the chest.' },
       { name: 'Golden rooster', target: 90, desc: 'Knee above the hip and one hand raised high overhead.' },
     ],
@@ -210,9 +210,9 @@ export const HOLDS = [
     video: 'pu bu drop stance kung fu tutorial',
     about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together.',
     levels: [
-      { name: 'Side lunge', target: 20, desc: 'Wide stance, sink onto one bent leg, other leg straight out to the side. Then switch legs.' },
-      { name: 'Drop', target: 30, desc: 'Sink lower, both feet flat, extended leg straight.' },
-      { name: 'Low drop', target: 45, desc: 'Hips close to the heel of the bent leg. Chest lifted.' },
+      { name: 'Side lunge', target: 20, desc: 'Very wide stance, feet parallel and flat. Sink onto one bent leg with the other straight out to the side. Fists at your hips. Then switch legs.' },
+      { name: 'Drop', target: 30, desc: 'Sink lower. Keep both feet flat and parallel (toes forward), and the extended leg straight.' },
+      { name: 'Low drop', target: 45, desc: 'Hips close to the heel of the bent leg. Chest up, looking along the straight leg.' },
       { name: 'Full drop', target: 60, desc: 'Fully folded, hips just above the floor, extended leg straight and low.' },
     ],
     criteria: level => [
@@ -237,7 +237,7 @@ export const HOLDS = [
       return {
         view: 'front', torso: lerp4(level, 180, 172),
         legs: { R: [thigh, shin], L: [straight, straight] },
-        arms: { L: [70, 75], R: [-25, -40] },
+        arms: chambered,
       };
     },
   },
@@ -282,7 +282,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'sideplank', name: 'Side Plank', native: 'Cè Bǎn', view: 'front', sides: true, camera: true,
+    id: 'sideplank', name: 'Side Plank', native: 'Cè Píngbǎn Zhīchēng', view: 'front', sides: true, camera: true,
     video: 'side plank progression tutorial',
     hint: 'Turn the phone sideways (landscape), low to the ground, with your front facing it',
     about: 'Not strictly Shaolin, but one of the best holds for the sides of the core and a stable spine.',
@@ -339,7 +339,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'birddog', name: 'Bird Dog', native: 'Niǎo Gǒu', view: 'side', sides: true, camera: true,
+    id: 'birddog', name: 'Bird Dog', native: 'Niǎo Gǒu Shì', view: 'side', sides: true, camera: true,
     video: 'bird dog exercise how to',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'Not strictly Shaolin, but a gentle, highly rated hold for the lower back and a core that resists twisting.',
@@ -395,7 +395,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'hollow', name: 'Hollow Hold', native: 'Kōng Xīn', view: 'side', sides: false, camera: true,
+    id: 'hollow', name: 'Hollow Hold', native: '', view: 'side', sides: false, camera: true,
     video: 'hollow body hold progression',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'Borrowed from gymnastics: lower back pressed into the floor, shoulders and legs lifted. Builds the front of the core.',
@@ -442,7 +442,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'squat', name: 'Deep Squat', native: 'Dūn', view: 'side', sides: false, camera: true,
+    id: 'squat', name: 'Deep Squat', native: 'Shēn Dūn', view: 'side', sides: false, camera: true,
     video: 'deep squat hold mobility how to',
     about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier.',
     levels: [
@@ -495,10 +495,10 @@ export const HOLDS = [
   },
 
   {
-    id: 'bridge', name: 'Iron Bridge', native: 'Tiě Bǎn Qiáo', view: 'side', sides: false, camera: true,
-    video: 'tie ban qiao iron bridge shaolin',
+    id: 'bridge', name: 'Iron Bridge', native: '', view: 'side', sides: false, camera: true,
+    video: 'iron bridge between two chairs bodyweight hold',
     hint: 'Turn the phone sideways (landscape), low to the ground, and lie side-on to it',
-    about: 'The body held rigid as an iron plank. Built up from a floor bridge to the full bridge between two chairs.',
+    about: 'The body held rigid as an iron plank, built up from a floor bridge to the strongman-style demonstration of lying stiff between two chairs. A demonstration feat rather than a classical stance.',
     levels: [
       { name: 'Shoulder bridge', target: 45, desc: 'On your back, knees bent, feet flat. Drive your hips up until shoulders, hips and knees make one straight line.' },
       { name: 'Reverse plank', target: 30, desc: 'Hands under your shoulders, fingers towards your feet, legs straight. Lift your hips into a straight board from shoulders to heels.' },
@@ -554,7 +554,7 @@ export const HOLDS = [
     levels: [
       { name: 'Leaning balance', target: 20, desc: 'Stand on one leg and tip forward, lifting the other leg behind you. Torso and back leg about 45° from upright. Then switch legs.' },
       { name: 'Half swallow', target: 30, desc: 'Tip further: torso and back leg about 30° from level. Both legs straight.' },
-      { name: 'Swallow', target: 45, desc: 'Torso and back leg level with the floor, arms swept back like wings.' },
+      { name: 'Swallow', target: 45, desc: 'Torso and back leg level with the floor, arms spread out to the sides like wings.' },
       { name: 'Flying swallow', target: 60, desc: 'Fully level, back leg as high as your head, arms reaching forward in line with your body.' },
     ],
     criteria: level => [
@@ -626,7 +626,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'plank', name: 'Fist Plank', native: 'Quán Chēng', view: 'side', sides: false, camera: true,
+    id: 'plank', name: 'Fist Plank', native: '', view: 'side', sides: false, camera: true,
     video: 'knuckle plank fist plank',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'The top of a knuckle push-up, held. Builds the core, wrists and shoulders that strikes come from.',
