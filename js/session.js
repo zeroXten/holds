@@ -244,6 +244,7 @@ export class Session {
       state: this.state, held: this.held, target: this.target, coins: this.coins, daily: this.daily,
       tier: bonusTier(this.sideHeld[this.sideIndex], this.sideTarget),
       score: Math.round(this.score), results: this.results, worst: this.worst, reached: this.reached,
+      inPose: !!this.seen && this.score >= this.thr.hold,
       seen: this.seen, stateTime: this.stateTime, side: this.side,
       sides: this.sides, sideIndex: this.sideIndex, sideHeld: this.sideHeld[this.sideIndex],
       sideTarget: this.sideTarget, sideReached: this.sideReached[this.sideIndex], canSwitch: this.onFirstSide(),

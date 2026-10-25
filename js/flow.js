@@ -72,6 +72,8 @@ export class FlowSession {
     let results = { low: null, high: null };
     if (seen) {
       const body = makeBody(lm, frame.width, frame.height);
+      // Hand height: 0 at the shoulders, about 1 at the hips, negative above the shoulders.
+      this.hands = ((body.arms.L.c.y + body.arms.R.c.y) / 2 - body.sh.y) / body.torsoLen;
       for (const p of ['low', 'high']) {
         const r = scorePose(this.poses[p], this.level, body);
         this.scores[p] += (r.score - this.scores[p]) * k;
@@ -90,7 +92,7 @@ export class FlowSession {
 
     switch (this.state) {
       case 'framing':
-        if (this.seenTime > 0.7) { this.go('ready'); say('Interlace your fingers in front of your belly, palms up', { priority: true }); }
+        if (this.seenTime > 0.7) { this.go('ready'); say('Hands together in front of your belly, palms up', { priority: true }); }
         break;
       case 'ready':
         this.lowTime = low ? this.lowTime + dt : 0;
@@ -98,7 +100,7 @@ export class FlowSession {
           this.go('flowing');
           this.startCycle();
           play('go');
-          say('Slowly raise your hands, turn your palms up and push to the sky', { priority: true });
+          say('Slowly lift your hands up the front of your body', { priority: true });
         }
         break;
       case 'flowing':
@@ -106,6 +108,7 @@ export class FlowSession {
         if (this.phase === 'up') {
           this.topScore = Math.max(this.topScore, this.scores.high);
           this.topTime = high ? this.topTime + dt : 0;
+          if (this.hands < 0.15 && this.hands > -0.3 && !this.turned) { this.turned = true; say('Turn the palms over and push up to the sky', { minGap: 6000 }); }
           if (this.topTime >= Math.max(0.3, this.dwell)) {
             this.setPhase('down');
             say(this.dwell >= 1 ? 'Open your hands and float them down the sides' : 'And slowly down', { minGap: 4000 });
@@ -138,6 +141,7 @@ export class FlowSession {
 
   startCycle() {
     this.cycleStart = this.now ?? this.last;
+    this.turned = false;
     this.topScore = 0;
     this.topTime = 0;
     this.lowTime = 0;
@@ -199,8 +203,10 @@ export class FlowSession {
       count: this.count, goal: this.goal, minCycle: this.minCycle, held: this.held, coins: this.coins, daily: this.daily,
       tier: bonusTier(this.count, this.goal), reached: this.reached, seen: this.seen,
       score: Math.round(this.state === 'flowing' && this.phase === 'up' ? this.scores.high : this.scores.low),
+      // At one of the key positions (for colouring the parts no check covers).
+      inPose: !!this.seen && Math.max(this.scores.low, this.scores.high) >= REACHED,
       results: this.results, worst: this.worst, tooFast: (this.now ?? 0) - this.tooFastAt < 2.5,
-      cycleTime: (this.now ?? this.last) - this.cycleStart,
+      cycleTime: (this.now ?? this.last) - this.cycleStart, hands: this.hands, topTime: this.topTime, dwell: this.dwell,
       sides: 1, sideIndex: 0, canSwitch: false,
     };
   }

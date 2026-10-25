@@ -308,7 +308,17 @@ function setStatus(kind, text) {
   el.textContent = text;
 }
 
+// What the camera is checking right now, ticked or crossed, so it's clear what to fix.
+function renderChecks(v) {
+  const show = run.camera && ['ready', 'holding', 'broken', 'flowing'].includes(v.state) && v.seen && v.results;
+  const html = show ? [...new Map(v.results.map(r => [r.label, r])).values()].map(r =>
+    `<span class="chk ${r.s >= 0.85 ? 'ok' : r.s >= 0.5 ? 'meh' : 'bad'}">${r.s >= 0.85 ? '✓' : '✗'} ${r.label}</span>`).join('') : '';
+  const el = $('#s-checks');
+  if (el.dataset.html !== html) { el.dataset.html = html; el.innerHTML = html; }
+}
+
 function updateHud(v) {
+  renderChecks(v);
   if (v.flow) return updateFlowHud(v);
   const s = run.session;
   // One-sided holds show the current side's time against that side's target.
@@ -375,6 +385,14 @@ function updateHud(v) {
   }
 }
 
+// The step of the movement you're on, from where your hands are.
+function flowStep(v) {
+  if (v.phase === 'down') return 'Let go and float your arms down the sides';
+  if (v.inPose && v.hands < -0.3) return v.topTime < v.dwell ? 'Stretch up through the palms… hold' : 'Stretch up';
+  if (v.worst && v.phaseTime > 6) return v.worst.cue;
+  return v.hands > 0.15 ? 'Lift your hands up the front of your body' : 'Turn the palms over and push up to the sky';
+}
+
 // Session screen for flowing holds: cycles counted instead of a timer.
 function updateFlowHud(v) {
   $('#s-time').textContent = v.count;
@@ -400,12 +418,12 @@ function updateFlowHud(v) {
       $('#s-cue').textContent = `${viewHint(run.hold)}, about 2–3 m from the phone.`;
       break;
     case 'ready':
-      setStatus('wait', 'Hands low to begin');
-      $('#s-cue').textContent = v.worst?.cue ?? 'Fingers interlaced in front of your belly, palms up';
+      setStatus('wait', 'Hands at your belly to begin');
+      $('#s-cue').textContent = v.worst?.cue ?? 'Hands together in front of your belly, palms up';
       break;
     case 'countdown':
       setStatus('wait', `Get ready · ${Math.ceil(5 - v.stateTime)}`);
-      $('#s-cue').textContent = 'Fingers interlaced in front of your belly, palms up';
+      $('#s-cue').textContent = 'Hands together in front of your belly, palms up';
       break;
     case 'paused':
       setStatus('wait', 'Paused');
@@ -416,7 +434,7 @@ function updateFlowHud(v) {
       else setStatus(v.reached ? 'bonus' : 'good', v.phase === 'up' ? (v.reached ? `Rise · bonus ×${v.tier.mult}` : 'Rise') : (v.reached ? `Lower · bonus ×${v.tier.mult}` : 'Lower'));
       $('#s-cue').textContent = v.tooFast
         ? `At least ${v.minCycle} seconds for each cycle`
-        : `${secs}s${secs < v.minCycle ? ` of at least ${v.minCycle}s` : ''} · ${v.phase === 'up' ? (v.worst && v.phaseTime > 5 ? v.worst.cue : 'palms up, push to the sky') : 'open your hands, float them down'}`;
+        : `${flowStep(v)} · ${secs}s${secs < v.minCycle ? ` of at least ${v.minCycle}s` : ''}`;
       break;
   }
 }
@@ -471,9 +489,10 @@ function drawSkeleton(frame, v, view, mirrored) {
     for (const j of js) jointS.set(j, Math.min(jointS.get(j) ?? 1, r.s));
     for (const [a, b] of BONES) if (js.includes(a) && js.includes(b)) boneS.set(`${a}-${b}`, Math.min(boneS.get(`${a}-${b}`) ?? 1, r.s));
   }
+  // Parts a check covers show how that check is going; the rest go green whenever
+  // you're in a good position, so all green means all good.
   const active = v.state !== 'framing';
-  const holding = v.state === 'holding';
-  const color = s => !active ? COLORS.idle : s === undefined ? (holding ? COLORS.good : COLORS.idle)
+  const color = s => !active ? COLORS.idle : s === undefined ? (v.inPose ? COLORS.good : COLORS.idle)
     : s >= 0.85 ? COLORS.good : s >= 0.5 ? COLORS.warn : COLORS.bad;
   const width = Math.max(4, cw / 90);
   ctx.lineCap = 'round';

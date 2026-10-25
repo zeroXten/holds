@@ -596,3 +596,18 @@ button.chip { cursor: pointer; }
 .area-row { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 10px; font-size: .9rem; }
 .area-bar { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
 .area-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--accent)); border-radius: inherit; }
+
+/* ---------- Live checklist ---------- */
+.checks { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; max-width: 94%; }
+.checks:empty { display: none; }
+.chk {
+  font-size: clamp(12px, 3.4vw, 16px); font-weight: 700; padding: 4px 10px; border-radius: 999px;
+  background: rgba(0, 0, 0, .55); color: #fff; border: 1.5px solid transparent;
+}
+.chk.ok { border-color: #4fbf6a; color: #a8f0b8; }
+.chk.meh { border-color: #e9a23b; color: #ffd38a; }
+.chk.bad { border-color: #d6493d; color: #ffb3aa; }
+@media (orientation: landscape) and (max-height: 600px) {
+  .checks { justify-content: flex-start; max-width: 100%; margin-top: 0; }
+  .chk { font-size: 12px; padding: 3px 8px; }
+}
