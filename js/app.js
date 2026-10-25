@@ -30,6 +30,7 @@ const fmt = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}
 const fmtLong = s => s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m ${String(Math.round(s % 60)).padStart(2, '0')}s` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
 // One-sided holds split the target between the sides.
 const targetText = (hold, t) => hold.sides ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
+const videoUrl = hold => `https://www.youtube.com/results?search_query=${encodeURIComponent(hold.video)}`;
 const viewHint = hold => hold.hint ?? (hold.view === 'front' ? 'Face the camera' : 'Stand side-on to the camera');
 
 function show(id) {
@@ -99,6 +100,7 @@ function renderHero() {
   $('#hero-native').textContent = hero.native;
   $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name} ${pips(hs)}`;
   $('#hero-desc').textContent = lv.desc;
+  $('#hero-video').href = videoUrl(hero);
   const best = hs.best[hs.level];
   $('#hero-meta').innerHTML = `
     <span class="tag strong">${targetText(hero, lv.target)}</span>
@@ -140,6 +142,7 @@ function openHold(hold) {
   $('#hs-name').textContent = hold.name;
   $('#hs-native').textContent = hold.native;
   $('#hs-about').textContent = hold.about;
+  $('#hs-video').href = videoUrl(hold);
   $('#hs-cam').checked = state.settings.camera;
   renderSheetLevel();
   $('#hold-sheet').showModal();

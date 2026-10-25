@@ -1,6 +1,8 @@
 // The holds. Each has four levels (a position and a target time), a stick figure
 // per level, and the criteria the camera uses to judge form.
 //
+// `video` is a YouTube search for demonstrations of the stance.
+//
 // Criteria: value(body, side) → number, judged against min and/or max with a
 // `soft` margin over which the score falls from 1 to 0. For one-sided holds
 // `side.main` is the working leg and `side.other` the second leg.
@@ -47,6 +49,7 @@ const lerp4 = (level, a, b) => a + (b - a) * (level - 1) / 3;
 export const HOLDS = [
   {
     id: 'horse', name: 'Horse Stance', native: 'Mǎ Bù', view: 'front', sides: false, camera: true,
+    video: 'ma bu horse stance kung fu tutorial',
     about: 'The foundation stance. Builds leg strength, a stable root and patience.',
     levels: [
       { name: 'High horse', target: 30, desc: 'Feet about twice shoulder width, toes forward, fists at your hips. Sink until your thighs slope about 45° down from level.' },
@@ -86,6 +89,7 @@ export const HOLDS = [
 
   {
     id: 'bow', name: 'Bow Stance', native: 'Gōng Bù', view: 'side', sides: true, camera: true,
+    video: 'gong bu bow stance kung fu tutorial',
     about: 'A long forward stance: front leg bent like a bow, back leg straight like the arrow.',
     levels: [
       { name: 'Short bow', target: 30, desc: 'Long step forward. Bend the front knee, back leg straight, both heels down. Then switch legs.' },
@@ -127,6 +131,7 @@ export const HOLDS = [
 
   {
     id: 'cat', name: 'Empty Stance', native: 'Xū Bù', view: 'side', sides: true, camera: true,
+    video: 'xu bu empty stance cat stance kung fu tutorial',
     about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly.',
     levels: [
       { name: 'High cat', target: 30, desc: 'Weight on the back leg, knee bent. Front foot forward, just the toes touching. Then switch legs.' },
@@ -167,6 +172,7 @@ export const HOLDS = [
 
   {
     id: 'crane', name: 'Crane Stance', native: 'Dú Lì Bù', view: 'side', sides: true, camera: true,
+    video: 'du li bu crane stance kung fu',
     about: 'Standing on one leg with the other knee raised: balance, focus and hip strength.',
     levels: [
       { name: 'Knee lift', target: 30, desc: 'Stand on one leg, raise the other knee towards hip height. Then switch legs.' },
@@ -201,6 +207,7 @@ export const HOLDS = [
 
   {
     id: 'drop', name: 'Drop Stance', native: 'Pū Bù', view: 'front', sides: true, camera: true,
+    video: 'pu bu drop stance kung fu tutorial',
     about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together.',
     levels: [
       { name: 'Side lunge', target: 20, desc: 'Wide stance, sink onto one bent leg, other leg straight out to the side. Then switch legs.' },
@@ -237,6 +244,7 @@ export const HOLDS = [
 
   {
     id: 'post', name: 'Standing Post', native: 'Zhàn Zhuāng', view: 'front', sides: false, camera: true,
+    video: 'zhan zhuang standing post holding the ball',
     about: '"Holding the ball". A quiet standing meditation that slowly builds deep endurance in the legs and shoulders.',
     levels: [
       { name: 'Wuji', target: 60, desc: 'Feet shoulder width, knees softly bent. Hands rounded in front of your belly.' },
@@ -275,6 +283,7 @@ export const HOLDS = [
 
   {
     id: 'sideplank', name: 'Side Plank', native: 'Cè Bǎn', view: 'front', sides: true, camera: true,
+    video: 'side plank progression tutorial',
     hint: 'Turn the phone sideways (landscape), low to the ground, with your front facing it',
     about: 'Not strictly Shaolin, but one of the best holds for the sides of the core and a stable spine.',
     levels: [
@@ -331,6 +340,7 @@ export const HOLDS = [
 
   {
     id: 'birddog', name: 'Bird Dog', native: 'Niǎo Gǒu', view: 'side', sides: true, camera: true,
+    video: 'bird dog exercise how to',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'Not strictly Shaolin, but a gentle, highly rated hold for the lower back and a core that resists twisting.',
     levels: [
@@ -386,6 +396,7 @@ export const HOLDS = [
 
   {
     id: 'hollow', name: 'Hollow Hold', native: 'Kōng Xīn', view: 'side', sides: false, camera: true,
+    video: 'hollow body hold progression',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'Borrowed from gymnastics: lower back pressed into the floor, shoulders and legs lifted. Builds the front of the core.',
     levels: [
@@ -432,6 +443,7 @@ export const HOLDS = [
 
   {
     id: 'squat', name: 'Deep Squat', native: 'Dūn', view: 'side', sides: false, camera: true,
+    video: 'deep squat hold mobility how to',
     about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier.',
     levels: [
       { name: 'Supported squat', target: 30, desc: 'Feet a little wider than your hips, toes slightly out. Hold a door frame or post and sink until your thighs are level.' },
@@ -484,6 +496,7 @@ export const HOLDS = [
 
   {
     id: 'bridge', name: 'Iron Bridge', native: 'Tiě Bǎn Qiáo', view: 'side', sides: false, camera: true,
+    video: 'tie ban qiao iron bridge shaolin',
     hint: 'Turn the phone sideways (landscape), low to the ground, and lie side-on to it',
     about: 'The body held rigid as an iron plank. Built up from a floor bridge to the full bridge between two chairs.',
     levels: [
@@ -536,6 +549,7 @@ export const HOLDS = [
 
   {
     id: 'swallow', name: 'Swallow Balance', native: 'Yàn Shì Píng Héng', view: 'side', sides: true, camera: true,
+    video: 'yan shi ping heng swallow balance wushu',
     about: 'Balance on one leg with the body tipped forward and the other leg reaching back, like a swallow in flight.',
     levels: [
       { name: 'Leaning balance', target: 20, desc: 'Stand on one leg and tip forward, lifting the other leg behind you. Torso and back leg about 45° from upright. Then switch legs.' },
@@ -578,6 +592,7 @@ export const HOLDS = [
 
   {
     id: 'kick', name: 'Kick Hold', native: 'Dēng Tuǐ', view: 'side', sides: true, camera: true,
+    video: 'deng tui heel kick kung fu',
     about: 'Hold a front heel kick out in the air: hip strength, hamstring flexibility and balance.',
     levels: [
       { name: 'Low kick', target: 20, desc: 'Kick one leg forward and hold it there, straight, heel pushing out, foot about shin height. Fists up in guard. Then switch legs.' },
@@ -612,6 +627,7 @@ export const HOLDS = [
 
   {
     id: 'plank', name: 'Fist Plank', native: 'Quán Chēng', view: 'side', sides: false, camera: true,
+    video: 'knuckle plank fist plank',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'The top of a knuckle push-up, held. Builds the core, wrists and shoulders that strikes come from.',
     levels: [
@@ -671,12 +687,13 @@ export const HOLDS = [
 
   {
     id: 'rest', name: 'Rest Stance', native: 'Xiē Bù', view: 'front', sides: true, camera: false,
-    about: 'A low, twisted, cross-legged stance. The camera can’t judge it reliably, so this one is on your honour.',
+    video: 'xie bu rest stance kung fu tutorial',
+    about: 'A low, cross-legged “resting” stance, like sitting down with your legs crossed while standing. Used for turning and coiling between moves. The camera can’t judge it reliably, so this one is on your honour.',
     levels: [
-      { name: 'High rest', target: 20, desc: 'Cross one leg behind the other and sink, rear knee behind the front calf. Then switch sides.' },
-      { name: 'Rest', target: 30, desc: 'Sink lower, front foot flat and turned out, rear heel up.' },
-      { name: 'Low rest', target: 45, desc: 'Sit almost onto the rear calf, torso upright and twisted.' },
-      { name: 'Deep rest', target: 60, desc: 'Fully seated on the rear leg, steady and upright.' },
+      { name: 'High rest', target: 20, desc: 'Turn your front foot out and step the other foot behind it, up on the ball of the foot, so your legs cross like scissors. Bend both knees a little so your thighs press together. Then switch sides.' },
+      { name: 'Rest', target: 30, desc: 'Sink to about half-squat: your back knee tucks in behind your front calf. Front foot flat, back heel up, chest upright.' },
+      { name: 'Low rest', target: 45, desc: 'Sit low, almost onto your back heel, thighs pressed together. Twist your chest towards the front foot.' },
+      { name: 'Deep rest', target: 60, desc: 'Fully seated on your back heel, back knee just off the floor. Upright and still.' },
     ],
     criteria: () => [],
     figure: level => {

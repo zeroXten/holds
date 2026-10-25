@@ -521,3 +521,10 @@ button.chip { cursor: pointer; }
 .install-box > div { display: grid; gap: 2px; flex: 1; }
 .install-box small { color: var(--muted); font-size: .85rem; }
 .install-box .btn { min-height: 42px; padding: 8px 18px; }
+
+/* ---------- Video links ---------- */
+.video-link {
+  display: inline-flex; align-items: center; gap: 6px; justify-self: start; margin-top: 6px;
+  color: var(--accent); font-weight: 600; text-decoration: none; font-size: .92rem;
+}
+.video-link .ico { width: 20px; height: 20px; color: #e33; }
