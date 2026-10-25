@@ -33,10 +33,10 @@ export function loadLandmarker(model = 'full') {
 export class CameraSource {
   static async open(video, model) {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('This browser has no camera access (it needs HTTPS).');
-    // Ask for 4:3, the camera sensor's own shape. A 16:9 picture is cropped from
-    // it, which loses about a quarter of the width when the phone is upright.
+    // Ask for 4:3, the camera sensor's own shape, at a high resolution. A 16:9 picture
+    // (or, on some phones, a low-resolution one) is cropped from the sensor and sees less.
     const [stream, landmarker] = await Promise.all([
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false }),
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false }),
       loadLandmarker(model),
     ]);
     // Zoom out as far as the camera allows (only some phones support this).

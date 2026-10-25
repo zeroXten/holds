@@ -327,10 +327,24 @@ body.demo .stage video { display: none; }
 .error-panel .btn { color: #f3e9da; background: #2b2118; border-color: #3a2d22; }
 .error-panel .btn.primary { background: #f06a2c; color: #1a0f08; border-color: #f06a2c; }
 
-@media (orientation: landscape) and (max-height: 520px) {
-  .timer { font-size: 18vh; margin-top: 0; }
-  .status { margin-top: 6px; }
-  .ref { height: 70px; }
+/* Landscape phones: the controls move into a panel down the left, leaving the
+   rest of the screen for your body (auto-framing keeps clear of the panel). */
+@media (orientation: landscape) and (max-height: 600px) {
+  .hud {
+    display: grid; grid-template-columns: min(38%, 300px) 1fr; grid-auto-rows: min-content;
+    align-items: start; justify-items: stretch; row-gap: 8px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    background: linear-gradient(90deg, rgba(0, 0, 0, .65), rgba(0, 0, 0, .35) 38%, transparent 55%);
+  }
+  .hud > * { grid-column: 1; }
+  .hud-top { grid-column: 1 / -1; }
+  .timer { font-size: min(17vh, 12vw); margin-top: 0; text-align: left; }
+  .tbar { width: 100%; margin-top: 0; }
+  .status { margin-top: 2px; font-size: clamp(15px, 4.5vh, 24px); justify-self: start; max-width: 100%; }
+  .cue { margin-top: 0; font-size: clamp(13px, 4vh, 20px); text-align: left; max-width: 100%; }
+  .hud-bottom { margin-top: 4px; grid-template-columns: 56px 1fr; }
+  .ref { height: 64px; }
+  .meter { height: 28px; }
 }
 
 /* ---------- Summary ---------- */

@@ -1,7 +1,8 @@
 // The holds. Each has four levels (a position and a target time), a stick figure
 // per level, and the criteria the camera uses to judge form.
 //
-// `video` is a YouTube search for demonstrations of the stance.
+// `video` is a YouTube search for demonstrations of the stance. `landscape` marks wide
+// or lying-down holds that fit the camera far better with the phone turned sideways.
 //
 // Criteria: value(body, side) → number, judged against min and/or max with a
 // `soft` margin over which the score falls from 1 to 0. For one-sided holds
@@ -89,6 +90,8 @@ export const HOLDS = [
 
   {
     id: 'bow', name: 'Bow Stance', native: 'Gōng Bù', view: 'side', sides: true, camera: true,
+    hint: 'Turn the phone sideways (landscape) and stand side-on to it',
+    landscape: true,
     video: 'gong bu bow stance kung fu tutorial',
     about: 'A long forward stance: front leg bent like a bow, back leg straight like the arrow.',
     levels: [
@@ -207,6 +210,8 @@ export const HOLDS = [
 
   {
     id: 'drop', name: 'Drop Stance', native: 'Pū Bù', view: 'front', sides: true, camera: true,
+    hint: 'Turn the phone sideways (landscape) and face it',
+    landscape: true,
     video: 'pu bu drop stance kung fu tutorial',
     about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together.',
     levels: [
@@ -283,6 +288,7 @@ export const HOLDS = [
 
   {
     id: 'sideplank', name: 'Side Plank', native: 'Cè Píngbǎn Zhīchēng', view: 'front', sides: true, camera: true,
+    landscape: true,
     video: 'side plank progression tutorial',
     hint: 'Turn the phone sideways (landscape), low to the ground, with your front facing it',
     about: 'Not strictly Shaolin, but one of the best holds for the sides of the core and a stable spine.',
@@ -340,6 +346,7 @@ export const HOLDS = [
 
   {
     id: 'birddog', name: 'Bird Dog', native: 'Niǎo Gǒu Shì', view: 'side', sides: true, camera: true,
+    landscape: true,
     video: 'bird dog exercise how to',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'Not strictly Shaolin, but a gentle, highly rated hold for the lower back and a core that resists twisting.',
@@ -396,6 +403,7 @@ export const HOLDS = [
 
   {
     id: 'hollow', name: 'Hollow Hold', native: '', view: 'side', sides: false, camera: true,
+    landscape: true,
     video: 'hollow body hold progression',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'Borrowed from gymnastics: lower back pressed into the floor, shoulders and legs lifted. Builds the front of the core.',
@@ -496,6 +504,7 @@ export const HOLDS = [
 
   {
     id: 'bridge', name: 'Iron Bridge', native: '', view: 'side', sides: false, camera: true,
+    landscape: true,
     video: 'iron bridge between two chairs bodyweight hold',
     hint: 'Turn the phone sideways (landscape), low to the ground, and lie side-on to it',
     about: 'The body held rigid as an iron plank, built up from a floor bridge to the strongman-style demonstration of lying stiff between two chairs. A demonstration feat rather than a classical stance.',
@@ -549,6 +558,8 @@ export const HOLDS = [
 
   {
     id: 'swallow', name: 'Swallow Balance', native: 'Yàn Shì Píng Héng', view: 'side', sides: true, camera: true,
+    hint: 'Turn the phone sideways (landscape) and stand side-on to it',
+    landscape: true,
     video: 'yan shi ping heng swallow balance wushu',
     about: 'Balance on one leg with the body tipped forward and the other leg reaching back, like a swallow in flight.',
     levels: [
@@ -592,6 +603,8 @@ export const HOLDS = [
 
   {
     id: 'kick', name: 'Kick Hold', native: 'Dēng Tuǐ', view: 'side', sides: true, camera: true,
+    hint: 'Turn the phone sideways (landscape) and stand side-on to it',
+    landscape: true,
     video: 'deng tui heel kick kung fu',
     about: 'Hold a front heel kick out in the air: hip strength, hamstring flexibility and balance.',
     levels: [
@@ -627,6 +640,7 @@ export const HOLDS = [
 
   {
     id: 'plank', name: 'Fist Plank', native: '', view: 'side', sides: false, camera: true,
+    landscape: true,
     video: 'knuckle plank fist plank',
     hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
     about: 'The top of a knuckle push-up, held. Builds the core, wrists and shoulders that strikes come from.',

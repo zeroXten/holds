@@ -326,7 +326,9 @@ function updateHud(v) {
   switch (v.state) {
     case 'framing':
       setStatus('wait', 'Step back so your whole body is in view');
-      $('#s-cue').textContent = `${viewHint(run.hold)}, about 2–3 m from the phone.`;
+      $('#s-cue').textContent = run.hold.landscape && innerHeight > innerWidth
+        ? 'Tip: turn your phone sideways (landscape) so you can stand closer.'
+        : `${viewHint(run.hold)}, about 2–3 m from the phone.`;
       break;
     case 'ready':
       setStatus('wait', 'Get into position');
@@ -359,8 +361,14 @@ function updateHud(v) {
   }
 }
 
-// Screen space taken by the timer at the top and the form meter at the bottom.
+// Screen space taken by the controls: the timer at the top and form meter at the bottom
+// in portrait, or the side panel in landscape (see the landscape rules in style.css).
+const sidePanel = matchMedia('(orientation: landscape) and (max-height: 600px)');
 function hudInset() {
+  if (sidePanel.matches) {
+    const panel = Math.max(...['.timer', '.status', '.cue', '.hud-bottom'].map(q => $(q).getBoundingClientRect().right));
+    return { top: $('.hud-top').getBoundingClientRect().bottom, bottom: 0, left: panel + 8 };
+  }
   const top = $('#s-tbar').getBoundingClientRect().bottom + 8;
   const bottom = window.innerHeight - $('.hud-bottom').getBoundingClientRect().top + 8;
   return { top, bottom };

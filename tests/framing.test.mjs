@@ -38,6 +38,41 @@ for (const [orient, [cw, ch]] of Object.entries(screens)) {
   }
 }
 
+// Close to the phone: the body fills the camera frame top to bottom, feet at the very
+// bottom edge. The picture should shrink so the feet clear the form meter.
+for (const [orient, [cw, ch]] of Object.entries(screens)) {
+  const [vw, vh] = cams[orient];
+  const inset = orient === 'portrait' ? { top: 150, bottom: 110 } : { top: 100, bottom: 80 };
+  const spec = HOLDS.find(h => h.id === 'bow').figure(3);
+  const raw = syntheticLandmarks(spec, { width: vw, height: vh });
+  const ys = raw.map(p => p.y), lo = Math.min(...ys), hi = Math.max(...ys);
+  const lm = raw.map(p => ({ ...p, y: 0.06 + (p.y - lo) / (hi - lo) * 0.92 }));
+  const f = new AutoFrame();
+  let view;
+  for (let i = 0; i < 120; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, inset);
+  const box = bodyBox(lm, vw, vh, true);
+  const top = view.ty + view.s * box.y, bottom = top + view.s * box.h;
+  const ok = top >= inset.top - 1 && bottom <= ch - inset.bottom + 1;
+  check(`${orient} close-up feet clear`, ok, `body ${Math.round(top)}–${Math.round(bottom)}px, clear area ${inset.top}–${ch - inset.bottom}px`);
+}
+
+// Landscape with the controls in a panel down the left: the body stays right of it.
+{
+  const [cw, ch] = screens.landscape, [vw, vh] = cams.landscape;
+  const inset = { top: 40, bottom: 0, left: 300 };
+  for (const id of ['bow', 'swallow', 'plank']) {
+    const lm = syntheticLandmarks(HOLDS.find(h => h.id === id).figure(3), { width: vw, height: vh });
+    const f = new AutoFrame();
+    let view;
+    for (let i = 0; i < 120; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, inset);
+    const box = bodyBox(lm, vw, vh, true);
+    const left = view.tx + view.s * box.x, right = left + view.s * box.w;
+    const top = view.ty + view.s * box.y, bottom = top + view.s * box.h;
+    check(`landscape panel ${id}`, left >= inset.left - 1 && right <= cw + 1 && top >= inset.top - 1 && bottom <= ch + 1,
+      `body x ${Math.round(left)}–${Math.round(right)}, y ${Math.round(top)}–${Math.round(bottom)}`);
+  }
+}
+
 // Nobody in view: ease back to showing the whole picture.
 {
   const [cw, ch] = screens.portrait, [vw, vh] = cams.portrait;

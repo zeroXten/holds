@@ -8,6 +8,7 @@
 const EASE = 0.5;       // seconds for the view to settle on a new framing
 const LOST_AFTER = 1.5; // seconds without a body before zooming out to the whole picture
 const MAX_ZOOM = 3.5;   // never magnify beyond this many times the whole-picture view
+const MIN_ZOOM = 0.5;   // ...or shrink below half of it (when you're close to the phone)
 
 export function bodyBox(landmarks, vw, vh, mirrored) {
   if (!landmarks) return null;
@@ -26,27 +27,30 @@ export function bodyBox(landmarks, vw, vh, mirrored) {
 // Keep the picture covering the screen where it's big enough; centre it where it isn't.
 const clampAxis = (t, size, screen) => (size >= screen ? Math.min(0, Math.max(screen - size, t)) : (screen - size) / 2);
 
-// `inset` keeps the body clear of the controls drawn over the top and bottom of the screen.
-export function targetView(box, vw, vh, cw, ch, inset = { top: 0, bottom: 0 }) {
+// `inset` keeps the body clear of the controls drawn over the screen: top and bottom
+// in portrait, a panel down the left side in landscape.
+// Seeing the whole body always wins: the picture shrinks (with black bars) rather than
+// let the timer or form meter cover the head or feet.
+export function targetView(box, vw, vh, cw, ch, inset = {}) {
   const fit = Math.min(cw / vw, ch / vh);
-  let s = fit, cx = vw / 2, cy = vh / 2, screenCy = ch / 2;
-  if (box) {
-    const rh = Math.max(ch * 0.4, ch - inset.top - inset.bottom);
-    screenCy = Math.min(inset.top, ch * 0.3) + rh / 2;
-    // Landmarks stop at the nose, wrists and ankles, so leave room for the head,
-    // hands and feet, plus breathing space. Long boxes (lying down) get a little height too.
-    const w = box.w + 0.35 * box.h + 0.1 * box.w;
-    const h = box.h * 1.35 + 0.15 * box.w;
-    s = Math.min(cw / w, rh / h);
-    s = Math.max(fit, Math.min(s, fit * MAX_ZOOM));
-    cx = box.x + box.w / 2;
-    cy = box.y + box.h / 2 - box.h * 0.05;  // nudge up for the top of the head
-  }
-  return {
-    s,
-    tx: clampAxis(cw / 2 - s * cx, s * vw, cw),
-    ty: clampAxis(screenCy - s * cy, s * vh, ch),
-  };
+  if (!box) return { s: fit, tx: (cw - fit * vw) / 2, ty: (ch - fit * vh) / 2 };
+  const top = Math.min(inset.top ?? 0, ch * 0.3), bottom = Math.min(inset.bottom ?? 0, ch * 0.3);
+  const left = Math.min(inset.left ?? 0, cw * 0.45);
+  const rh = Math.max(ch * 0.4, ch - top - bottom), rw = cw - left;
+  // Landmarks stop at the nose, wrists and ankles: pad for the head, hands and feet.
+  // Long boxes (lying down) get a little extra height too.
+  const x0 = box.x - 0.175 * box.h - 0.05 * box.w, x1 = box.x + box.w + 0.175 * box.h + 0.05 * box.w;
+  const y0 = box.y - 0.22 * box.h - 0.075 * box.w, y1 = box.y + box.h + 0.08 * box.h + 0.075 * box.w;
+  const s = Math.max(fit * MIN_ZOOM, Math.min(rw / (x1 - x0), rh / (y1 - y0), fit * MAX_ZOOM));
+  // Centre the padded body in the clear area, avoid empty edges where the picture allows...
+  let tx = clampAxis(left + rw / 2 - s * (x0 + x1) / 2, s * vw, cw);
+  let ty = clampAxis(top + rh / 2 - s * (y0 + y1) / 2, s * vh, ch);
+  // ...but never at the cost of hiding part of the body (the feet matter most).
+  if (ty + s * y0 < top) ty = top - s * y0;
+  if (ty + s * y1 > top + rh) ty = top + rh - s * y1;
+  if (tx + s * x0 < left) tx = left - s * x0;
+  if (tx + s * x1 > cw) tx = cw - s * x1;
+  return { s, tx, ty };
 }
 
 export class AutoFrame {
