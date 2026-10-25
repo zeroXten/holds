@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "python3 tools/serve.py 8765",
-    "test": "node tests/scoring.test.mjs && node tests/session.test.mjs && node tests/framing.test.mjs && node tests/economy.test.mjs",
+    "test": "node tests/scoring.test.mjs && node tests/session.test.mjs && node tests/framing.test.mjs && node tests/economy.test.mjs && node tests/shop.test.mjs",
     "icons": "node tools/make-icons.mjs"
   }
 }

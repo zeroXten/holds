@@ -29,3 +29,65 @@ export function bonusTier(held, target) {
   while (tier + 1 < BONUS_TIERS.length && over >= BONUS_TIERS[tier + 1].from) tier++;
   return { tier: tier + 1, mult: BONUS_TIERS[tier].mult };
 }
+
+// ---- Shop: protecting the streak (cheapest when planned ahead, dearest after the fact) ----
+export const REST_DAY_PRICE = 5;        // book a rest day in advance
+export const REST_DAYS_PER_WEEK = 2;
+export const FREEZE_PRICE = 15;         // used automatically on a missed day
+export const FREEZE_MAX = 2;
+export const REPAIR_PRICE_PER_DAY = 40; // buy back a broken streak
+export const REPAIR_WINDOW_DAYS = 3;    // ...if you come back within this many missed days
+
+// ---- Bets on yourself: stake coins, win more if you do it in time ----
+export const BETS = [
+  { id: 'holds3', name: 'Three holds today', desc: 'Reach the target on 3 different holds today.', stake: 10, payout: 25, days: 1 },
+  { id: 'time10', name: 'Ten minutes today', desc: 'Hold for 10 minutes in total today.', stake: 15, payout: 40, days: 1 },
+  { id: 'form90', name: 'Perfect form', desc: 'Reach a target with 90+ average form today (camera on).', stake: 10, payout: 25, days: 1 },
+  { id: 'pb', name: 'New personal best', desc: 'Beat one of your personal bests today.', stake: 10, payout: 25, days: 1 },
+  { id: 'week5', name: 'Five-day week', desc: 'Train on 5 of the next 7 days.', stake: 40, payout: 100, days: 7 },
+  { id: 'streak7', name: 'Unbroken week', desc: 'Train every day for 7 days. Planned rest days count; freezes don’t.', stake: 50, payout: 125, days: 7 },
+];
+
+// ---- Level test-out: try the next level early; it only costs coins if you don't pass ----
+export const TEST_FORM = 80;
+export const testPrice = level => 10 * level;
+
+// ---- The temple: features and themes to buy (drawn in temple.js) ----
+export const TEMPLE_ITEMS = [
+  { id: 'path', name: 'Stone Path', price: 25, desc: 'Worn flagstones across the courtyard.' },
+  { id: 'bamboo', name: 'Bamboo Grove', price: 40, desc: 'Tall bamboo swaying at the edges.' },
+  { id: 'posts', name: 'Plum Blossom Poles', price: 60, desc: 'Meihuazhuang: training poles for stance work.' },
+  { id: 'lanterns', name: 'Red Lanterns', price: 60, desc: 'Lanterns that glow when night falls.' },
+  { id: 'incense', name: 'Incense Burner', price: 70, desc: 'A bronze cauldron with drifting smoke.' },
+  { id: 'mist', name: 'Mountain Mist', price: 50, desc: 'Soft mist drifting between the peaks.' },
+  { id: 'plum', name: 'Plum Blossom Tree', price: 90, desc: 'A gnarled old tree shedding petals.' },
+  { id: 'lions', name: 'Stone Lions', price: 100, desc: 'A pair of guardians by the path.' },
+  { id: 'cranes', name: 'Cranes', price: 100, desc: 'Red-crowned cranes crossing the sky.' },
+  { id: 'pond', name: 'Koi Pond', price: 140, desc: 'Lily pads and lazy koi.' },
+  { id: 'bell', name: 'Bell Tower', price: 160, desc: 'A pavilion with a great bronze bell.' },
+  { id: 'gate', name: 'Mountain Gate', price: 200, desc: 'A painted archway framing the view.' },
+  { id: 'waterfall', name: 'Waterfall', price: 200, desc: 'Falling water on the far mountain.' },
+  { id: 'hall', name: 'Temple Hall', price: 300, desc: 'The main hall with sweeping roofs.' },
+  { id: 'pagoda', name: 'Pagoda', price: 400, desc: 'A three-tiered pagoda behind the hall.' },
+];
+
+export const THEMES = [
+  { id: 'dawn', name: 'Dawn', price: 0, desc: 'First light over the mountains.' },
+  { id: 'day', name: 'Clear Day', price: 80, desc: 'Blue skies and green hills.' },
+  { id: 'dusk', name: 'Dusk', price: 100, desc: 'A red sun sinking behind the peaks.' },
+  { id: 'autumn', name: 'Autumn', price: 120, desc: 'Golden hills and falling leaves.' },
+  { id: 'night', name: 'Night', price: 150, desc: 'Moonlight, stars and glowing lanterns.' },
+  { id: 'snow', name: 'Snow', price: 150, desc: 'A hush of winter on the temple.' },
+];
+
+// ---- Streak milestones: a one-off reward each time a streak reaches these lengths ----
+// (on top of the everyday streak bonus of +5% coins per day, up to +50%)
+export const STREAK_MILESTONES = [
+  { days: 7, name: '1-week streak', coins: 20, freeze: true },
+  { days: 14, name: '2-week streak', coins: 40 },
+  { days: 30, name: '1-month streak', coins: 100, freeze: true },
+  { days: 60, name: '2-month streak', coins: 150 },
+  { days: 100, name: '100-day streak', coins: 250, freeze: true },
+  { days: 180, name: '6-month streak', coins: 300 },
+  { days: 365, name: '1-year streak', coins: 500 },
+];

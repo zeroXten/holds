@@ -422,3 +422,93 @@ body.demo .stage video { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Temple scene ---------- */
+.temple-banner {
+  display: block; width: 100%; padding: 0; border: 0; margin: 0 0 14px; position: relative;
+  border-radius: var(--radius); overflow: hidden; background: #000; box-shadow: var(--shadow); cursor: pointer;
+}
+.temple-banner.static { cursor: default; }
+.temple-banner canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+.banner-label {
+  position: absolute; right: 8px; bottom: 8px; font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+  padding: 4px 10px; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff;
+}
+button.chip { cursor: pointer; }
+.freezes { font-size: .75rem; color: #7fc8ff; font-weight: 700; }
+.freezes:empty { display: none; }
+
+/* ---------- Home cards ---------- */
+.home-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 12px; display: grid; gap: 10px;
+}
+.home-card.warn { border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+.home-card.bet { border-color: var(--gold); }
+.home-card .row { justify-content: flex-end; flex-wrap: wrap; }
+.home-card .btn { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 8px 16px; }
+.home-card small { color: var(--muted); }
+.progress { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--accent)); }
+
+/* ---------- Shop ---------- */
+.subbar .shop-wallet { margin-left: auto; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+.tabs button {
+  border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; min-height: 42px; font-weight: 700;
+}
+.tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.shop-intro { color: var(--muted); margin-bottom: 12px; font-size: .92rem; }
+.shop-note { color: var(--muted); font-size: .88rem; }
+.shop-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.shop-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.shop-list li:first-child { border-top: 0; }
+.shop-list li > div { display: grid; gap: 2px; flex: 1; }
+.shop-list small { color: var(--muted); font-size: .82rem; }
+.shop-list small.blocked { color: var(--bad); }
+.shop-list li.owned b { color: var(--muted); }
+.btn.buy { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 6px 14px; white-space: nowrap; }
+.btn.buy:disabled { opacity: .45; cursor: not-allowed; }
+.owned-tag { font-size: .78rem; font-weight: 700; color: var(--good); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.theme-card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 8px; display: grid; gap: 4px; justify-items: start; }
+.theme-card.active { border-color: var(--accent); }
+.theme-card canvas { width: 100%; height: auto; border-radius: 10px; image-rendering: pixelated; }
+.theme-card small { color: var(--muted); font-size: .78rem; }
+#shop-body h3 { font-size: 1.05rem; margin: 20px 0 6px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+#shop-body h3 small { font-family: var(--sans); font-weight: 600; font-size: .8rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+#shop-body h3 small .ico { width: 14px; height: 14px; }
+.streak-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-weight: 600; }
+.streak-head small { color: var(--muted); font-weight: 500; }
+.big-flame { font-size: 2rem; font-weight: 800; white-space: nowrap; }
+.rest-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 8px; }
+.rest-day {
+  display: grid; justify-items: center; padding: 6px 0; border-radius: 12px;
+  border: 1.5px solid var(--line); background: var(--surface); line-height: 1.2;
+}
+.rest-day b { font-size: 1.1rem; }
+.rest-day small { font-size: .7rem; color: var(--muted); }
+.rest-day.on { background: color-mix(in srgb, #7fc8ff 25%, var(--surface)); border-color: #7fc8ff; }
+.rest-day:disabled { opacity: .4; cursor: not-allowed; }
+.shop-row { display: flex; align-items: center; gap: 12px; }
+.shop-row p { flex: 1; }
+.milestones { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.milestones li { display: flex; justify-content: space-between; padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); font-size: .9rem; }
+.milestones li.done { color: var(--muted); text-decoration: line-through; }
+
+/* ---------- Level test, summary extras ---------- */
+.lv.test { border-style: dashed; border-color: var(--gold); opacity: 1; }
+.lv.test.on { background: var(--gold); border-color: var(--gold); color: #1a0f08; }
+.test-msg { font-size: .9rem; background: color-mix(in srgb, var(--gold) 14%, var(--surface)); border: 1px dashed var(--gold); border-radius: 12px; padding: 10px 12px; }
+.sum-extra { display: grid; gap: 8px; }
+.sum-extra:empty { display: none; }
+.banner.good { background: color-mix(in srgb, var(--good) 18%, var(--surface)); border-color: var(--good); }
+.banner.bad { background: color-mix(in srgb, var(--bad) 14%, var(--surface)); border-color: var(--bad); }
+.banner.gold { background: color-mix(in srgb, var(--gold) 22%, var(--surface)); border-color: var(--gold); font-weight: 700; }
+
+/* ---------- Theme accents (set from the temple theme) ---------- */
+:root[data-scene="day"] { --accent: #2f8a55; --gold: #e0a83a; }
+:root[data-scene="dusk"] { --accent: #b8406e; --gold: #f0a040; }
+:root[data-scene="autumn"] { --accent: #c4561c; --gold: #e8a040; }
+:root[data-scene="night"] { --accent: #5b74e8; --gold: #f0c860; }
+:root[data-scene="snow"] { --accent: #3a7ab8; --gold: #d8a848; }

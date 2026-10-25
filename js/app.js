@@ -1,5 +1,9 @@
 import { HOLDS, holdById } from './holds.js';
-import { LEVEL_MULT, DAILY_MULT, BONUS_TIERS } from './economy.js';
+import {
+  LEVEL_MULT, DAILY_MULT, BONUS_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
+  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice,
+} from './economy.js';
+import { drawTemple, SCENE_H } from './temple.js';
 import { figureSVG } from './figure.js';
 import * as P from './progress.js';
 import { Session, STRICTNESS } from './session.js';
@@ -32,14 +36,28 @@ function show(id) {
   $$('.screen').forEach(s => { s.hidden = s.id !== id; });
   document.body.dataset.screen = id;
   window.scrollTo(0, 0);
+  if (id === 'home' || id === 'shop') requestAnimationFrame(() => drawScenes(true));
 }
 
+// Toasts queue up, so several notices in a row are each seen.
+const toastQueue = [];
 function toast(msg) {
+  toastQueue.push(msg);
+  if (toastQueue.length === 1) showNextToast();
+}
+function showNextToast() {
   const t = $('#toast');
-  t.textContent = msg;
+  if (!toastQueue.length) { t.hidden = true; return; }
+  t.textContent = toastQueue[0];
   t.hidden = false;
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => { t.hidden = true; }, 2600);
+  setTimeout(() => { toastQueue.shift(); showNextToast(); }, 2800);
+}
+
+// Messages saved by the progress logic (a freeze was used, a bet was settled...).
+function flushNotices() {
+  if (!state.notices.length) return;
+  state.notices.splice(0).forEach(toast);
+  P.save(state);
 }
 
 function pips(hs) {
@@ -57,7 +75,11 @@ function renderHome() {
   $('#xp-fill').style.width = `${Math.round(r.progress * 100)}%`;
   $('#xp-text').textContent = r.next ? `${state.lifetime.toLocaleString()} / ${r.next.coins.toLocaleString()} coins earned` : `${state.lifetime.toLocaleString()} coins earned`;
   $('#streak').textContent = P.streak(state);
+  $('#freezes').textContent = state.streak.freezes ? `❄${state.streak.freezes}` : '';
   $('#wallet').textContent = state.coins.toLocaleString();
+  document.documentElement.dataset.scene = state.temple.theme;
+  renderHomeCards();
+  drawScenes(true);
   $('#intro').hidden = state.history.length > 0;
   const daily = P.dailyHold(state);
   if (!hero || !P.isUnlocked(state, hero.id)) hero = daily;
@@ -141,11 +163,24 @@ function renderSheetLevel() {
     sheetLevel = 1;
   }
   const unlocked = hs.mastered ? 4 : hs.level;
+  // The level after yours can be taken as a test; the rest stay locked.
+  const testLevel = !locked && !hs.mastered && hs.level < 4 ? hs.level + 1 : null;
   $('#hs-levels').innerHTML = hold.levels.map((l, i) => {
-    const n = i + 1, locked = n > unlocked;
-    return `<button type="button" role="tab" class="lv ${n === sheetLevel ? 'on' : ''}" data-level="${n}" ${locked ? 'disabled' : ''} aria-selected="${n === sheetLevel}">
-      ${locked ? '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3z"/></svg>' : n}</button>`;
+    const n = i + 1, closed = n > unlocked && n !== testLevel;
+    return `<button type="button" role="tab" class="lv ${n === sheetLevel ? 'on' : ''} ${n === testLevel ? 'test' : ''}" data-level="${n}" ${closed ? 'disabled' : ''} aria-selected="${n === sheetLevel}">
+      ${n > unlocked ? LOCK : n}</button>`;
   }).join('');
+  const testing = sheetLevel === testLevel;
+  $('#hs-test-msg').hidden = !testing;
+  $('#hs-start').textContent = testing ? 'Take the level test' : 'Start';
+  if (testing) {
+    const price = testPrice(sheetLevel), short = price > state.coins;
+    $('#hs-test-msg').innerHTML = `<b>Level test:</b> reach the target${hold.camera ? ` with ${TEST_FORM}+ average form (camera on)` : ''} to unlock level ${sheetLevel} now. Passing is free; not passing costs <b>${price} coins</b>.${short ? ` You need ${price} coins to take it.` : ''}`;
+    $('#hs-start').disabled = short;
+    $('#hs-cam-row').hidden = true;
+  } else {
+    $('#hs-start').disabled = false;
+  }
   const lv = hold.levels[sheetLevel - 1];
   $('#hs-fig').innerHTML = figureSVG(hold.figure(sheetLevel));
   $('#hs-lname').textContent = `Level ${sheetLevel} · ${lv.name}`;
@@ -178,7 +213,7 @@ const COLORS = { good: '#7bd88f', warn: '#ffb547', bad: '#ff5d5d', idle: 'rgba(2
 
 let run = null;  // the active session: { session, source, hold, level, raf, wake }
 
-async function startSession(hold, level, useCamera) {
+async function startSession(hold, level, useCamera, { test = false } = {}) {
   audio.unlock();
   stopRun();
   show('session');
@@ -193,7 +228,7 @@ async function startSession(hold, level, useCamera) {
   $('#s-ref').hidden = !useCamera;
   $('#s-tick').style.left = `${STRICTNESS[state.settings.strictness].hold}%`;
   document.body.classList.toggle('demo', DEMO);
-  run = { hold, level, camera: useCamera };
+  run = { hold, level, camera: useCamera, test };
   const myRun = run;
   setStatus('wait', useCamera ? (DEMO ? 'Demo mode' : 'Starting camera…') : '');
   $('#s-cue').textContent = useCamera && !DEMO ? 'The pose model downloads the first time (about 10 MB).' : '';
@@ -262,7 +297,7 @@ function updateHud(v) {
   // One-sided holds show the current side's time against that side's target.
   $('#s-time').textContent = fmt(v.sideHeld);
   $('#s-target').textContent = ` / ${fmt(v.sideTarget)}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${run.test ? ' · Level test' : ''}`;
   // Whole coins, plus a bar filling towards the next one; a chime and a pop as each lands.
   const whole = Math.floor(v.coins);
   $('#s-coins').textContent = whole.toLocaleString();
@@ -417,10 +452,10 @@ function endSession() {
 let lastRun = null;
 
 function finishSession() {
-  const { session, hold, level, camera } = run;
-  const result = session.result;
+  const { session, hold, level, camera, test } = run;
+  const result = { ...session.result, test };
   stopRun();
-  lastRun = { hold, level, camera };
+  lastRun = { hold, level, camera, test };
   if (result.held < 3) {
     toast('Session too short to count');
     show('home');
@@ -454,6 +489,17 @@ function renderSummary(hold, level, r, o) {
     ? (o.wallet >= o.nextUnlock ? `You have ${o.wallet} coins: enough to unlock a new hold!` : `You have ${o.wallet} coins. ${o.nextUnlock - o.wallet} more to unlock a new hold.`)
     : `You have ${o.wallet} coins.`;
   $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${wallet}`;
+  // Level test, bet and streak milestone results.
+  const extra = [];
+  if (o.test) {
+    extra.push(o.test.passed
+      ? `<div class="banner good">Level test passed! Level ${level} is unlocked.</div>`
+      : `<div class="banner bad">Level test not passed: −${o.test.price} coins. You need the full target${r.camera ? ` with ${TEST_FORM}+ form` : ''}.</div>`);
+  }
+  if (o.bet) extra.push(o.bet.result === 'won' ? `<div class="banner good">Bet won: ${o.bet.def.name}! +${o.bet.def.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${o.bet.def.name}.</div>`);
+  for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! +${m.coins} coins${m.freeze ? ' and a free streak freeze' : ''}.</div>`);
+  $('#sum-extra').innerHTML = extra.join('');
+  if (o.milestones.length || o.bet?.result === 'won' || o.test?.passed) setTimeout(() => audio.play('level'), 300);
   $('#sum-stats').innerHTML = `
     <div><b>${fmtLong(r.held)}</b><small>held of ${fmtLong(r.target)}${r.sides ? `<br>${r.sides.map(t => fmtLong(t)).join(' + ')}` : ''}</small></div>
     ${r.camera ? `<div><b>${Math.round(r.avgForm)}</b><small>average form</small></div>` : '<div><b>—</b><small>honour mode</small></div>'}
@@ -600,7 +646,170 @@ $('#reset').onclick = () => {
   toast('Progress reset');
 };
 
+// ---------- Home cards: broken streak, active bet ----------
+
+function renderHomeCards() {
+  const cards = [];
+  const b = state.streak.broken;
+  if (b) {
+    cards.push(`<div class="home-card warn">
+      <p><b>Your ${b.streak}-day streak ended.</b> Repair it for ${b.price} coins to keep it going.</p>
+      <div class="row"><button class="btn" data-act="dismiss-repair">Let it go</button><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div>
+    </div>`);
+  }
+  const bp = P.betProgress(state);
+  if (bp) cards.push(betCard(bp));
+  $('#home-cards').innerHTML = cards.join('');
+}
+
+function betCard(bp) {
+  const ends = bp.end === P.dayKey() ? 'ends tonight' : `ends ${new Date(bp.end + 'T12:00').toLocaleDateString(undefined, { weekday: 'long' })}`;
+  return `<div class="home-card bet">
+    <p><b>Bet: ${bp.def.name}</b> · win ${bp.def.payout} coins · ${ends}</p>
+    <div class="progress"><i style="width:${Math.round(bp.frac * 100)}%"></i></div>
+    <small>${bp.text}</small>
+  </div>`;
+}
+
+// ---------- Shop ----------
+
+let shopTab = 'temple';
+
+function openShop(tab = shopTab) {
+  shopTab = tab;
+  show('shop');
+  renderShop();
+}
+
+function renderShop() {
+  $('#shop-wallet').textContent = state.coins.toLocaleString();
+  $$('#shop-tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === shopTab));
+  $('#shop-preview').hidden = !(shopTab === 'temple' || shopTab === 'themes');
+  $('#shop-body').innerHTML = { temple: shopTemple, themes: shopThemes, streak: shopStreak, bets: shopBets }[shopTab]();
+  if (shopTab === 'themes') {
+    $$('#shop-body canvas[data-theme]').forEach(cv => drawTemple(cv, state, 3.3, cv.dataset.theme));
+  }
+  drawScenes(true);
+}
+
+const buyBtn = (act, id, price, label = `${COIN} ${price}`) =>
+  `<button class="btn buy" data-act="${act}" data-id="${id}" ${state.coins < price ? 'disabled' : ''}>${label}</button>`;
+
+function shopTemple() {
+  const owned = state.temple.owned.length;
+  return `<p class="shop-intro">Build up your temple. Each feature you buy appears in the scene on your home screen. (${owned} of ${TEMPLE_ITEMS.length})</p>
+  <ul class="shop-list">${[...TEMPLE_ITEMS].sort((a, b) => a.price - b.price).map(i => `
+    <li class="${P.owns(state, i.id) ? 'owned' : ''}"><div><b>${i.name}</b><small>${i.desc}</small></div>
+      ${P.owns(state, i.id) ? '<span class="owned-tag">Built</span>' : buyBtn('buy-item', i.id, i.price)}</li>`).join('')}
+  </ul>`;
+}
+
+function shopThemes() {
+  return `<p class="shop-intro">Themes change the time of day or season in your temple, and the app's colours.</p>
+  <div class="theme-grid">${THEMES.map(t => {
+    const have = state.temple.themes.includes(t.id), active = state.temple.theme === t.id;
+    return `<div class="theme-card ${active ? 'active' : ''}">
+      <canvas data-theme="${t.id}" width="120" height="${SCENE_H}"></canvas>
+      <b>${t.name}</b><small>${t.desc}</small>
+      ${active ? '<span class="owned-tag">In use</span>' : have ? `<button class="btn buy" data-act="use-theme" data-id="${t.id}">Use</button>` : buyBtn('buy-theme', t.id, t.price)}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function shopStreak() {
+  const n = P.streak(state), next = P.nextMilestone(state), today = P.dayKey();
+  const days = Array.from({ length: 7 }, (_, i) => P.addDays(today, i + 1));
+  const b = state.streak.broken;
+  return `
+  <div class="streak-head"><span class="big-flame">🔥 ${n}</span><span>day streak${next ? `<br><small>${next.days - n} more day${next.days - n === 1 ? '' : 's'} to the ${next.name}: +${next.coins} coins${next.freeze ? ' and a free freeze' : ''}</small>` : ''}</span></div>
+  <p class="shop-intro">Every streak day adds 5% to your coins (up to +50%), and milestones pay out on top. Protecting your streak is cheapest when planned ahead.</p>
+  ${b ? `<div class="home-card warn"><p><b>Your ${b.streak}-day streak ended.</b> Repair it: ${REPAIR_PRICE_PER_DAY} coins per missed day.</p>
+    <div class="row"><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div></div>` : ''}
+  <h3>Rest days <small>${COIN} ${REST_DAY_PRICE} each · up to 2 a week</small></h3>
+  <p class="shop-note">Plan a day off in advance and your streak carries on. Rest is part of training.</p>
+  <div class="rest-strip">${days.map(d => {
+    const planned = state.streak.covered[d] === 'rest', block = P.restBlocker(state, d, today);
+    const date = new Date(d + 'T12:00');
+    return `<button class="rest-day ${planned ? 'on' : ''}" data-act="${planned ? 'cancel-rest' : 'plan-rest'}" data-id="${d}" ${!planned && block ? `disabled title="${block}"` : ''}>
+      <small>${date.toLocaleDateString(undefined, { weekday: 'short' })}</small><b>${date.getDate()}</b><small>${planned ? 'Rest' : '+'}</small></button>`;
+  }).join('')}</div>
+  <h3>Streak freezes <small>${COIN} ${FREEZE_PRICE} each</small></h3>
+  <div class="shop-row"><p class="shop-note">Covers a day you miss without planning. Used automatically. You have <b>${state.streak.freezes} of ${FREEZE_MAX}</b>.</p>
+    ${state.streak.freezes >= FREEZE_MAX ? '<span class="owned-tag">Full</span>' : buyBtn('buy-freeze', 'freeze', FREEZE_PRICE)}</div>
+  <h3>Milestones</h3>
+  <ul class="milestones">${STREAK_MILESTONES.map(m => `<li class="${n >= m.days ? 'done' : ''}"><span>${m.name}</span><span>+${m.coins}${m.freeze ? ' + ❄' : ''}</span></li>`).join('')}</ul>`;
+}
+
+function shopBets() {
+  const bp = P.betProgress(state);
+  if (bp) return `<p class="shop-intro">Your coins are on the line. Finish this bet before placing another.</p>${betCard(bp)}`;
+  return `<p class="shop-intro">Bet on yourself: stake coins, and win more back if you do it in time. Only training after you place the bet counts.</p>
+  <ul class="shop-list">${BETS.map(b => {
+    const block = P.betBlocker(state, b.id);
+    return `<li><div><b>${b.name}</b><small>${b.desc} Stake ${b.stake}, win ${b.payout}.</small>${block && !block.startsWith('Needs ' + b.stake) ? `<small class="blocked">${block}</small>` : ''}</div>
+      <button class="btn buy" data-act="bet" data-id="${b.id}" ${block ? 'disabled' : ''}>Bet ${b.stake}</button></li>`;
+  }).join('')}</ul>`;
+}
+
+// Every shop and home-card button goes through here.
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const id = b.dataset.id;
+  const actions = {
+    'buy-item': () => P.buyTempleItem(state, id) && `${TEMPLE_ITEMS.find(i => i.id === id).name} built!`,
+    'buy-theme': () => P.buyTheme(state, id) && `${THEMES.find(t => t.id === id).name} theme unlocked!`,
+    'use-theme': () => P.useTheme(state, id) && '',
+    'buy-freeze': () => P.buyFreeze(state) && 'Streak freeze bought',
+    'plan-rest': () => P.planRest(state, id) && 'Rest day planned',
+    'cancel-rest': () => P.cancelRest(state, id) && 'Rest day cancelled, coins refunded',
+    repair: () => P.repairStreak(state) && 'Streak repaired!',
+    'dismiss-repair': () => { P.dismissRepair(state); return ''; },
+    bet: () => P.placeBet(state, id) && 'Bet placed. Good luck!',
+  };
+  const msg = actions[b.dataset.act]?.();
+  if (msg === false || msg === undefined) return;
+  audio.unlock();
+  if (msg) { toast(msg); audio.play(/built|unlocked|repaired/.test(msg) ? 'level' : 'point'); }
+  document.documentElement.dataset.scene = state.temple.theme;
+  if (document.body.dataset.screen === 'shop') renderShop(); else renderHome();
+});
+
+$('#shop-tabs').onclick = e => { const t = e.target.closest('[data-tab]'); if (t) { shopTab = t.dataset.tab; renderShop(); } };
+
+// ---------- Temple scene animation ----------
+
+// Art pixels are this many CSS pixels; canvases keep a fixed height in art pixels
+// and grow wider to fill their container.
+const ART_PX = 2;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let sceneTimer = null;
+
+function drawScenes(resize = false) {
+  const screen = document.body.dataset.screen;
+  const cv = screen === 'home' ? $('#temple-canvas') : screen === 'shop' && !$('#shop-preview').hidden ? $('#shop-canvas') : null;
+  if (!cv) return;
+  if (resize || !cv.dataset.sized) {
+    const w = Math.max(150, Math.round(cv.parentElement.clientWidth / ART_PX));
+    if (cv.width !== w) cv.width = w;
+    cv.height = SCENE_H;
+    cv.dataset.sized = '1';
+  }
+  drawTemple(cv, state, reduceMotion ? 3.3 : performance.now() / 1000);
+}
+
+function animateScenes() {
+  clearInterval(sceneTimer);
+  if (reduceMotion) return;
+  sceneTimer = setInterval(() => { if (document.visibilityState === 'visible') drawScenes(); }, 100);
+}
+window.addEventListener('resize', () => drawScenes(true));
+
 // ---------- Wiring ----------
+
+$('#temple-banner').onclick = () => openShop('temple');
+$('#wallet-chip').onclick = () => openShop('temple');
+$('#streak-chip').onclick = () => openShop('streak');
 
 $('#shuffle').onclick = () => { hero = P.pickHold(state, hero.id); renderHero(); };
 $('#back-daily').onclick = () => { hero = P.dailyHold(state); renderHero(); };
@@ -612,7 +821,12 @@ $('#hero-fig').onclick = () => openHold(hero);
 $('#grid').onclick = e => { const c = e.target.closest('[data-hold]'); if (c) openHold(holdById(c.dataset.hold)); };
 $('#hs-levels').onclick = e => { const b = e.target.closest('[data-level]'); if (b && !b.disabled) { sheetLevel = +b.dataset.level; renderSheetLevel(); } };
 $('#hold-sheet').addEventListener('close', () => {
-  if ($('#hold-sheet').returnValue === 'start') startSession(sheetHold, sheetLevel, sheetHold.camera && $('#hs-cam').checked);
+  if ($('#hold-sheet').returnValue === 'start') {
+    const hs = P.holdState(state, sheetHold.id);
+    const test = sheetLevel > hs.level;
+    // Tests always use the camera when the hold supports it.
+    startSession(sheetHold, sheetLevel, sheetHold.camera && (test || $('#hs-cam').checked), { test });
+  }
   $('#hold-sheet').returnValue = '';
 });
 $('#settings-btn').onclick = openSettings;
@@ -621,13 +835,22 @@ $('#progress-btn').onclick = renderProgress;
 $('#end-btn').onclick = () => endSession();
 $('#s-retry').onclick = () => { const { hold, level } = run ?? lastRun; startSession(hold, level, true); };
 $('#s-honour').onclick = () => { const { hold, level } = run ?? lastRun; startSession(hold, level, false); };
-$('#sum-again').onclick = () => { const { hold, level, camera } = lastRun; startSession(hold, level, camera); };
+$('#sum-again').onclick = () => {
+  const { hold, level, camera, test } = lastRun;
+  // After a passed test the level is yours, so "go again" is an ordinary session.
+  startSession(hold, level, camera, { test: test && level > P.holdState(state, hold.id).level });
+};
 document.addEventListener('click', e => {
   if (e.target.closest('[data-home]')) { stopRun(); show('home'); renderHome(); }
 });
 
+// On opening: spend freezes or offer a repair, settle an expired bet, then show what happened.
+P.protectStreak(state);
+P.settleBet(state);
 show('home');
 renderHome();
+flushNotices();
+animateScenes();
 
 // Start fetching the pose model in the background so the first session starts quickly.
 if (!DEMO && state.settings.camera) {

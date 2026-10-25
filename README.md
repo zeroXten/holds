@@ -7,6 +7,10 @@ A gamified trainer for Shaolin isometric stances. Prop your phone up, step back,
 - **Coins:** 1 coin per 10 seconds in good form, × the level (1×, 1.25×, 1.5×, 2×) × form (0.75× at the threshold, 1.25× at perfect form). Bonus time past the target pays 1.5×, then 2× from +50%, then 3× from double the target. Reaching the target adds 2 coins, and a daily streak adds up to +50%.
 - **Hold of the day:** picked from your unlocked holds using the date as the seed, so it's the same all day. It earns 3× coins.
 - **Unlocking holds:** Horse and Bow are free. Spend coins to unlock the others; each unlock costs more than the last (20, 30, 45 … 300 coins).
+- **Streaks:** each streak day adds 5% to your coins (up to +50%), and milestones at 1 week, 2 weeks, 1, 2, ~3, 6 and 12 months pay bonus coins (some with a free streak freeze). Protect a streak with a planned rest day (5 coins, booked ahead), a streak freeze (15, used automatically) or a repair after the fact (40 per missed day).
+- **Bets on yourself:** stake coins on a goal (three holds today, ten minutes today, a 90+ form target, a personal best, five days this week, an unbroken week) and win more back.
+- **Level tests:** take the next level early; pass with 80+ form and it unlocks for free, fail and it costs coins.
+- **Your temple:** a pixel-art Shaolin courtyard, drawn entirely in code, across the top of the home screen. It starts bare; buy 15 features (path, bamboo, lanterns, hall, pagoda…) and 6 themes (dawn, day, dusk, autumn, night, snow) that also recolour the app. `node tools/render-temple.mjs <dir>` renders scenes to PNG.
 - **Levelling up:** reach a level's target with 70+ average form on 3 different days to unlock the next level.
 - **Also:** sash ranks from total coins earned (spending doesn't lower your rank), badges, a training heatmap and personal bests. Plain HTML/CSS/JS with no build step. Installs as an app and works offline.
 

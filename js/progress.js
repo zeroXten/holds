@@ -2,7 +2,10 @@
 // levels, streaks, personal bests and badges.
 
 import { HOLDS } from './holds.js';
-import { STARTER_HOLDS, UNLOCK_PRICES } from './economy.js';
+import {
+  STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES,
+} from './economy.js';
 
 const KEY = 'holds.v1';
 export const QUALIFY_DAYS = 3;   // days hitting the target (with good form) to level up
@@ -46,6 +49,11 @@ export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autof
 const blank = () => ({
   version: 2, coins: 0, lifetime: 0, unlocked: [...STARTER_HOLDS], purchased: [], daily: null,
   holds: {}, history: [], days: {}, badges: {}, settings: { ...DEFAULT_SETTINGS },
+  // covered: days that keep the streak alive without training ('rest' | 'freeze' | 'repair')
+  streak: { freezes: 0, covered: {}, broken: null, claimed: {} },  // claimed: milestone days → the streak's start date
+  bet: null,
+  temple: { owned: [], theme: 'dawn', themes: ['dawn'] },
+  notices: [],  // messages to show once (a freeze was used, a bet was won...)
 });
 
 // Version 1 had points (about 80 per coin) and every hold open. Convert the
@@ -70,7 +78,13 @@ export function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const data = migrate(JSON.parse(raw));
-      return { ...blank(), ...data, settings: { ...DEFAULT_SETTINGS, ...data.settings } };
+      const fresh = blank();
+      return {
+        ...fresh, ...data,
+        settings: { ...DEFAULT_SETTINGS, ...data.settings },
+        streak: { ...fresh.streak, ...data.streak },
+        temple: { ...fresh.temple, ...data.temple },
+      };
     }
   } catch { /* storage unavailable or corrupt: start fresh */ }
   return blank();
@@ -85,7 +99,7 @@ export function save(state) {
 export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-const addDays = (key, n) => {
+export const addDays = (key, n) => {
   const [y, m, d] = key.split('-').map(Number);
   return dayKey(new Date(y, m - 1, d + n));
 };
@@ -94,12 +108,234 @@ export function holdState(state, id) {
   return state.holds[id] ?? { level: 1, qualDays: [], mastered: false, best: {}, sessions: 0, totalTime: 0, last: null };
 }
 
-// Current streak: consecutive training days ending today, or yesterday if today isn't done yet.
+// A day keeps the streak alive if you trained, or it was a rest day, freeze or repair.
+const trained = (state, day) => !!state.days[day];
+const kept = (state, day) => trained(state, day) || !!state.streak.covered[day];
+
+// Current streak: training days in an unbroken run ending today (or yesterday if today
+// isn't done yet). Covered days bridge the run but don't add to the count.
 export function streak(state, today = dayKey()) {
-  let day = state.days[today] ? today : addDays(today, -1);
+  let day = kept(state, today) ? today : addDays(today, -1);
   let n = 0;
-  while (state.days[day]) { n++; day = addDays(day, -1); }
+  while (kept(state, day)) { if (trained(state, day)) n++; day = addDays(day, -1); }
   return n;
+}
+
+// First day of the current run (the earliest training day in it), so milestone
+// rewards can be claimed once per streak.
+export function streakStart(state, today = dayKey()) {
+  let day = kept(state, today) ? today : addDays(today, -1), start = null;
+  while (kept(state, day)) { if (trained(state, day)) start = day; day = addDays(day, -1); }
+  return start;
+}
+
+export const nextMilestone = (state, today = dayKey()) => STREAK_MILESTONES.find(m => m.days > streak(state, today)) ?? null;
+
+// Pays out any milestone the current streak has reached and not yet claimed.
+function claimMilestones(state, today) {
+  const n = streak(state, today), start = streakStart(state, today), earned = [];
+  for (const m of STREAK_MILESTONES) {
+    if (n < m.days || state.streak.claimed[m.days] === start) continue;
+    state.streak.claimed[m.days] = start;
+    let coins = m.coins, freeze = false;
+    if (m.freeze) {
+      // A free freeze, or its price in coins if you already hold the maximum.
+      if (state.streak.freezes < FREEZE_MAX) { state.streak.freezes++; freeze = true; } else coins += FREEZE_PRICE;
+    }
+    state.coins += coins;
+    state.lifetime += coins;
+    earned.push({ ...m, coins, freeze });
+  }
+  return earned;
+}
+
+// ---- Protecting the streak ----
+
+// Run on opening the app (and before recording a session): spend freezes on missed
+// days if there are enough, otherwise offer a repair while it's still recent.
+export function protectStreak(state, today = dayKey()) {
+  const missed = [];
+  let day = addDays(today, -1);
+  while (!kept(state, day) && missed.length <= REPAIR_WINDOW_DAYS) { missed.push(day); day = addDays(day, -1); }
+  state.streak.broken = null;
+  if (!missed.length || !kept(state, day)) return;   // nothing missed, or too long ago
+  const run = streak(state, day);
+  if (!run) return;
+  if (missed.length <= state.streak.freezes) {
+    for (const d of missed) state.streak.covered[d] = 'freeze';
+    state.streak.freezes -= missed.length;
+    state.notices.push(`${missed.length === 1 ? 'A streak freeze' : `${missed.length} streak freezes`} saved your ${run}-day streak.`);
+  } else if (state.streak.dismissed !== day) {
+    // `since` (the streak's last kept day) identifies this break, so a dismissed offer stays dismissed.
+    state.streak.broken = { streak: run, missed: missed.reverse(), price: missed.length * REPAIR_PRICE_PER_DAY, since: day };
+  }
+  save(state);
+}
+
+export function repairStreak(state) {
+  const b = state.streak.broken;
+  if (!b || state.coins < b.price) return false;
+  for (const d of b.missed) state.streak.covered[d] = 'repair';
+  state.coins -= b.price;
+  state.streak.broken = null;
+  save(state);
+  return true;
+}
+
+export function dismissRepair(state) {
+  if (!state.streak.broken) return;
+  state.streak.dismissed = state.streak.broken.since;
+  state.streak.broken = null;
+  save(state);
+}
+
+export function buyFreeze(state) {
+  if (state.streak.freezes >= FREEZE_MAX || state.coins < FREEZE_PRICE) return false;
+  state.coins -= FREEZE_PRICE;
+  state.streak.freezes++;
+  save(state);
+  return true;
+}
+
+const weekStart = key => {
+  const [y, m, d] = key.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return addDays(key, -((date.getDay() + 6) % 7));  // Monday
+};
+export const restDaysInWeek = (state, key) => {
+  const start = weekStart(key);
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i)).filter(d => state.streak.covered[d] === 'rest').length;
+};
+
+// Why a day can't be booked as a rest day, or null if it can.
+export function restBlocker(state, day, today = dayKey()) {
+  if (day <= today) return 'Rest days have to be planned at least a day ahead.';
+  if (day > addDays(today, 7)) return 'You can plan up to a week ahead.';
+  if (state.streak.covered[day]) return 'Already covered.';
+  if (restDaysInWeek(state, day) >= REST_DAYS_PER_WEEK) return `Up to ${REST_DAYS_PER_WEEK} rest days a week.`;
+  if (state.coins < REST_DAY_PRICE) return `Needs ${REST_DAY_PRICE} coins.`;
+  return null;
+}
+
+export function planRest(state, day, today = dayKey()) {
+  if (restBlocker(state, day, today)) return false;
+  state.coins -= REST_DAY_PRICE;
+  state.streak.covered[day] = 'rest';
+  save(state);
+  return true;
+}
+
+export function cancelRest(state, day, today = dayKey()) {
+  if (state.streak.covered[day] !== 'rest' || day <= today) return false;
+  delete state.streak.covered[day];
+  state.coins += REST_DAY_PRICE;
+  save(state);
+  return true;
+}
+
+// ---- Bets ----
+
+export const betDef = id => BETS.find(b => b.id === id);
+
+export function betBlocker(state, id) {
+  const def = betDef(id);
+  if (state.bet) return 'Finish your current bet first.';
+  if (id === 'holds3' && HOLDS.filter(h => isUnlocked(state, h.id)).length < 3) return 'Needs 3 unlocked holds.';
+  if (state.coins < def.stake) return `Needs ${def.stake} coins.`;
+  return null;
+}
+
+export function placeBet(state, id, today = dayKey()) {
+  if (betBlocker(state, id)) return false;
+  const def = betDef(id);
+  state.coins -= def.stake;
+  state.bet = { id, start: today, end: addDays(today, def.days - 1), holds: [], time: 0, days: [], done: false };
+  save(state);
+  return true;
+}
+
+// Progress text and fraction for the active bet.
+export function betProgress(state) {
+  const b = state.bet;
+  if (!b) return null;
+  const def = betDef(b.id);
+  const p = {
+    holds3: [b.holds.length, 3, `${b.holds.length} of 3 holds`],
+    time10: [Math.min(b.time, 600), 600, `${Math.floor(b.time / 60)} of 10 minutes`],
+    form90: [b.done ? 1 : 0, 1, b.done ? 'Done' : 'Not yet'],
+    pb: [b.done ? 1 : 0, 1, b.done ? 'Done' : 'Not yet'],
+    week5: [b.days.length, 5, `${b.days.length} of 5 days`],
+    streak7: [b.days.length, 7, `${b.days.length} of 7 days`],
+  }[b.id];
+  return { def, frac: p[0] / p[1], text: p[2], end: b.end };
+}
+
+function betWon(state) {
+  const b = state.bet;
+  switch (b.id) {
+    case 'holds3': return b.holds.length >= 3;
+    case 'time10': return b.time >= 600;
+    case 'form90': case 'pb': return b.done;
+    case 'week5': return b.days.length >= 5;
+    case 'streak7': {
+      // Every day of the week trained, or a planned rest day.
+      for (let d = b.start; d <= b.end; d = addDays(d, 1)) if (!b.days.includes(d) && state.streak.covered[d] !== 'rest') return false;
+      return true;
+    }
+  }
+  return false;
+}
+
+// Settles the active bet: a win as soon as it's met, a loss once its time is up
+// (or, for the unbroken week, as soon as a day is missed).
+export function settleBet(state, today = dayKey(), { notify = true } = {}) {
+  const b = state.bet;
+  if (!b) return null;
+  const def = betDef(b.id);
+  let result = null;
+  if (betWon(state)) result = 'won';
+  else if (today > b.end) result = 'lost';
+  else if (b.id === 'streak7') {
+    for (let d = b.start; d < today; d = addDays(d, 1)) {
+      if (!b.days.includes(d) && state.streak.covered[d] !== 'rest') { result = 'lost'; break; }
+    }
+  }
+  if (!result) return null;
+  if (result === 'won') state.coins += def.payout;
+  if (notify) state.notices.push(result === 'won' ? `Bet won: ${def.name}! +${def.payout} coins.` : `Bet lost: ${def.name}. Better luck next time.`);
+  state.bet = null;
+  save(state);
+  return { result, def };
+}
+
+// ---- The temple ----
+
+export const owns = (state, id) => state.temple.owned.includes(id);
+
+export function buyTempleItem(state, id) {
+  const item = TEMPLE_ITEMS.find(i => i.id === id);
+  if (!item || owns(state, id) || state.coins < item.price) return false;
+  state.coins -= item.price;
+  state.temple.owned.push(id);
+  save(state);
+  return true;
+}
+
+export function buyTheme(state, id) {
+  const theme = THEMES.find(t => t.id === id);
+  if (!theme || state.temple.themes.includes(id) || state.coins < theme.price) return false;
+  state.coins -= theme.price;
+  state.temple.themes.push(id);
+  state.temple.theme = id;
+  save(state);
+  return true;
+}
+
+export function useTheme(state, id) {
+  if (!state.temple.themes.includes(id)) return false;
+  state.temple.theme = id;
+  save(state);
+  return true;
 }
 
 export function rankFor(coins) {
@@ -187,6 +423,7 @@ export function pickHold(state, exclude) {
 // Records a finished session and works out everything that changed.
 export function recordSession(state, s) {
   const today = dayKey();
+  protectStreak(state, today);  // in case the day rolled over with the app open
   const hold = HOLDS.find(h => h.id === s.holdId);
   const hs = holdState(state, s.holdId);
   const before = { rank: rankFor(state.lifetime), streak: streak(state) };
@@ -203,10 +440,17 @@ export function recordSession(state, s) {
   const pb = s.held > prevBest && s.held >= 5;
   if (pb) hs.best[s.level] = Math.round(s.held * 10) / 10;
 
-  // Level progress: one qualifying session per day at the current level.
-  let levelUp = false, mastered = false, qualified = false;
+  // Level test-out: pass the next level's target with good form to unlock it now.
+  // Passing is free; not passing costs the test price.
+  let levelUp = false, mastered = false, qualified = false, test = null;
+  if (s.test) {
+    const passed = reached && (!s.camera || s.avgForm >= TEST_FORM);
+    if (passed) { hs.level = s.level; hs.qualDays = []; levelUp = true; }
+    else state.coins = Math.max(0, state.coins - testPrice(s.level));
+    test = { passed, price: testPrice(s.level) };
+  }
   const formOk = !s.camera || s.avgForm >= QUALIFY_FORM;
-  if (reached && formOk && s.level === hs.level && !hs.mastered && !hs.qualDays.includes(today)) {
+  if (!s.test && reached && formOk && s.level === hs.level && !hs.mastered && !hs.qualDays.includes(today)) {
     hs.qualDays.push(today);
     qualified = true;
     if (hs.qualDays.length >= QUALIFY_DAYS) {
@@ -229,6 +473,17 @@ export function recordSession(state, s) {
     target: s.target, avgForm: s.camera ? Math.round(s.avgForm) : null, coins, camera: s.camera, daily: !!s.daily,
   });
   if (state.history.length > 1000) state.history.splice(0, state.history.length - 1000);
+
+  // Bet progress, then settle it (the stake was paid when the bet was placed).
+  if (state.bet) {
+    const b = state.bet;
+    if (reached && !b.holds.includes(s.holdId)) b.holds.push(s.holdId);
+    b.time += s.held;
+    if (!b.days.includes(today)) b.days.push(today);
+    if ((b.id === 'form90' && reached && s.camera && s.avgForm >= 90) || (b.id === 'pb' && pb)) b.done = true;
+  }
+  const bet = settleBet(state, today, { notify: false });  // the summary screen shows it
+  const milestones = claimMilestones(state, today);
 
   // Badges
   const t = totals(state);
@@ -256,7 +511,7 @@ export function recordSession(state, s) {
   const locked = HOLDS.filter(h => !isUnlocked(state, h.id));
   return {
     coins, baseCoins: s.coins, streakMult, streak: st, reached, pb, prevBest,
-    qualified, qualDays: hs.qualDays.length, levelUp, mastered, newLevel: hs.level,
+    qualified, qualDays: hs.qualDays.length, levelUp, mastered, newLevel: hs.level, test, bet, milestones,
     badges: earn, rankUp: rankFor(state.lifetime).index > before.rank.index, rank: rankFor(state.lifetime),
     wallet: state.coins, nextUnlock: locked.length ? unlockPrice(state) : null,
   };
