@@ -2,6 +2,7 @@
 // on-device), or a scripted stick figure for demo mode (?demo, ?demo=fast).
 
 import { syntheticLandmarks, standing, lerpSpec } from './figure.js';
+import { LandmarkTracker } from './tracker.js';
 
 const VERSION = '0.10.14';
 const BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
@@ -55,6 +56,7 @@ export class CameraSource {
   constructor(video, stream, landmarker) {
     Object.assign(this, { video, stream, landmarker, lastVideoTime: -1, lastTs: 0, last: null });
     this.mirrored = true;
+    this.tracker = new LandmarkTracker();
   }
 
   now() { return performance.now() / 1000; }
@@ -63,11 +65,13 @@ export class CameraSource {
     const v = this.video;
     if (v.readyState < 2 || !v.videoWidth) return null;
     if (v.currentTime !== this.lastVideoTime) {
+      const dt = this.lastVideoTime < 0 ? 1 / 30 : Math.max(1 / 120, v.currentTime - this.lastVideoTime);
       this.lastVideoTime = v.currentTime;
       const ts = Math.max(performance.now(), this.lastTs + 1);
       this.lastTs = ts;
       const res = this.landmarker.detectForVideo(v, ts);
-      this.last = { landmarks: res.landmarks?.[0] ?? null, width: v.videoWidth, height: v.videoHeight };
+      const landmarks = this.tracker.update(res.landmarks?.[0] ?? null, dt, v.videoWidth / v.videoHeight);
+      this.last = { landmarks, width: v.videoWidth, height: v.videoHeight };
     }
     return this.last;
   }
@@ -80,6 +84,8 @@ export class CameraSource {
 export class DemoSource {
   constructor(hold, level, target, speed = 1) {
     Object.assign(this, { hold, level, target, speed, t0: performance.now() / 1000 });
+    this.tracker = new LandmarkTracker();
+    this.lastT = null;
     this.stand = standing(hold.view);
     this.pose = hold.figure(level);
     this.mirrored = true;
@@ -126,7 +132,10 @@ export class DemoSource {
     const spec = this.low ? this.flowSpec(t) : lerpSpec(this.stand, this.pose, this.mix(t));
     // Lying-down holds are filmed with the phone in landscape.
     const [width, height] = this.pose.compact ? [1280, 720] : [720, 1280];
-    return { landmarks: syntheticLandmarks(spec, { width, height, noise: 0.002 }), width, height };
+    const dt = this.lastT === null ? 1 / 30 : Math.max(1 / 120, t - this.lastT);
+    this.lastT = t;
+    const raw = syntheticLandmarks(spec, { width, height, noise: 0.002 });
+    return { landmarks: this.tracker.update(raw, dt, width / height), width, height };
   }
 
   stop() {}
