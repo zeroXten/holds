@@ -10,7 +10,7 @@
 
 import { makeBody, scorePose, visible } from './scoring.js';
 import { requiredFor } from './holds.js';
-import { COIN_SECONDS, LEVEL_MULT, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
+import { COIN_SECONDS, coinRateFor, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { play, say } from './audio.js';
 
 export const STRICTNESS = {
@@ -29,7 +29,7 @@ export class Session {
     Object.assign(this, { hold, level, camera, daily, now0: now, last: now });
     this.target = hold.levels[level - 1].target;
     // Coins per second before form and bonus-time multipliers.
-    this.mult = LEVEL_MULT[level - 1] * (daily ? DAILY_MULT : 1);
+    this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1);
     this.thr = STRICTNESS[strictness];
     this.required = requiredFor(hold, level);
     this.state = camera ? 'framing' : 'countdown';

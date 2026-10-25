@@ -8,7 +8,7 @@
 
 import { makeBody, scorePose, visible } from './scoring.js';
 import { requiredFor } from './holds.js';
-import { COIN_SECONDS, LEVEL_MULT, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
+import { COIN_SECONDS, coinRateFor, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { Session } from './session.js';
 import { play, say } from './audio.js';
 
@@ -28,7 +28,7 @@ export class FlowSession {
     this.goal = hold.levels[level - 1].target;
     this.minCycle = f.minCycle[level - 1];
     this.dwell = f.dwell[level - 1];
-    this.mult = LEVEL_MULT[level - 1] * (daily ? DAILY_MULT : 1);
+    this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1);
     this.poses = { low: { criteria: f.low, sides: false }, high: { criteria: hold.criteria, sides: false } };
     this.required = requiredFor(hold, level);
     this.state = camera ? 'framing' : 'countdown';

@@ -3,6 +3,9 @@
 
 export const COIN_SECONDS = 10;              // seconds of good form per coin, before multipliers
 export const LEVEL_MULT = [1, 1.25, 1.5, 2]; // harder levels earn faster
+export const STYLE_MULT = { hard: 1, soft: 0.5 }; // gentle (soft) holds earn at half the rate of hard ones
+// Coin rate for a hold at a level, before form, bonus time and hold of the day.
+export const coinRateFor = (hold, level) => LEVEL_MULT[level - 1] * (STYLE_MULT[hold.style] ?? 1);
 export const TARGET_BONUS = 2;               // coins for reaching a target (split across sides)
 export const DAILY_MULT = 3;                 // hold of the day earns this many times the coins
 export const HONOUR_FORM = 0.75;             // form factor without the camera

@@ -1,6 +1,6 @@
 // Offline support. App files: network first, so updates arrive straight away.
 // MediaPipe library, WASM and model: cache first, since they're versioned and large.
-const APP = 'holds-app-v14';
+const APP = 'holds-app-v15';
 const LIBS = 'holds-libs-v1';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png',

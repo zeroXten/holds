@@ -1,6 +1,6 @@
 import { HOLDS, holdById, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
-  LEVEL_MULT, DAILY_MULT, BONUS_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
+  coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
   REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice,
 } from './economy.js';
 import { drawTemple, SCENE_H } from './temple.js';
@@ -27,7 +27,7 @@ const COIN = '<svg viewBox="0 0 24 24" class="ico coin"><path fill-rule="evenodd
 const LOCK = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3z"/></svg>';
 // "Soft · Arms & shoulders · Balance": style, then areas from most to least worked.
 const areaTags = hold => [STYLES[hold.style], ...Object.entries(hold.areas).sort((a, b) => b[1] - a[1]).map(([a]) => AREAS[a])];
-const coinRate = level => `${LEVEL_MULT[level - 1]}× coins`;
+const coinRate = (hold, level) => `${coinRateFor(hold, level)}× coins${hold.style === 'soft' ? ' (soft)' : ''}`;
 
 const fmt = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const fmtLong = s => s < 60 ? `${Math.round(s)}s`
@@ -111,7 +111,7 @@ function renderHero() {
   const best = hs.best[hs.level];
   $('#hero-meta').innerHTML = `
     <span class="tag strong">${targetText(hero, lv.target)}</span>
-    <span class="tag">${coinRate(hs.level)}</span>
+    <span class="tag">${coinRate(hero, hs.level)}</span>
     <span class="tag">${hero.camera ? viewHint(hero) : 'Honour system'}</span>
     ${best ? `<span class="tag">Best ${amount(hero, best)}</span>` : ''}`;
 }
@@ -204,7 +204,7 @@ function renderSheetLevel() {
   const best = hs.best[sheetLevel];
   $('#hs-meta').innerHTML = `
     <span class="tag strong">${targetText(hold, lv.target)}</span>
-    <span class="tag">${coinRate(sheetLevel)}</span>
+    <span class="tag">${coinRate(hold, sheetLevel)}</span>
     ${P.isDaily(state, hold.id) ? `<span class="tag strong">Hold of the day: ${DAILY_MULT}× coins</span>` : ''}
     ${hold.camera ? `<span class="tag">${viewHint(hold)}</span>` : '<span class="tag">Honour system</span>'}
     ${best ? `<span class="tag">Best ${amount(hold, best)}</span>` : ''}
@@ -583,7 +583,7 @@ function renderSummary(hold, level, r, o) {
 
   const hs = P.holdState(state, hold.id);
   let lvl = '';
-  if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${targetText(hold, hold.levels[o.newLevel - 1].target)}, ${coinRate(o.newLevel)}.</div>`;
+  if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${targetText(hold, hold.levels[o.newLevel - 1].target)}, ${coinRate(hold, o.newLevel)}.</div>`;
   else if (o.mastered) lvl = '<div class="banner">You’ve completed every level of this stance.</div>';
   else if (level === hs.level && !hs.mastered) {
     const need = P.QUALIFY_DAYS - hs.qualDays.length;
