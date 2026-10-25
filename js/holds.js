@@ -700,16 +700,27 @@ export const HOLDS = [
   },
 
   {
-    id: 'rest', name: 'Rest Stance', native: 'Xiē Bù', view: 'front', sides: true, camera: false,
+    id: 'rest', name: 'Rest Stance', native: 'Xiē Bù', view: 'side', sides: true, camera: true,
     video: 'xie bu rest stance kung fu tutorial',
-    about: 'A low, cross-legged “resting” stance, like sitting down with your legs crossed while standing. Used for turning and coiling between moves. The camera can’t judge it reliably, so this one is on your honour.',
+    about: 'A low, cross-legged “resting” stance, like sitting down with your legs crossed while standing. Used for turning and coiling between moves. The camera checks that you’re low with both knees bent; it can’t see the legs cross, so keep that part honest.',
     levels: [
       { name: 'High rest', target: 20, desc: 'Turn your front foot out and step the other foot behind it so your legs cross. Both feet stay on the floor: front foot flat, back foot on its toes with the heel up. Bend both knees a little. Then switch sides.' },
       { name: 'Rest', target: 30, desc: 'Sink to about half-squat: your back knee tucks in behind your front calf. Front foot flat, back heel up, chest upright.' },
       { name: 'Low rest', target: 45, desc: 'Sit low, almost onto your back heel, thighs pressed together. Twist your chest towards the front foot.' },
       { name: 'Deep rest', target: 60, desc: 'Fully seated on your back heel, back knee just off the floor. Upright and still.' },
     ],
-    criteria: () => [],
+    // Only what the camera can see reliably: how low you sit, both knees bent, chest up.
+    criteria: level => [
+      {
+        id: 'low', label: 'Sitting low', cue: 'Sink lower', weight: 2, joints: [23, 24, 27, 28],
+        value: b => (Math.max(b.la.y, b.ra.y) - b.hip.y) / b.torsoLen, max: by(level, [1.35, 1.22, 1.08, 0.95]), soft: 0.15,
+      },
+      {
+        id: 'bent', label: 'Both knees bent', cue: 'Bend both knees and sit down into it', joints: [25, 26],
+        value: b => Math.max(b.legs.L.angle, b.legs.R.angle), max: by(level, [160, 145, 130, 120]), soft: 25,
+      },
+      upright(20, 'Chest up'),
+    ],
     figure: level => {
       // Side-on, facing right, both feet on the floor. Front leg: shin upright, foot flat.
       // Back leg: knee low, tucked in behind the front calf; foot planted behind on its toes.

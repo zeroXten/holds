@@ -499,7 +499,8 @@ function renderSummary(hold, level, r, o) {
   const wallet = o.nextUnlock
     ? (o.wallet >= o.nextUnlock ? `You have ${o.wallet} coins: enough to unlock a new hold!` : `You have ${o.wallet} coins. ${o.nextUnlock - o.wallet} more to unlock a new hold.`)
     : `You have ${o.wallet} coins.`;
-  $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${wallet}`;
+  const betLine = o.bet?.result === 'won' ? `Plus ${o.bet.def.payout} coins from your bet.<br>` : '';
+  $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${betLine}${wallet}`;
   // Level test, bet and streak milestone results.
   const extra = [];
   if (o.test) {
@@ -510,7 +511,9 @@ function renderSummary(hold, level, r, o) {
   if (o.bet) extra.push(o.bet.result === 'won' ? `<div class="banner good">Bet won: ${o.bet.def.name}! +${o.bet.def.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${o.bet.def.name}.</div>`);
   for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! +${m.coins} coins${m.freeze ? ' and a free streak freeze' : ''}.</div>`);
   $('#sum-extra').innerHTML = extra.join('');
-  if (o.milestones.length || o.bet?.result === 'won' || o.test?.passed) setTimeout(() => audio.play('level'), 300);
+  if (o.test?.passed) setTimeout(() => audio.play('level'), 300);
+  // The big moments get the full-screen treatment, once the summary has appeared.
+  setTimeout(() => { if (o.bet) celebrateBet(o.bet); o.milestones.forEach(celebrateMilestone); }, 900);
   $('#sum-stats').innerHTML = `
     <div><b>${fmtLong(r.held)}</b><small>held of ${fmtLong(r.target)}${r.sides ? `<br>${r.sides.map(t => fmtLong(t)).join(' + ')}` : ''}</small></div>
     ${r.camera ? `<div><b>${Math.round(r.avgForm)}</b><small>average form</small></div>` : '<div><b>—</b><small>honour mode</small></div>'}
@@ -549,11 +552,11 @@ function encouragement(r, o) {
   return `${fmtLong(left)} short of the target. Rest for a minute and try again, or try an easier level.`;
 }
 
-function countUp(el, to) {
+function countUp(el, to, prefix = '') {
   const t0 = performance.now(), dur = 900;
   const step = () => {
     const k = Math.min(1, (performance.now() - t0) / dur);
-    el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))).toLocaleString();
+    el.textContent = prefix + Math.round(to * (1 - Math.pow(1 - k, 3))).toLocaleString();
     if (k < 1) requestAnimationFrame(step);
   };
   step();
@@ -590,6 +593,7 @@ function renderProgress() {
   }
   $('#heatmap').innerHTML = cells;
 
+  $('#bet-log').innerHTML = betLogHTML();
   $('#badges').innerHTML = P.BADGES.map(b => `<div class="badge ${state.badges[b.id] ? 'earned' : 'locked'}">${medal()}<b>${b.name}</b><small>${b.desc}</small></div>`).join('');
   const recent = state.history.slice(-12).reverse();
   $('#history').innerHTML = recent.length ? recent.map(h => {
@@ -686,6 +690,65 @@ $('#reset').onclick = () => {
   toast('Progress reset');
 };
 
+// ---------- Celebrations ----------
+
+// Queued full-screen moments for bet results and streak milestones.
+const celebrations = [];
+function celebrate(c) {
+  celebrations.push(c);
+  if (celebrations.length === 1) showCelebration();
+}
+
+function showCelebration() {
+  const c = celebrations[0], el = $('#celebrate');
+  if (!c) { el.hidden = true; return; }
+  el.hidden = false;
+  el.className = `celebrate ${c.win ? 'win' : 'lose'}`;
+  $('#cel-kicker').textContent = c.kicker;
+  $('#cel-title').textContent = c.title;
+  $('#cel-msg').textContent = c.msg;
+  $('#cel-coins-row').hidden = !c.coins;
+  $('#cel-ok').textContent = c.ok ?? (c.win ? 'Nice!' : 'OK');
+  $('#cel-alt').hidden = !c.alt;
+  if (c.alt) { $('#cel-alt').textContent = c.alt.label; $('#cel-alt').onclick = () => { nextCelebration(); c.alt.go(); }; }
+  // A burst of coins flying out from the centre.
+  $('#cel-burst').innerHTML = c.win ? Array.from({ length: 18 }, (_, i) => {
+    const a = (i / 18) * Math.PI * 2, r = 110 + (i % 3) * 40;
+    return `<i style="--dx:${Math.round(Math.cos(a) * r)}px;--dy:${Math.round(Math.sin(a) * r)}px;--d:${(i % 4) * 60}ms">${COIN}</i>`;
+  }).join('') : '';
+  if (c.coins) countUp($('#cel-coins'), c.coins, '+');
+  audio.unlock();
+  if (c.win) { audio.play('level'); setTimeout(() => audio.play('target'), 450); } else audio.play('end');
+  if (c.say) audio.say(c.say, { priority: true });
+}
+
+function nextCelebration() { celebrations.shift(); showCelebration(); }
+$('#cel-ok').onclick = nextCelebration;
+
+function celebrateBet(r) {
+  if (r.result === 'won') {
+    celebrate({
+      win: true, kicker: 'Bet won', title: r.def.name, coins: r.def.payout,
+      msg: `You staked ${r.def.stake} and won ${r.def.payout}. Paid into your wallet.`,
+      say: `Bet won! Plus ${r.def.payout} coins`,
+    });
+  } else {
+    celebrate({
+      win: false, kicker: 'Bet missed', title: r.def.name,
+      msg: `Not this time: you got to ${r.progress.toLowerCase()}. The ${r.def.stake}-coin stake is gone, but the training still counts. Fancy another go?`,
+      ok: 'Not now', alt: { label: 'New bet', go: () => openShop('bets') },
+    });
+  }
+}
+
+function celebrateMilestone(m) {
+  celebrate({
+    win: true, kicker: 'Streak milestone', title: `🔥 ${m.name}!`, coins: m.coins,
+    msg: m.freeze ? 'Bonus coins and a free streak freeze. Keep the fire going.' : 'Bonus coins for showing up, day after day.',
+    say: `${m.name}! Plus ${m.coins} coins`,
+  });
+}
+
 // ---------- Home cards: broken streak, active bet ----------
 
 function renderHomeCards() {
@@ -700,6 +763,18 @@ function renderHomeCards() {
   const bp = P.betProgress(state);
   if (bp) cards.push(betCard(bp));
   $('#home-cards').innerHTML = cards.join('');
+}
+
+// Settled bets, newest first.
+function betLogHTML(limit = 30) {
+  const log = state.betLog.slice(0, limit);
+  if (!log.length) return '<li class="empty">No bets yet. Find them in the shop.</li>';
+  return log.map(b => {
+    const def = BETS.find(x => x.id === b.id);
+    const when = new Date(b.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return `<li class="${b.result}"><span><b>${def?.name ?? b.id}</b> <small>${when}</small></span>
+      <span class="bet-result">${b.result === 'won' ? `Won +${b.payout}` : `Lost −${b.stake}`}</span></li>`;
+  }).join('');
 }
 
 function betCard(bp) {
@@ -782,13 +857,14 @@ function shopStreak() {
 
 function shopBets() {
   const bp = P.betProgress(state);
-  if (bp) return `<p class="shop-intro">Your coins are on the line. Finish this bet before placing another.</p>${betCard(bp)}`;
+  const recent = state.betLog.length ? `<h3>Recent results</h3><ul class="history bets-log">${betLogHTML(5)}</ul>` : '';
+  if (bp) return `<p class="shop-intro">Your coins are on the line. Finish this bet before placing another.</p>${betCard(bp)}${recent}`;
   return `<p class="shop-intro">Bet on yourself: stake coins, and win more back if you do it in time. Only training after you place the bet counts.</p>
   <ul class="shop-list">${BETS.map(b => {
     const block = P.betBlocker(state, b.id);
     return `<li><div><b>${b.name}</b><small>${b.desc} Stake ${b.stake}, win ${b.payout}.</small>${block && !block.startsWith('Needs ' + b.stake) ? `<small class="blocked">${block}</small>` : ''}</div>
       <button class="btn buy" data-act="bet" data-id="${b.id}" ${block ? 'disabled' : ''}>Bet ${b.stake}</button></li>`;
-  }).join('')}</ul>`;
+  }).join('')}</ul>${recent}`;
 }
 
 // Every shop and home-card button goes through here.
@@ -886,10 +962,11 @@ document.addEventListener('click', e => {
 
 // On opening: spend freezes or offer a repair, settle an expired bet, then show what happened.
 P.protectStreak(state);
-P.settleBet(state);
+const settled = P.settleBet(state, P.dayKey(), { notify: false });
 show('home');
 renderHome();
 flushNotices();
+if (settled) celebrateBet(settled);
 animateScenes();
 
 // Start fetching the pose model in the background so the first session starts quickly.

@@ -52,6 +52,7 @@ const blank = () => ({
   // covered: days that keep the streak alive without training ('rest' | 'freeze' | 'repair')
   streak: { freezes: 0, covered: {}, broken: null, claimed: {} },  // claimed: milestone days → the streak's start date
   bet: null,
+  betLog: [],  // settled bets, newest first
   temple: { owned: [], theme: 'dawn', themes: ['dawn'] },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
 });
@@ -301,11 +302,14 @@ export function settleBet(state, today = dayKey(), { notify = true } = {}) {
     }
   }
   if (!result) return null;
-  if (result === 'won') state.coins += def.payout;
+  const progress = betProgress(state).text;
+  if (result === 'won') { state.coins += def.payout; state.lifetime += def.payout; }
   if (notify) state.notices.push(result === 'won' ? `Bet won: ${def.name}! +${def.payout} coins.` : `Bet lost: ${def.name}. Better luck next time.`);
+  state.betLog.unshift({ id: def.id, result, stake: def.stake, payout: def.payout, progress, at: new Date().toISOString() });
+  state.betLog.splice(30);
   state.bet = null;
   save(state);
-  return { result, def };
+  return { result, def, progress };
 }
 
 // ---- The temple ----

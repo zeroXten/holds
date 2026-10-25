@@ -80,6 +80,8 @@
     <div class="heatmap" id="heatmap"></div>
     <h2 class="section-title">Badges</h2>
     <div class="badges" id="badges"></div>
+    <h2 class="section-title">Bets</h2>
+    <ul class="history bets-log" id="bet-log"></ul>
     <h2 class="section-title">Recent sessions</h2>
     <ul class="history" id="history"></ul>
   </section>
@@ -199,6 +201,18 @@
       </div>
     </form>
   </dialog>
+
+  <!-- Celebration: bet results, streak milestones -->
+  <div class="celebrate" id="celebrate" hidden>
+    <div class="cel-card" role="dialog" aria-live="assertive">
+      <div class="cel-burst" id="cel-burst"></div>
+      <p class="cel-kicker" id="cel-kicker"></p>
+      <h2 id="cel-title"></h2>
+      <div class="cel-coins" id="cel-coins-row"><svg viewBox="0 0 24 24" class="ico coin"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9.5 9.5h5v5h-5z"/></svg><span id="cel-coins">+0</span></div>
+      <p class="cel-msg" id="cel-msg"></p>
+      <div class="row"><button class="btn" id="cel-alt" hidden></button><button class="btn primary" id="cel-ok"></button></div>
+    </div>
+  </div>
 
   <div class="toast" id="toast" hidden></div>
   <script type="module" src="js/app.js"></script>

@@ -86,11 +86,11 @@ export class DemoSource {
     // Seconds of wall time for each phase (before speed-up): [start, end, from→to].
     const T = 4.5, B = Math.min(target * 0.4, 25);
     const half = hold.sides ? target / 2 : null;
-    const end = T + target + 6 + (half ? 4 : 0) + 4;
+    const end = T + target + 6 + (half ? 6 : 0) + 4;
     this.keys = [
       [0, 2.5, 0, 0], [2.5, 4.5, 0, 1],
       [T + B, T + B + 0.8, 1, 0.35], [T + B + 0.8, T + B + 3.5, 0.35, 0.35], [T + B + 3.5, T + B + 4.3, 0.35, 1],
-      ...(half ? [[T + half + 4.4, T + half + 5.4, 1, 0], [T + half + 6, T + half + 7.5, 0, 1]] : []),
+      ...(half ? [[T + half + 4.4, T + half + 5.4, 1, 0], [T + half + 8, T + half + 9.5, 0, 1]] : []),
       [end, end + 1.5, 1, 0],
     ];
   }
