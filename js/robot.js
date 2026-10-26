@@ -15,7 +15,7 @@ const C = {
   outline: rgb('#1d1a24'), metal: rgb('#b8c4cc'), metalLight: rgb('#e8f0f4'), metalDark: rgb('#6c7a86'),
   robe: rgb('#e8891e'), robeLight: rgb('#f6a84e'), robeDark: rgb('#b85a12'), drape: rgb('#a8321e'), drapeLight: rgb('#c8482c'),
   wrap: rgb('#f2ead8'), wrapLine: rgb('#cbbd9e'), shoe: rgb('#2a2622'),
-  gold: rgb('#f0c040'), bead: rgb('#6a3418'), beadLight: rgb('#9a5a30'),
+  gold: rgb('#f0c040'), bead: rgb('#6a3418'), beadBig: rgb('#4e2612'), beadLight: rgb('#a86a3a'),
   eye: rgb('#6ff3ff'), eyeGlow: rgb('#6ff3ff', 90), eyeHot: rgb('#e8ffff'), visor: rgb('#1f2a33'), led: rgb('#ffb02e'),
 };
 
@@ -104,6 +104,33 @@ export function drawRobot(p, J, t, mood = 'normal') {
     p.line(kn.x - fy * r * 0.9, kn.y + fx * r * 0.9, kn.x + fy * r * 0.9, kn.y - fx * r * 0.9, C.metalDark);
   }
 
+  // Prayer beads (mala): two rounded loops hanging from behind the neck, on top of the
+  // robe but under the head. A longer one with bigger beads, a shorter one inside it.
+  const neck = { x: sh.x + down.x * r * 0.6, y: sh.y + down.y * r * 0.6 };
+  const loop = (halfWidth, depth, beadR, wood, light) => {
+    // The lower half of an ellipse from one side of the neck round to the other.
+    const steps = 160, pts = [];
+    for (let i = 0; i <= steps; i++) {
+      // Skip the very ends, where the string runs up behind the neck.
+      const a = (0.12 + 0.76 * (i / steps)) * Math.PI, cx = Math.cos(a), sy = Math.sin(a);
+      pts.push({ x: neck.x - ux * halfWidth * cx + down.x * depth * sy, y: neck.y - uy * halfWidth * cx + down.y * depth * sy });
+    }
+    // Space the beads evenly along the curve.
+    let run = 0, next = 0;
+    const gap = beadR * 2.7;
+    for (let i = 0; i < pts.length; i++) {
+      if (i) run += len(pts[i], pts[i - 1]);
+      if (run < next) continue;
+      next += gap;
+      const b = pts[i];
+      p.disc(b.x, b.y, beadR + 0.6, C.outline);
+      p.disc(b.x, b.y, beadR, wood);
+      if (beadR >= 1.5) p.set(b.x - beadR * 0.35, b.y - beadR * 0.35, light);
+    }
+  };
+  loop(R * 0.85, T * 0.8, Math.max(1.2, r * 0.52), C.beadBig, C.beadLight);
+  loop(R * 0.42, T * 0.4, Math.max(1, r * 0.36), C.bead, C.beadLight);
+
   // Head: angular metal, tilted to match hers. Drawn from points in head units (R).
   const head = J.head ?? { x: sh.x, y: sh.y - T * 0.5 };
   const tilt = Math.max(-0.45, Math.min(0.45, J.tilt ?? 0)), ct = Math.cos(tilt), st = Math.sin(tilt);
@@ -153,19 +180,6 @@ export function drawRobot(p, J, t, mood = 'normal') {
     p.line(g1x, g1y, g2x, g2y, C.metalDark);
   }
 
-  // Big prayer beads (mala) hanging round the neck, drawn last so they sit on the robe.
-  const neckL = { x: sh.x - ux * R * 0.55, y: sh.y - uy * R * 0.55 + r }, neckR = { x: sh.x + ux * R * 0.55, y: sh.y + uy * R * 0.55 + r };
-  const low = { x: sh.x + down.x * T * 0.5, y: sh.y + down.y * T * 0.5 };
-  const beads = Math.max(7, Math.round(T / 5));
-  for (let i = 0; i <= beads; i++) {
-    const u = i / beads, a = u < 0.5 ? neckL : low, b = u < 0.5 ? low : neckR, k = u < 0.5 ? u * 2 : (u - 0.5) * 2;
-    const sag = Math.sin(u * Math.PI) * r * 0.6;
-    const x = a.x + (b.x - a.x) * k, y = a.y + (b.y - a.y) * k + sag * 0.2;
-    const big = i === Math.round(beads / 2);
-    p.disc(x, y, Math.max(1, r * (big ? 0.6 : 0.32)) + 0.5, C.outline);
-    p.disc(x, y, Math.max(1, r * (big ? 0.6 : 0.32)), big ? C.gold : C.bead);
-    if (!big && r >= 2) p.set(x - r * 0.15, y - r * 0.15, C.beadLight);
-  }
 }
 
 // ---- Gestures ----
