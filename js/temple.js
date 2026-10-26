@@ -1,5 +1,5 @@
 // The temple courtyard: a pixel-art scene drawn entirely in code. It starts as
-// bare mountains and earth with a carved stone and a single training post; the
+// bare mountains and earth with a carved stone; the
 // temple grows through its stages and the courtyard gains each feature you buy. Themes change the time of day or season (and the app's accent colours).
 
 import { Pix, rgb, mix, bayer } from './pixel.js';
@@ -372,12 +372,6 @@ function poles(p, c, x, G, snow) {
   }
 }
 
-function lonePost(p, c, x, G) {
-  p.rect(x, G - 6, 2, 12, c.wood);
-  p.vline(x, G - 6, G + 5, c.woodLight);
-  p.hline(x - 1, x + 2, G + 6, c.earthDark);
-}
-
 function pond(p, c, x, y, t) {
   p.ellipse(x, y, 17, 6, c.stoneDark);
   p.ellipse(x, y - 0.5, 16, 5, c.stone);
@@ -651,7 +645,7 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, a
 
   ground(p, c, W, H, G);
   if (has('path')) path(p, c, W, H, G);
-  if (has('posts')) poles(p, c, cx - 46, G, snow); else lonePost(p, c, cx - 47, G);
+  if (has('posts')) poles(p, c, cx - 46, G, snow);
   if (has('pond')) pond(p, c, cx + 44, G + 12, t);
   if (has('lions')) lions(p, c, cx, G);
   if (has('banners')) banners(p, c, cx, G, t, snow);
