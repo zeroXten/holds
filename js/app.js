@@ -395,7 +395,7 @@ function updateHud(v) {
 
 // The step of the movement you're on, from where your hands are.
 function flowStep(v) {
-  if (v.phase === 'down') return 'Let go and float your arms down the sides';
+  if (v.phase === 'down') return v.worst && v.phaseTime > 3 ? v.worst.cue : 'Float your arms down the sides';
   if (v.inPose && v.hands < -0.3) return v.topTime < v.dwell ? 'Stretch up through the palms… hold' : 'Stretch up';
   if (v.worst && v.phaseTime > 6) return v.worst.cue;
   return v.hands > 0.15 ? 'Lift your hands up the front of your body' : 'Turn the palms over and push up to the sky';
@@ -416,7 +416,7 @@ function updateFlowHud(v) {
   $('#session').dataset.state = v.state;
   $('#s-fill').style.width = `${v.score}%`;
   $('#s-fill').className = `fill ${v.score >= 70 ? 'good' : v.score >= 45 ? 'warn' : 'bad'}`;
-  $('#s-score').textContent = run.camera ? (v.phase === 'up' && v.state === 'flowing' ? `Reach up ${v.score}` : `Hands low ${v.score}`) : '';
+  $('#s-score').textContent = run.camera ? `${{ lift: 'Rise', high: 'Reach up', lower: 'Lower', low: 'Hands low' }[v.aim]} ${v.score}` : '';
   const done = $('#s-done');
   if (done) done.textContent = 'Done';
   const secs = Math.floor(v.cycleTime);
@@ -439,10 +439,8 @@ function updateFlowHud(v) {
       break;
     case 'flowing':
       if (v.tooFast) setStatus('bad', 'Slower');
-      else setStatus(v.reached ? 'bonus' : 'good', v.phase === 'up' ? (v.reached ? `Rise · bonus ×${v.tier.mult}` : 'Rise') : (v.reached ? `Lower · bonus ×${v.tier.mult}` : 'Lower'));
-      $('#s-cue').textContent = v.tooFast
-        ? `At least ${v.minCycle} seconds for each cycle`
-        : `${flowStep(v)} · ${secs}s${secs < v.minCycle ? ` of at least ${v.minCycle}s` : ''}`;
+      else setStatus(v.reached ? 'bonus' : 'good', `${v.phase === 'up' ? 'Rise' : 'Lower'} · ${secs}s${v.reached ? ` · bonus ×${v.tier.mult}` : ''}`);
+      $('#s-cue').textContent = v.tooFast ? `At least ${v.minCycle} seconds for each cycle` : flowStep(v);
       break;
   }
 }

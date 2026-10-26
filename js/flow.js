@@ -29,7 +29,10 @@ export class FlowSession {
     this.minCycle = f.minCycle[level - 1];
     this.dwell = f.dwell[level - 1];
     this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1);
+    // The two key positions, and (optionally) what to check on the way between them.
     this.poses = { low: { criteria: f.low, sides: false }, high: { criteria: hold.criteria, sides: false } };
+    if (f.lift) this.poses.lift = { criteria: f.lift, sides: false };
+    if (f.lower) this.poses.lower = { criteria: f.lower, sides: false };
     this.required = requiredFor(hold, level);
     this.state = camera ? 'framing' : 'countdown';
     this.stateTime = 0;
@@ -38,7 +41,7 @@ export class FlowSession {
     this.count = 0;
     this.held = 0;               // seconds of counted cycles (for bets and totals)
     this.coins = 0;
-    this.scores = { low: 0, high: 0 };
+    this.scores = { low: 0, high: 0, lift: 0, lower: 0 };
     this.topScore = 0;
     this.topTime = 0;
     this.lowTime = 0;
@@ -49,6 +52,14 @@ export class FlowSession {
     this.reached = false;
     this.tooFastAt = -1e9;
     this.result = null;
+  }
+
+  aimFor() {
+    if (this.state !== 'flowing') return 'low';
+    const h = this.hands ?? 1;  // hand height: 0 at the shoulders, ~1 at the hips
+    if (this.phase === 'up') return this.poses.lift && h > -0.3 ? 'lift' : 'high';
+    // Floating down stays "on the way" until the hands are low and gathering in.
+    return this.poses.lower && (h < 0.55 || (this.spread ?? 0) > 0.8) ? 'lower' : 'low';
   }
 
   go(state) { this.state = state; this.stateTime = 0; }
@@ -70,24 +81,28 @@ export class FlowSession {
     const seen = !!lm && visible(lm, this.required, view);
     this.seen = seen;
     const k = 1 - Math.exp(-dt / 0.2);
-    let results = { low: null, high: null };
+    const results = {};
+    const poses = Object.keys(this.poses);
     if (seen) {
       const body = makeBody(lm, frame.width, frame.height, view);
       // Hand height: 0 at the shoulders, about 1 at the hips, negative above the shoulders.
       this.hands = ((body.arms.L.c.y + body.arms.R.c.y) / 2 - body.sh.y) / body.torsoLen;
-      for (const p of ['low', 'high']) {
+      // How far the hands are out to the sides, in shoulder widths from the middle.
+      this.spread = Math.max(Math.abs(body.arms.L.c.x - body.sh.x), Math.abs(body.arms.R.c.x - body.sh.x)) / body.shoulderW;
+      for (const p of poses) {
         const r = scorePose(this.poses[p], this.level, body);
         this.scores[p] += (r.score - this.scores[p]) * k;
         results[p] = r.results;
       }
       this.seenTime += dt;
     } else {
-      for (const p of ['low', 'high']) this.scores[p] *= 1 - k;
+      for (const p of poses) this.scores[p] *= 1 - k;
       this.seenTime = 0;
     }
-    // Coaching and skeleton colours follow the position you're heading for.
-    const aim = this.state === 'flowing' && this.phase === 'up' ? 'high' : 'low';
-    this.results = results[aim];
+    // Coaching and skeleton colours follow the part of the movement you're in: on the
+    // way between the key positions, what matters on the way; near one, that position.
+    this.aim = this.aimFor();
+    this.results = results[this.aim];
     this.worst = this.results?.filter(r => r.cue && r.s < 0.75).sort((a, b) => a.s * a.weight - b.s * b.weight)[0] ?? null;
     const low = this.scores.low >= REACHED, high = this.scores.high >= REACHED;
 
@@ -204,9 +219,9 @@ export class FlowSession {
       flow: true, state: this.state, phase: this.phase, phaseTime: this.phaseTime, stateTime: this.stateTime,
       count: this.count, goal: this.goal, minCycle: this.minCycle, held: this.held, coins: this.coins, daily: this.daily,
       tier: bonusTier(this.count, this.goal), reached: this.reached, seen: this.seen,
-      score: Math.round(this.state === 'flowing' && this.phase === 'up' ? this.scores.high : this.scores.low),
-      // At one of the key positions (for colouring the parts no check covers).
-      inPose: !!this.seen && Math.max(this.scores.low, this.scores.high) >= REACHED,
+      aim: this.aim ?? 'low', score: Math.round(this.scores[this.aim ?? 'low']),
+      // Moving well (for colouring the parts no check covers).
+      inPose: !!this.seen && this.scores[this.aim ?? 'low'] >= REACHED,
       results: this.results, worst: this.worst, tooFast: (this.now ?? 0) - this.tooFastAt < 2.5,
       cycleTime: (this.now ?? this.last) - this.cycleStart, hands: this.hands, topTime: this.topTime, dwell: this.dwell,
       sides: 1, sideIndex: 0, canSwitch: false,

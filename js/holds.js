@@ -49,6 +49,19 @@ const DEG = Math.PI / 180;
 // How far the hand furthest from the middle of the body is from it, in shoulder widths.
 // "Hands together in front of you" for the camera: about 0.1–0.35 with fingers linked
 // or palms pressed, about 0.65 or more with the arms hanging at your sides.
+// Standing qigong: feet about hip width, legs long (the knees can stay soft).
+const qigongLegs = () => [
+  {
+    id: 'feet', label: 'Feet hip width', joints: [27, 28],
+    cue: { low: 'Step your feet a little wider, hip width', high: 'Bring your feet in to hip width' },
+    value: b => dist(b.la, b.ra) / b.shoulderW, min: 0.45, max: 1.4, soft: 0.35,
+  },
+  {
+    id: 'legs', label: 'Legs long', cue: 'Stand up tall on long legs', joints: [23, 24, 25, 26, 27, 28],
+    value: b => Math.min(b.legs.L.angle, b.legs.R.angle), min: 155, soft: 25,
+  },
+];
+
 const handsOffCentre = b => Math.max(Math.abs(b.arms.L.c.x - b.sh.x), Math.abs(b.arms.R.c.x - b.sh.x)) / b.shoulderW;
 
 const chambered = { L: [25, -10], R: [-25, 10] };
@@ -420,7 +433,7 @@ export const HOLDS = [
     id: 'sky', name: 'Holding Up the Sky', native: 'Liǎng Shǒu Tuō Tiān', view: 'front', sides: false, camera: true,
     areas: { upper: 0.5, mobility: 0.5 }, style: 'soft',
     video: 'ba duan jin two hands hold up the heavens',
-    about: 'The first of the Ba Duan Jin (Eight Brocades), a slow, flowing movement rather than a still hold. Each cycle: hands at your belly, palms up → lift them up the front → turn the palms over at your chest and push up to the sky → stretch → float your arms down the sides. The camera counts each cycle. It can’t see your fingers: it checks your hands are together at your belly, and together and straight overhead.',
+    about: 'The first of the Ba Duan Jin (Eight Brocades), a slow, flowing movement rather than a still hold. Stand with your feet hip width apart and your legs long; they stay still throughout. Each cycle: hands at your belly, palms up → lift them up the front → turn the palms over at your chest and push up to the sky → stretch → float your arms down the sides. The camera counts each cycle. It can’t see your fingers: it checks your hands stay near the middle as they rise, are together and straight overhead, stay long as they float down, and come together at your belly.',
     // A flowing hold: levels set a number of slow cycles, a minimum time per cycle,
     // and how long to pause at the top. See flow.js.
     flow: {
@@ -436,6 +449,25 @@ export const HOLDS = [
           value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.sh.y) / b.torsoLen, min: 0.35, max: 1.05, soft: 0.25,
         },
         upright(10, 'Stand tall', 12),
+        ...qigongLegs(),
+      ],
+      // On the way between: hands rising up the middle of the body, then arms floating
+      // long down the sides.
+      lift: () => [
+        {
+          id: 'middle', label: 'Hands up the middle', cue: 'Keep your hands close together as they rise up the front', joints: [11, 12, 13, 14, 15, 16],
+          value: handsOffCentre, max: 0.6, soft: 0.4,
+        },
+        upright(10, 'Stand tall', 12),
+        ...qigongLegs(),
+      ],
+      lower: () => [
+        {
+          id: 'long', label: 'Long arms', cue: 'Keep your arms long as they float down the sides', joints: [11, 12, 13, 14, 15, 16],
+          value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 130, soft: 40,
+        },
+        upright(10, 'Stand tall', 12),
+        ...qigongLegs(),
       ],
       lowFigure: () => ({ view: 'front', torso: 180, legs: { L: [3, 0], R: [-3, 0] }, arms: { L: [20, -75], R: [-20, 75] } }),
     },
@@ -460,6 +492,7 @@ export const HOLDS = [
         value: handsOffCentre, max: 0.6, soft: 0.35,
       },
       upright(10, 'Stand tall', 12),
+      ...qigongLegs(),
     ],
     figure: level => ({
       view: 'front', torso: 180, ...(level === 4 ? { lift: 2 } : {}),

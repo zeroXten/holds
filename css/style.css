@@ -299,7 +299,8 @@ body.demo .stage video { display: none; }
 .status.wait { background: rgba(0, 0, 0, .5); }
 @keyframes pulse { to { transform: scale(1.04); } }
 .cue {
-  margin-top: 10px; font-size: clamp(16px, 4.5vw, 28px); font-weight: 600; text-align: center;
+  /* Big enough to read from 2–3 m away. */
+  margin-top: 10px; font-size: clamp(21px, 6.4vw, 40px); font-weight: 700; line-height: 1.2; text-align: center;
   text-shadow: 0 2px 10px rgba(0, 0, 0, .8); max-width: 92%; min-height: 1.4em;
 }
 
@@ -342,7 +343,7 @@ body.demo .stage video { display: none; }
   .timer { font-size: min(17vh, 12vw); margin-top: 0; text-align: left; }
   .tbar { width: 100%; margin-top: 0; }
   .status { margin-top: 2px; font-size: clamp(15px, 4.5vh, 24px); justify-self: start; max-width: 100%; }
-  .cue { margin-top: 0; font-size: clamp(13px, 4vh, 20px); text-align: left; max-width: 100%; }
+  .cue { margin-top: 0; font-size: clamp(17px, 6vh, 28px); text-align: left; max-width: 100%; }
   .hud-bottom { margin-top: 4px; grid-template-columns: 56px 1fr; }
   .ref { height: 64px; }
   .meter { height: 28px; }
@@ -598,7 +599,7 @@ button.chip { cursor: pointer; }
 .checks { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; max-width: 94%; }
 .checks:empty { display: none; }
 .chk {
-  font-size: clamp(12px, 3.4vw, 16px); font-weight: 700; padding: 4px 10px; border-radius: 999px;
+  font-size: clamp(15px, 4.6vw, 22px); font-weight: 700; padding: 4px 12px; border-radius: 999px;
   background: rgba(0, 0, 0, .55); color: #fff; border: 1.5px solid transparent;
 }
 .chk.ok { border-color: #4fbf6a; color: #a8f0b8; }
@@ -606,7 +607,7 @@ button.chip { cursor: pointer; }
 .chk.bad { border-color: #d6493d; color: #ffb3aa; }
 @media (orientation: landscape) and (max-height: 600px) {
   .checks { justify-content: flex-start; max-width: 100%; margin-top: 0; }
-  .chk { font-size: 12px; padding: 3px 8px; }
+  .chk { font-size: 15px; padding: 3px 10px; }
 }
 
 /* ---------- Version ---------- */
