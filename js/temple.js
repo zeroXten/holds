@@ -1,6 +1,6 @@
 // The temple courtyard: a pixel-art scene drawn entirely in code. It starts as
-// bare mountains and earth with a single training post, and gains each feature
-// you buy. Themes change the time of day or season (and the app's accent colours).
+// bare mountains and earth with a carved stone and a single training post; the
+// temple grows through its stages and the courtyard gains each feature you buy. Themes change the time of day or season (and the app's accent colours).
 
 import { Pix, rgb, mix, bayer } from './pixel.js';
 
@@ -222,6 +222,84 @@ function path(p, c, W, H, G) {
   }
 }
 
+// Stage 1: a carved standing stone with a red cloth tied round it.
+function shrineStone(p, c, cx, G, snow) {
+  p.rect(cx - 6, G - 2, 12, 2, c.stoneDark);
+  p.hline(cx - 6, cx + 5, G - 2, c.stone);
+  for (let y = G - 14; y < G - 2; y++) {
+    const half = y < G - 12 ? 2 : 3;
+    p.hline(cx - half, cx + half - 1, y, c.stone);
+    p.set(cx - half, y, c.stoneLight); p.set(cx + half - 1, y, c.stoneDark);
+  }
+  if (snow) p.hline(cx - 2, cx + 1, G - 14, c.white);
+  p.hline(cx - 3, cx + 2, G - 10, c.red);
+  p.set(cx + 3, G - 9, c.red); p.set(cx + 3, G - 8, c.redDark);
+  for (const y of [G - 7, G - 5]) p.hline(cx - 1, cx, y, c.stoneDark);  // a carved glyph
+}
+
+// Stage 2: a small roofed shrine on a stone base, a little gold figure inside.
+function waysideShrine(p, c, cx, G, night, snow) {
+  p.rect(cx - 9, G - 3, 18, 3, c.stone);
+  p.hline(cx - 9, cx + 8, G - 3, c.stoneLight);
+  p.hline(cx - 9, cx + 8, G - 1, c.stoneDark);
+  p.rect(cx - 5, G - 14, 10, 11, night ? c.window : c.woodDark);
+  if (night) glowAt(p, cx, G - 8, 9, c.glow);
+  p.disc(cx, G - 10, 1.2, c.gold);
+  p.ellipse(cx, G - 6, 3, 2, c.gold);
+  p.hline(cx - 3, cx + 2, G - 4, c.goldDark);
+  for (const x of [cx - 7, cx + 5]) { p.rect(x, G - 15, 2, 12, c.red); p.vline(x, G - 15, G - 4, c.redLight); }
+  roof(p, c, cx, G - 20, 24, 5, snow);
+  p.set(cx, G - 21, c.gold);
+}
+
+// Stage 3: a one-room temple with red columns and a single roof.
+function smallTemple(p, c, cx, G, night, snow) {
+  p.rect(cx - 22, G - 3, 44, 3, c.stone);
+  p.hline(cx - 22, cx + 21, G - 3, c.stoneLight);
+  p.hline(cx - 22, cx + 21, G - 1, c.stoneDark);
+  for (let i = 0; i < 2; i++) p.hline(cx - 5 - i, cx + 4 + i, G - 2 + i, i % 2 ? c.stoneDark : c.stoneLight);
+  const top = G - 15;
+  p.rect(cx - 17, top, 34, 12, c.plaster);
+  p.hline(cx - 17, cx + 16, top, c.plasterDark);
+  for (const off of [-15, 9]) {
+    const x0 = cx + off;
+    for (let y = top + 3; y < G - 6; y++) for (let x = x0; x < x0 + 6; x++) {
+      const lattice = (x + y) % 2 === 0 || y === top + 3 || y === G - 7;
+      p.set(x, y, night ? (lattice ? c.lattice : c.window) : (lattice ? c.lattice : c.plasterDark));
+    }
+  }
+  for (const off of [-18, -8, 6, 16]) { p.rect(cx + off, top, 2, 12, c.red); p.vline(cx + off, top, G - 4, c.redLight); }
+  p.rect(cx - 4, top + 2, 8, 10, c.redDark);
+  p.vline(cx, top + 2, G - 4, c.outline);
+  for (let y = top + 4; y < G - 4; y += 3) { p.set(cx - 2, y, c.gold); p.set(cx + 1, y, c.gold); }
+  roof(p, c, cx, G - 22, 48, 7, snow);
+  p.rect(cx - 17, G - 24, 3, 2, c.gold); p.rect(cx + 14, G - 24, 3, 2, c.gold);
+  p.rect(cx - 1, G - 24, 2, 2, c.gold);
+}
+
+// Stage 5: the hall raised on a wide two-step terrace with a balustrade, a third
+// roof and a golden finial.
+function grandTemple(p, c, cx, G, night, snow) {
+  p.rect(cx - 42, G - 3, 84, 3, c.stone);
+  p.hline(cx - 42, cx + 41, G - 3, c.stoneLight);
+  p.hline(cx - 42, cx + 41, G - 1, c.stoneDark);
+  p.rect(cx - 38, G - 6, 76, 3, c.stone);
+  p.hline(cx - 38, cx + 37, G - 6, c.stoneLight);
+  p.hline(cx - 38, cx + 37, G - 4, c.stoneDark);
+  for (let x = cx - 38; x <= cx + 37; x += 3) if (Math.abs(x - cx) > 8) p.vline(x, G - 9, G - 7, c.stoneLight);
+  p.hline(cx - 38, cx - 8, G - 9, c.stoneLight); p.hline(cx + 8, cx + 37, G - 9, c.stoneLight);
+  for (let i = 0; i < 6; i++) p.hline(cx - 7, cx + 6, G - 6 + i, i % 2 ? c.stoneDark : c.stoneLight);
+  const g = G - 5;
+  hall(p, c, cx, g, night, snow);
+  p.rect(cx - 15, g - 44, 30, 3, c.red);
+  for (let x = cx - 13; x < cx + 13; x += 4) p.set(x, g - 43, c.gold);
+  roof(p, c, cx, g - 50, 36, 6, snow);
+  p.vline(cx, g - 55, g - 51, c.gold);
+  p.disc(cx, g - 56, 1.2, c.gold);
+  p.set(cx - 18, g - 47, c.gold); p.set(cx + 18, g - 47, c.gold);
+}
+
+// Stage 4 (and the heart of stage 5): the main hall.
 function hall(p, c, cx, G, night, snow) {
   // Stone platform and steps
   p.rect(cx - 33, G - 4, 66, 4, c.stone);
@@ -431,7 +509,12 @@ function snowfall(p, W, H, t) {
 
 export const SCENE_H = 104;
 
-export function renderTemple(p, { owned = [], theme = 'dawn', t = 0 } = {}) {
+const STAGES = [
+  (p, c, cx, G, lit, snow) => shrineStone(p, c, cx, G, snow),
+  waysideShrine, smallTemple, hall, grandTemple,
+];
+
+export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0 } = {}) {
   const { th, c } = palette(theme);
   const has = id => owned.includes(id);
   const W = p.w, H = p.h, G = H - 22, cx = Math.round(W / 2);
@@ -448,12 +531,12 @@ export function renderTemple(p, { owned = [], theme = 'dawn', t = 0 } = {}) {
   mountains(p, c, th, W, G, 'near', 21.9);
 
   if (has('pagoda')) pagoda(p, c, cx + 56, G, lit, snow);
-  if (has('hall')) hall(p, c, cx, G, lit, snow);
+  STAGES[Math.max(0, Math.min(STAGES.length - 1, tier))](p, c, cx, G, lit, snow);
   if (has('bell')) bellTower(p, c, cx - 56, G, t, snow);
 
   ground(p, c, W, H, G);
   if (has('path')) path(p, c, W, H, G);
-  if (has('posts')) poles(p, c, cx - 46, G, snow); else lonePost(p, c, cx - 30, G);
+  if (has('posts')) poles(p, c, cx - 46, G, snow); else lonePost(p, c, cx - 47, G);
   if (has('pond')) pond(p, c, cx + 44, G + 12, t);
   if (has('lions')) lions(p, c, cx, G);
   if (has('lanterns') && !has('gate')) lanterns(p, c, W, G, cx, false, t, lit);
@@ -471,7 +554,7 @@ export function renderTemple(p, { owned = [], theme = 'dawn', t = 0 } = {}) {
 // Draws the scene into a <canvas> whose width/height are in art pixels.
 export function drawTemple(canvas, state, t, theme = state.temple.theme) {
   const p = new Pix(canvas.width, canvas.height);
-  renderTemple(p, { owned: state.temple.owned, theme, t });
+  renderTemple(p, { owned: state.temple.owned, tier: state.temple.tier ?? 0, theme, t });
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(p.w, p.h);
   new Uint32Array(img.data.buffer).set(p.data);

@@ -1,6 +1,6 @@
 import { HOLDS, holdById, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
-  coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
+  coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
   REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice,
 } from './economy.js';
 import { drawTemple, SCENE_H } from './temple.js';
@@ -1026,12 +1026,20 @@ const buyBtn = (act, id, price, label = `${COIN} ${price}`) =>
   `<button class="btn buy" data-act="${act}" data-id="${id}" ${state.coins < price ? 'disabled' : ''}>${label}</button>`;
 
 function shopTemple() {
+  const tier = state.temple.tier ?? 0, now = TEMPLE_TIERS[tier], next = P.nextTier(state);
   const owned = state.temple.owned.length;
-  return `<p class="shop-intro">Build up your temple. Each feature you buy appears in the scene on your home screen. (${owned} of ${TEMPLE_ITEMS.length})</p>
-  <ul class="shop-list">${[...TEMPLE_ITEMS].sort((a, b) => a.price - b.price).map(i => `
-    <li class="${P.owns(state, i.id) ? 'owned' : ''}"><div><b>${i.name}</b><small>${i.desc}</small></div>
-      ${P.owns(state, i.id) ? '<span class="owned-tag">Built</span>' : buyBtn('buy-item', i.id, i.price)}</li>`).join('')}
-  </ul>`;
+  const item = i => {
+    const built = P.owns(state, i.id), allowed = P.canBuild(state, i);
+    const note = allowed ? `<small>${i.desc}</small>` : `<small class="blocked">Needs the ${TEMPLE_TIERS[i.needs].name}</small>`;
+    return `<li class="${built ? 'owned' : ''}"><div><b>${i.name}</b>${note}</div>
+      ${built ? '<span class="owned-tag">Built</span>' : allowed ? buyBtn('buy-item', i.id, i.price) : ''}</li>`;
+  };
+  return `<p class="shop-intro">Your temple: <b>${now.name}</b> (stage ${tier + 1} of ${TEMPLE_TIERS.length}).</p>
+  <ul class="shop-list">${next
+    ? `<li><div><b>Upgrade to ${next.name}</b><small>${next.desc}</small></div>${buyBtn('upgrade-temple', next.id, next.price)}</li>`
+    : `<li class="owned"><div><b>${now.name}</b><small>Your temple is complete.</small></div><span class="owned-tag">Built</span></li>`}</ul>
+  <h3>Decorations <small>${owned} of ${TEMPLE_ITEMS.length}</small></h3>
+  <ul class="shop-list">${[...TEMPLE_ITEMS].sort((a, b) => a.price - b.price).map(item).join('')}</ul>`;
 }
 
 function shopThemes() {
@@ -1090,6 +1098,7 @@ document.addEventListener('click', e => {
   if (!b || b.disabled) return;
   const id = b.dataset.id;
   const actions = {
+    'upgrade-temple': () => P.upgradeTemple(state) && `${TEMPLE_TIERS[state.temple.tier].name} built!`,
     'buy-item': () => P.buyTempleItem(state, id) && `${TEMPLE_ITEMS.find(i => i.id === id).name} built!`,
     'buy-theme': () => P.buyTheme(state, id) && `${THEMES.find(t => t.id === id).name} theme unlocked!`,
     'use-theme': () => P.useTheme(state, id) && '',

@@ -64,6 +64,17 @@ export const TEST_FORM = 80;
 export const testPrice = level => 10 * level;
 
 // ---- The temple: features and themes to buy (drawn in temple.js) ----
+// The temple itself grows in stages, from a carved stone to a grand temple; each
+// upgrade is bought in turn. Decorations can go around any stage, but a few big
+// buildings need a temple of a certain size (`needs`: the stage's index).
+export const TEMPLE_TIERS = [
+  { id: 'stone', name: 'Shrine Stone', price: 0, desc: 'A carved stone on bare earth: where every temple begins.' },
+  { id: 'shrine', name: 'Wayside Shrine', price: 30, desc: 'A little roofed shrine on a stone base.' },
+  { id: 'small', name: 'Small Temple', price: 120, desc: 'One room, red columns and a tiled roof.' },
+  { id: 'hall', name: 'Temple Hall', price: 250, desc: 'The main hall with two sweeping roofs.' },
+  { id: 'grand', name: 'Grand Temple', price: 500, desc: 'A raised hall with three roofs, a balustrade and gold.' },
+];
+
 export const TEMPLE_ITEMS = [
   { id: 'path', name: 'Stone Path', price: 25, desc: 'Worn flagstones across the courtyard.' },
   { id: 'bamboo', name: 'Bamboo Grove', price: 40, desc: 'Tall bamboo swaying at the edges.' },
@@ -75,11 +86,10 @@ export const TEMPLE_ITEMS = [
   { id: 'lions', name: 'Stone Lions', price: 100, desc: 'A pair of guardians by the path.' },
   { id: 'cranes', name: 'Cranes', price: 100, desc: 'Red-crowned cranes crossing the sky.' },
   { id: 'pond', name: 'Koi Pond', price: 140, desc: 'Lily pads and lazy koi.' },
-  { id: 'bell', name: 'Bell Tower', price: 160, desc: 'A pavilion with a great bronze bell.' },
+  { id: 'bell', name: 'Bell Tower', price: 160, desc: 'A pavilion with a great bronze bell.', needs: 2 },
   { id: 'gate', name: 'Mountain Gate', price: 200, desc: 'A painted archway framing the view.' },
   { id: 'waterfall', name: 'Waterfall', price: 200, desc: 'Falling water on the far mountain.' },
-  { id: 'hall', name: 'Temple Hall', price: 300, desc: 'The main hall with sweeping roofs.' },
-  { id: 'pagoda', name: 'Pagoda', price: 400, desc: 'A three-tiered pagoda behind the hall.' },
+  { id: 'pagoda', name: 'Pagoda', price: 400, desc: 'A three-tiered pagoda beside the hall.', needs: 3 },
 ];
 
 export const THEMES = [

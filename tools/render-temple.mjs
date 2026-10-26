@@ -23,14 +23,19 @@ function png(p) {
 
 const all = TEMPLE_ITEMS.map(i => i.id);
 const scenes = {
-  'base-dawn': { owned: [], theme: 'dawn' },
-  'all-dawn': { owned: all, theme: 'dawn' },
+  'tier0-bare': { owned: [], tier: 0, theme: 'dawn' },
+  'tier1-shrine': { owned: ['path', 'lanterns'], tier: 1, theme: 'dawn' },
+  'tier2-small': { owned: ['path', 'lanterns', 'lions', 'incense'], tier: 2, theme: 'day' },
+  'tier3-hall-night': { owned: ['path', 'lanterns', 'lions', 'bell'], tier: 3, theme: 'night' },
+  'tier4-grand': { owned: all, tier: 4, theme: 'dawn' },
+  'tier4-grand-snow': { owned: ['path', 'lanterns', 'lions', 'incense'], tier: 4, theme: 'snow' },
+  'all-dawn': { owned: all, tier: 3, theme: 'dawn' },
   'all-day': { owned: all, theme: 'day' },
   'all-dusk': { owned: all, theme: 'dusk' },
   'all-autumn': { owned: all, theme: 'autumn' },
   'all-night': { owned: all, theme: 'night' },
   'all-snow': { owned: all, theme: 'snow' },
-  'some-dawn': { owned: ['path', 'bamboo', 'posts', 'lanterns', 'hall'], theme: 'dawn' },
+  'some-dawn': { owned: ['path', 'bamboo', 'posts', 'lanterns'], tier: 3, theme: 'dawn' },
 };
 for (const [name, opts] of Object.entries(scenes)) {
   const p = renderTemple(new Pix(W, SCENE_H), { ...opts, t: 3.3 });

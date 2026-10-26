@@ -4,7 +4,7 @@
 import { HOLDS, AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
-  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
 } from './economy.js';
 
 const KEY = 'holds.v1';
@@ -53,7 +53,7 @@ const blank = () => ({
   streak: { freezes: 0, covered: {}, broken: null, claimed: {} },  // claimed: milestone days → the streak's start date
   bet: null,
   betLog: [],  // settled bets, newest first
-  temple: { owned: [], theme: 'dawn', themes: ['dawn'] },
+  temple: { tier: 0, owned: [], theme: 'dawn', themes: ['dawn'] },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
 });
 
@@ -82,6 +82,11 @@ export function load() {
       const fresh = blank();
       // A running "new personal best" bet (now retired) gets its stake back.
       if (data.bet?.id === 'pb') { data.coins = (data.coins ?? 0) + 10; data.bet = null; data.notices = [...(data.notices ?? []), 'The personal best bet has been retired: your 10-coin stake is back.']; }
+      // The Temple Hall used to be a decoration; now it's a stage of the temple.
+      if (data.temple?.owned?.includes('hall')) {
+        data.temple.owned = data.temple.owned.filter(id => id !== 'hall');
+        data.temple.tier = Math.max(data.temple.tier ?? 0, TEMPLE_TIERS.findIndex(t => t.id === 'hall'));
+      }
       // Starter holds added since this save was made are free too.
       data.unlocked = [...new Set([...(data.unlocked ?? []), ...STARTER_HOLDS])];
       return {
@@ -338,9 +343,23 @@ export function settleBet(state, today = dayKey(), { notify = true } = {}) {
 
 export const owns = (state, id) => state.temple.owned.includes(id);
 
+// The next stage of the temple, or null at the last one.
+export const nextTier = state => TEMPLE_TIERS[(state.temple.tier ?? 0) + 1] ?? null;
+
+export function upgradeTemple(state) {
+  const next = nextTier(state);
+  if (!next || state.coins < next.price) return false;
+  state.coins -= next.price;
+  state.temple.tier = (state.temple.tier ?? 0) + 1;
+  save(state);
+  return true;
+}
+
+export const canBuild = (state, item) => (state.temple.tier ?? 0) >= (item.needs ?? 0);
+
 export function buyTempleItem(state, id) {
   const item = TEMPLE_ITEMS.find(i => i.id === id);
-  if (!item || owns(state, id) || state.coins < item.price) return false;
+  if (!item || owns(state, id) || !canBuild(state, item) || state.coins < item.price) return false;
   state.coins -= item.price;
   state.temple.owned.push(id);
   save(state);

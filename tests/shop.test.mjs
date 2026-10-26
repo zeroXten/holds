@@ -133,7 +133,24 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('buy item', P.buyTempleItem(s, 'path') && P.owns(s, 'path') && s.coins === 275);
   check('no double buy', !P.buyTempleItem(s, 'path'));
   check('too expensive', !P.buyTempleItem(s, 'pagoda'));
+  check('bell tower needs a small temple', !P.buyTempleItem(s, 'bell'));
+  check('upgrade temple', P.upgradeTemple(s) && s.temple.tier === 1 && s.coins === 275 - E.TEMPLE_TIERS[1].price);
+  s.coins = 1000;
+  check('upgrades in order', P.upgradeTemple(s) && s.temple.tier === 2 && P.buyTempleItem(s, 'bell'));
+  s.coins = 2000;
+  while (P.upgradeTemple(s));
+  check('last stage', s.temple.tier === E.TEMPLE_TIERS.length - 1 && P.nextTier(s) === null);
   check('buy theme switches to it', P.buyTheme(s, 'night') && s.temple.theme === 'night' && P.useTheme(s, 'dawn') && s.temple.theme === 'dawn');
+}
+
+// An old save that bought the Temple Hall as a decoration gets it as a temple stage.
+{
+  const s = fresh(0);
+  s.temple.owned = ['path', 'hall'];
+  delete s.temple.tier;
+  P.save(s);
+  const t = P.load().temple;
+  check('hall becomes a stage', t.tier === 3 && !t.owned.includes('hall') && t.owned.includes('path'), JSON.stringify(t));
 }
 
 // Streak milestones: paid once per streak, with a free freeze at 1 week.
