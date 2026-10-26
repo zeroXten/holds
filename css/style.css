@@ -77,6 +77,7 @@ p { margin: 0; }
   min-height: 48px;
 }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn.big { width: 100%; font-size: 1.15rem; min-height: 58px; letter-spacing: .02em; }
 .btn.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
 .btn:active { transform: scale(.98); }
@@ -220,7 +221,6 @@ p { margin: 0; }
 .unlock-box { display: grid; gap: 10px; }
 .unlock-box .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .unlock-box .btn .ico { color: currentColor; }
-.unlock-box .btn:disabled { opacity: .45; cursor: not-allowed; }
 .foot { text-align: center; margin-top: 18px; }
 
 /* ---------- Sheets ---------- */
@@ -525,7 +525,6 @@ button.chip { cursor: pointer; }
 .shop-list small.blocked { color: var(--bad); }
 .shop-list li.owned b { color: var(--muted); }
 .btn.buy { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 6px 14px; white-space: nowrap; }
-.btn.buy:disabled { opacity: .45; cursor: not-allowed; }
 .owned-tag { font-size: .78rem; font-weight: 700; color: var(--good); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .theme-card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 8px; display: grid; gap: 4px; justify-items: start; }
