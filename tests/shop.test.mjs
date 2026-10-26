@@ -36,7 +36,7 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
 
 // Freezes: bought up to the max, used automatically on missed days.
 {
-  const s = fresh(100);
+  const s = fresh(3 * E.FREEZE_PRICE);
   train(s, '2026-10-20', '2026-10-21', '2026-10-22');
   check('buy freeze', P.buyFreeze(s) && P.buyFreeze(s) && !P.buyFreeze(s) && s.streak.freezes === 2);
   P.protectStreak(s, '2026-10-24');  // missed the 23rd
