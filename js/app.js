@@ -760,7 +760,8 @@ async function openRobot() {
   const mine = robot = {};
   let source;
   try {
-    source = DEMO ? new RobotDemoSource() : await CameraSource.open($('#robot-video'), state.settings.model);
+    // The fast model: copying big movements doesn't need the accurate one.
+    source = DEMO ? new RobotDemoSource() : await CameraSource.open($('#robot-video'), 'lite');
   } catch (e) {
     $('#robot-hint').textContent = 'The robot needs the camera to see you.';
     return;

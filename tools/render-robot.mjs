@@ -3,8 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 import { Pix } from '../js/pixel.js';
-import { renderTemple } from '../js/temple.js';
-import { drawRobot } from '../js/robot.js';
+import { drawRobot, hallBackground } from '../js/robot.js';
 import { buildJoints, standing } from '../js/figure.js';
 import { HOLDS } from '../js/holds.js';
 
@@ -35,11 +34,12 @@ const handsUp = { ...standing('front'), arms: { L: [175, 178], R: [-175, -178] }
 const poses = {
   standing: [standing('front'), 'normal'], 'hands-up': [handsUp, 'happy'],
   horse: [HOLDS.find(h => h.id === 'horse').figure(3), 'normal'], 'arms-wide': [HOLDS.find(h => h.id === 'horse').figure(4), 'happy'],
+  'side-on': [standing('side'), 'normal', 1], 'half-turned': [standing('front'), 'normal', 0.5],
 };
-for (const [name, [spec, mood]] of Object.entries(poses)) {
+for (const [name, [spec, mood, turn = 0]] of Object.entries(poses)) {
   const p = new Pix(W, H);
-  renderTemple(p, { owned: ['path', 'bamboo', 'lanterns', 'hall'], theme: 'dawn', t: 2 });
-  drawRobot(p, joints(spec), 1.3, mood);
+  p.data.set(hallBackground(W, H));
+  drawRobot(p, { ...joints(spec), turn }, 1.3, mood);
   writeFileSync(`${out}/robot-${name}.png`, png(p));
 }
 console.log('rendered', Object.keys(poses).length);

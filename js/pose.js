@@ -11,12 +11,12 @@ const MODELS = {
   full: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
 };
 
-let pending = null, pendingModel = null;
+// One landmarker per model, kept once loaded (the robot uses 'lite', holds the chosen one).
+const landmarkers = new Map();
 
 export function loadLandmarker(model = 'full') {
-  if (pending && pendingModel === model) return pending;
-  pendingModel = model;
-  pending = (async () => {
+  if (landmarkers.has(model)) return landmarkers.get(model);
+  const pending = (async () => {
     const { PoseLandmarker, FilesetResolver } = await import(`${BASE}/vision_bundle.mjs`);
     const fileset = await FilesetResolver.forVisionTasks(`${BASE}/wasm`);
     const options = delegate => ({
@@ -27,7 +27,8 @@ export function loadLandmarker(model = 'full') {
     try { return await PoseLandmarker.createFromOptions(fileset, options('GPU')); }
     catch { return await PoseLandmarker.createFromOptions(fileset, options('CPU')); }
   })();
-  pending.catch(() => { pending = null; });
+  landmarkers.set(model, pending);
+  pending.catch(() => landmarkers.delete(model));
   return pending;
 }
 

@@ -1,9 +1,8 @@
 // Robo Monk: an easter egg (tap the version in Settings 5 times). A pixel-art Shaolin
-// robot monk stands in your temple and copies you, mirror-style, using the same pose
+// robot monk stands in a plain training hall and copies you, mirror-style, using the same pose
 // detection as the holds. It reacts to a few big, easy movements with sounds and speech.
 
-import { Pix, rgb } from './pixel.js';
-import { renderTemple } from './temple.js';
+import { Pix, rgb, mix, bayer } from './pixel.js';
 import { makeBody, kneeDrop } from './scoring.js';
 import { AutoFrame } from './framing.js';
 import { syntheticLandmarks, standing, lerpSpec } from './figure.js';
@@ -57,17 +56,17 @@ export function drawRobot(p, J, t, mood = 'normal') {
     tube(p, { x: a.x, y: a.y + r * 0.3 }, tip, r * 1.05, C.shoe);
   }
 
-  // Robe, worked out across the shoulders and hips. Turned side-on (shoulders close
-  // together) it keeps a sensible width across the body instead of shrinking to a sliver.
-  let ux, uy, ls = J.ls, rs = J.rs, lh = J.lh, rh = J.rh;
-  if (len(J.ls, J.rs) > T * 0.35) {
-    const w = len(J.ls, J.rs); ux = (J.rs.x - J.ls.x) / w; uy = (J.rs.y - J.ls.y) / w;
-  } else {
-    ux = (hip.y - sh.y) / T; uy = -(hip.x - sh.x) / T;  // across the torso
-    const half = T * 0.28;
-    ls = { x: sh.x - ux * half, y: sh.y - uy * half }; rs = { x: sh.x + ux * half, y: sh.y + uy * half };
-    lh = { x: hip.x - ux * half * 0.8, y: hip.y - uy * half * 0.8 }; rh = { x: hip.x + ux * half * 0.8, y: hip.y + uy * half * 0.8 };
-  }
+  // Robe: as wide as her shoulders and hips look, so it narrows to a profile when she
+  // turns side-on, with a minimum for the depth of a body. "Across" runs along the
+  // shoulders, or across the torso when they line up.
+  const sw = len(J.ls, J.rs);
+  let ux, uy;
+  if (sw > T * 0.15) { ux = (J.rs.x - J.ls.x) / sw; uy = (J.rs.y - J.ls.y) / sw; } else { ux = (hip.y - sh.y) / T; uy = -(hip.x - sh.x) / T; }
+  const shHalf = Math.max(sw / 2, T * 0.17), hipHalf = Math.max(len(J.lh, J.rh) / 2, T * 0.15);
+  const ls = { x: sh.x - ux * shHalf, y: sh.y - uy * shHalf }, rs = { x: sh.x + ux * shHalf, y: sh.y + uy * shHalf };
+  const lh = { x: hip.x - ux * hipHalf, y: hip.y - uy * hipHalf }, rh = { x: hip.x + ux * hipHalf, y: hip.y + uy * hipHalf };
+  // Which way she's facing: 0 front-on, ±1 in profile (to screen right / left).
+  const turn = Math.max(-1, Math.min(1, J.turn ?? 0)), side = Math.abs(turn);
   const widen = (pt, k) => [pt.x + ux * k, pt.y + uy * k];
   const down = { x: (hip.x - sh.x) / T, y: (hip.y - sh.y) / T };
   const hem = (pt, k) => [pt[0] + down.x * T * k, pt[1] + down.y * T * k];
@@ -85,28 +84,14 @@ export function drawRobot(p, J, t, mood = 'normal') {
   // Sash belt across the hips
   p.capsule(lh.x - ux * r * 1.5, lh.y - uy * r * 1.5, rh.x + ux * r * 1.5, rh.y + uy * r * 1.5, Math.max(1, r * 0.4), C.robeDark);
 
-  // Arms: wide saffron sleeves down to the wrist, metal hands.
-  for (const s of ['l', 'r']) {
-    const S = J[s + 's'], E = J[s + 'e'], W = J[s + 'w'];
-    tube(p, S, E, r * 1.45, C.robe, C.robeLight);
-    tube(p, E, W, r * 1.25, C.robe, C.robeLight);
-    p.disc(W.x, W.y, r * 1.3 + 1, C.outline);
-    p.disc(W.x, W.y, r * 1.3, C.robeDark);  // cuff
-    // A blocky metal hand along the line of the forearm, with a knuckle seam.
-    const fx = (W.x - E.x) / (len(E, W) || 1), fy = (W.y - E.y) / (len(E, W) || 1);
-    const tip = { x: W.x + fx * r * 1.9, y: W.y + fy * r * 1.9 };
-    const hand = (k, c) => p.poly([
-      [W.x - fy * r * k, W.y + fx * r * k], [W.x + fy * r * k, W.y - fx * r * k],
-      [tip.x + fy * r * k * 0.85, tip.y - fx * r * k * 0.85], [tip.x - fy * r * k * 0.85, tip.y + fx * r * k * 0.85]], c);
-    hand(1.05 + 1 / r, C.outline);
-    hand(1.05, C.metal);
-    const kn = { x: W.x + fx * r * 1.15, y: W.y + fy * r * 1.15 };
-    p.line(kn.x - fy * r * 0.9, kn.y + fx * r * 0.9, kn.x + fy * r * 0.9, kn.y - fx * r * 0.9, C.metalDark);
-  }
+  // Arms go in front of the beads and head (drawn at the end), unless the camera
+  // says a hand is clearly behind the body.
+  const behind = arm => (J[arm + 'w'].z ?? 0) > (J.headZ ?? 0) + 0.15;
+  for (const arm of ['l', 'r']) if (behind(arm)) drawArm(p, J, arm, r);
 
   // Prayer beads (mala): two rounded loops hanging from behind the neck, on top of the
   // robe but under the head. A longer one with bigger beads, a shorter one inside it.
-  const neck = { x: sh.x + down.x * r * 0.6, y: sh.y + down.y * r * 0.6 };
+  const neck = { x: sh.x + down.x * r * 0.6 + turn * R * 0.35, y: sh.y + down.y * r * 0.6 };
   const loop = (halfWidth, depth, beadR, wood, light) => {
     // The lower half of an ellipse from one side of the neck round to the other.
     const steps = 160, pts = [];
@@ -128,58 +113,85 @@ export function drawRobot(p, J, t, mood = 'normal') {
       if (beadR >= 1.5) p.set(b.x - beadR * 0.35, b.y - beadR * 0.35, light);
     }
   };
-  loop(R * 0.85, T * 0.8, Math.max(1.2, r * 0.52), C.beadBig, C.beadLight);
-  loop(R * 0.42, T * 0.4, Math.max(1, r * 0.36), C.bead, C.beadLight);
+  const open = 1 - side * 0.65;  // loops narrow as she turns
+  loop(R * 0.85 * open, T * 0.8, Math.max(1.2, r * 0.52), C.beadBig, C.beadLight);
+  loop(R * 0.42 * open, T * 0.4, Math.max(1, r * 0.36), C.bead, C.beadLight);
 
   // Head: angular metal, tilted to match hers. Drawn from points in head units (R).
   const head = J.head ?? { x: sh.x, y: sh.y - T * 0.5 };
   const tilt = Math.max(-0.45, Math.min(0.45, J.tilt ?? 0)), ct = Math.cos(tilt), st = Math.sin(tilt);
   const at = (dx, dy) => [head.x + (dx * ct - dy * st) * R, head.y + (dx * st + dy * ct) * R];
   const shape = pts => pts.map(([x, y]) => at(x, y));
+  // Turned, the skull narrows a little and the face features slide round towards the front.
+  const sk = 1 - side * 0.12;
+  const fx = x => turn * 0.42 + x * (1 - side * 0.55);
+  const face = pts => shape(pts.map(([x, y]) => [fx(x), y]));
+  const faceAt = (x, y) => at(fx(x), y);
   // Segmented neck
   for (const k of [0.25, 0.55, 0.85]) {
     const n = { x: sh.x + (head.x - sh.x) * k * 0.6, y: sh.y + (head.y - sh.y) * k * 0.6 };
     p.ellipse(n.x, n.y, r * 1.05 + 1, r * 0.45 + 1, C.outline);
     p.ellipse(n.x, n.y, r * 1.05, r * 0.45, C.metalDark);
   }
-  // Side panels
+  // Side panels (the one on the side she's facing is hidden behind the face when turned)
   for (const sx of [-1, 1]) {
-    const panel = shape([[sx * 0.88, -0.35], [sx * 1.08, -0.3], [sx * 1.08, 0.3], [sx * 0.88, 0.35]]);
+    if (side > 0.35 && Math.sign(turn) === sx) continue;
+    const panel = shape([[sx * 0.88 * sk, -0.35], [sx * 1.08 * sk, -0.3], [sx * 1.08 * sk, 0.3], [sx * 0.88 * sk, 0.35]]);
     p.poly(panel.map(([x, y]) => [x + sx, y]), C.outline);
     p.poly(panel, C.metalDark);
   }
   // Skull: chamfered box with a slightly domed crown
   const skull = [[-0.62, -1.02], [0.62, -1.02], [0.9, -0.72], [0.92, 0.3], [0.68, 0.98], [-0.68, 0.98], [-0.92, 0.3], [-0.9, -0.72]];
-  p.poly(shape(skull.map(([x, y]) => [x * 1.08, y * 1.06])), C.outline);
-  p.poly(shape(skull), C.metal);
-  p.poly(shape([[0.5, -1.02], [0.62, -1.02], [0.9, -0.72], [0.92, 0.3], [0.68, 0.98], [0.5, 0.98]]), C.metalDark);   // shaded side
-  p.poly(shape([[-0.55, -0.95], [-0.2, -0.95], [-0.42, -0.62], [-0.72, -0.62]]), C.metalLight);                     // glint
+  p.poly(shape(skull.map(([x, y]) => [x * 1.08 * sk, y * 1.06])), C.outline);
+  p.poly(shape(skull.map(([x, y]) => [x * sk, y])), C.metal);
+  p.poly(shape([[0.5, -1.02], [0.62, -1.02], [0.9, -0.72], [0.92, 0.3], [0.68, 0.98], [0.5, 0.98]].map(([x, y]) => [x * sk, y])), C.metalDark);   // shaded side
+  p.poly(shape([[-0.55, -0.95], [-0.2, -0.95], [-0.42, -0.62], [-0.72, -0.62]].map(([x, y]) => [x * sk, y])), C.metalLight);                     // glint
   // The six monk's dots, as amber LEDs on the crown
   for (const [dx, dy] of [[-0.3, -0.82], [0, -0.86], [0.3, -0.82], [-0.15, -0.68], [0.15, -0.68], [0, -0.74]]) {
-    const [x, y] = at(dx, dy);
+    const [x, y] = at(dx * (1 - side * 0.4) + turn * 0.15, dy);
     p.set(x, y, C.led);
   }
   // Visor: a dark band with a glowing bar and a slowly scanning "pupil"
-  p.poly(shape([[-0.82, -0.32], [0.82, -0.32], [0.78, 0.08], [-0.78, 0.08]]), C.visor);
+  p.poly(face([[-0.82, -0.32], [0.82, -0.32], [0.78, 0.08], [-0.78, 0.08]]), C.visor);
   const flare = mood === 'happy', dim = !flare && (t % 5) < 0.12;
   if (!dim) {
-    const [ax, ay] = at(-0.7, -0.12), [bx, by] = at(0.7, -0.12);
+    const [ax, ay] = faceAt(-0.7, -0.12), [bx, by] = faceAt(0.7, -0.12);
     p.line(ax, ay, bx, by, flare ? C.eyeHot : C.eye);
-    if (flare) { const [cx2, cy2] = at(-0.7, -0.2), [dx2, dy2] = at(0.7, -0.2); p.line(cx2, cy2, dx2, dy2, C.eye); }
+    if (flare) { const [cx2, cy2] = faceAt(-0.7, -0.2), [dx2, dy2] = faceAt(0.7, -0.2); p.line(cx2, cy2, dx2, dy2, C.eye); }
     const scan = Math.sin(t * 0.8) * 0.45;
-    const [px, py] = at(scan, -0.12);
+    const [px, py] = faceAt(scan, -0.12);
     p.disc(px, py, Math.max(1, R * 0.12), C.eyeGlow);
     p.capsule(px - R * 0.12, py, px + R * 0.12, py, Math.max(0.8, R * 0.06), C.eyeHot);
   }
   // Jaw seam and speaker grille
-  const [j1x, j1y] = at(-0.86, 0.38), [j2x, j2y] = at(0.86, 0.38);
+  const [j1x, j1y] = faceAt(-0.86, 0.38), [j2x, j2y] = faceAt(0.86, 0.38);
   p.line(j1x, j1y, j2x, j2y, C.metalDark);
-  p.poly(shape([[-0.32, 0.5], [0.32, 0.5], [0.3, 0.82], [-0.3, 0.82]]), C.visor);
+  p.poly(face([[-0.32, 0.5], [0.32, 0.5], [0.3, 0.82], [-0.3, 0.82]]), C.visor);
   for (const gx of [-0.18, 0, 0.18]) {
-    const [g1x, g1y] = at(gx, 0.56), [g2x, g2y] = at(gx, 0.76);
+    const [g1x, g1y] = faceAt(gx, 0.56), [g2x, g2y] = faceAt(gx, 0.76);
     p.line(g1x, g1y, g2x, g2y, C.metalDark);
   }
 
+  for (const arm of ['l', 'r']) if (!behind(arm)) drawArm(p, J, arm, r);
+}
+
+// One arm: a wide saffron sleeve down to the wrist, a cuff, and a blocky metal hand.
+function drawArm(p, J, side, r) {
+  const S = J[side + 's'], E = J[side + 'e'], W = J[side + 'w'];
+  tube(p, S, E, r * 1.45, C.robe, C.robeLight);
+  tube(p, E, W, r * 1.25, C.robe, C.robeLight);
+  p.disc(W.x, W.y, r * 1.3 + 1, C.outline);
+  p.disc(W.x, W.y, r * 1.3, C.robeDark);  // cuff
+  // The hand runs along the line of the forearm, with a knuckle seam.
+  const fx = (W.x - E.x) / (len(E, W) || 1), fy = (W.y - E.y) / (len(E, W) || 1);
+  const tip = { x: W.x + fx * r * 1.9, y: W.y + fy * r * 1.9 };
+  const hand = (k, c) => p.poly([
+    [W.x - fy * r * k, W.y + fx * r * k], [W.x + fy * r * k, W.y - fx * r * k],
+    [tip.x + fy * r * k * 0.85, tip.y - fx * r * k * 0.85], [tip.x - fy * r * k * 0.85, tip.y + fx * r * k * 0.85]], c);
+  hand(1.05 + 1 / r, C.outline);
+  hand(1.05, C.metal);
+  const kn = { x: W.x + fx * r * 1.15, y: W.y + fy * r * 1.15 };
+  p.line(kn.x - fy * r * 0.9, kn.y + fx * r * 0.9, kn.x + fy * r * 0.9, kn.y - fx * r * 0.9, C.metalDark);
 }
 
 // ---- Gestures ----
@@ -234,14 +246,45 @@ export class RobotDemoSource {
 
 // ---- The scene ----
 
+// A plain training hall: a warm wall with a soft light behind the robot, a beam, and a
+// plank floor. Drawn once per screen size and copied into every frame.
+export function hallBackground(W, H) {
+  const p = new Pix(W, H), floor = Math.round(H * 0.8);
+  const wallTop = '#2a1d16', wallLow = '#4a3326', glow = '#6e4c36';
+  for (let y = 0; y < floor; y++) {
+    for (let x = 0; x < W; x++) {
+      // Vertical gradient, lifted by an elliptical glow behind where the robot stands.
+      const dx = (x - W / 2) / (W * 0.55), dy = (y - floor * 0.55) / (floor * 0.6);
+      const light = Math.max(0, 1 - Math.hypot(dx, dy));
+      const base = mix(wallTop, wallLow, y / floor);
+      p.set(x, y, rgb(light > bayer(x, y) * 0.9 + 0.05 ? mix(base, glow, light * 0.7) : base));
+    }
+  }
+  const beam = Math.round(H * 0.16);
+  p.rect(0, beam, W, 3, rgb('#1a120d'));
+  p.hline(0, W, beam, rgb('#5a3d2c'));
+  for (let y = floor; y < H; y++) {
+    const k = (y - floor) / (H - floor);
+    for (let x = 0; x < W; x++) {
+      const plank = Math.floor((x - W / 2) / (6 + k * 10) + 100) % 2;
+      p.set(x, y, rgb(mix(plank ? '#7a5234' : '#6c4830', '#3e2a1e', 1 - k * 0.6)));
+    }
+  }
+  p.hline(0, W, floor, rgb('#1a120d'));
+  return p.data.slice();
+}
+
 // Pose landmarks (normalised) → robot points in art pixels, through the auto-framing view.
 function toJoints(lm, view, mirrored) {
-  const at = i => ({ x: (view.tx + view.s * (mirrored ? 1 - lm[i].x : lm[i].x) * view.vw) / ART, y: (view.ty + view.s * lm[i].y * view.vh) / ART });
+  const at = i => ({ x: (view.tx + view.s * (mirrored ? 1 - lm[i].x : lm[i].x) * view.vw) / ART, y: (view.ty + view.s * lm[i].y * view.vh) / ART, z: lm[i].z ?? 0 });
   const ears = mid(at(7), at(8)), nose = at(0);
   return {
+    headZ: lm[0].z ?? 0,  // the camera's depth estimate: smaller is nearer
     ls: at(11), rs: at(12), le: at(13), re: at(14), lw: at(15), rw: at(16),
     lh: at(23), rh: at(24), lk: at(25), rk: at(26), la: at(27), ra: at(28), lt: at(31), rt: at(32),
     head: { x: (ears.x + nose.x) / 2, y: (ears.y + nose.y) / 2 - len(at(11), at(12)) * 0.08 },
+    // Facing: how far the nose sits to one side of the ears, in head widths (0 = front-on).
+    turn: (nose.x - ears.x) / (len(mid(at(11), at(12)), mid(at(23), at(24))) * 0.34 * 0.6),
     // Head tilt from the line between the ears, only when they're clearly apart
     // (side-on they line up and the angle would be noise).
     tilt: (() => {
@@ -292,18 +335,27 @@ export class RobotScene {
     const W = Math.max(40, Math.round(cw / ART)), H = Math.max(60, Math.round(ch / ART));
     if (this.canvas.width !== W || this.canvas.height !== H) { this.canvas.width = W; this.canvas.height = H; }
 
-    const p = new Pix(W, H);
-    renderTemple(p, { owned: this.state.temple.owned, theme: this.state.temple.theme, t: now });
+    // Reuse one buffer and start each frame from the pre-drawn background.
+    if (!this.pix || this.pix.w !== W || this.pix.h !== H) {
+      this.pix = new Pix(W, H);
+      this.bg = hallBackground(W, H);
+      this.img = this.canvas.getContext('2d').createImageData(W, H);
+    }
+    const p = this.pix;
+    p.data.set(this.bg);
 
-    // Her pose, or (when nobody's there) the robot waving on its own.
+    // Copy her only once her whole body has been clearly in view for a moment; until
+    // then (or if she steps out) stand in a neutral pose rather than follow guesses.
     const frame = this.source.next();
     let lm = frame?.landmarks, fw = frame?.width, fh = frame?.height, mirrored = this.source.mirrored;
-    const present = !!lm && [11, 12, 23, 24].every(i => (lm[i]?.visibility ?? 1) > 0.5);
-    if (present) { this.seenFor += dt; this.lostFor = 0; } else { this.lostFor += dt; this.seenFor = 0; }
+    const clear = i => { const q = lm?.[i]; return q && (q.visibility ?? 1) > 0.6 && q.x > 0 && q.x < 1 && q.y > 0 && q.y < 1; };
+    // Shoulders, hips, knees, ankles: one of each pair is enough (side-on, the far side hides).
+    const whole = !!lm && [[11, 12], [23, 24], [25, 26], [27, 28]].every(([a, b]) => clear(a) || clear(b));
+    if (whole) { this.seenFor += dt; this.lostFor = 0; } else { this.lostFor += dt; this.seenFor = 0; }
+    const present = whole && this.seenFor > 0.5;
+    if (present !== this.wasPresent) { this.wasPresent = present; this.blendUntil = now + 0.7; }  // ease between poses
     if (!present) {
-      const wave = standing('front');
-      wave.arms.R = [-150 + Math.sin(now * 5) * 25, -175 + Math.sin(now * 5) * 15];
-      lm = syntheticLandmarks(wave, { width: 720, height: 1280 });
+      lm = syntheticLandmarks(standing('front'), { width: 720, height: 1280 });
       fw = 720; fh = 1280; mirrored = false;
     }
     const view = this.framer.update(dt, { landmarks: lm, width: fw, height: fh }, cw, ch, mirrored, { top: 60, bottom: 20 });
@@ -333,9 +385,21 @@ export class RobotScene {
     }
     if (now > this.moodUntil) this.mood = 'normal';
 
-    const J = toJoints(lm, view, mirrored);
+    // Ease the drawn pose towards the target: quickly while copying her, slowly when
+    // switching between her and the neutral pose so it doesn't jump.
+    const target = toJoints(lm, view, mirrored);
+    const k = Math.min(1, dt / (now < (this.blendUntil ?? 0) ? 0.25 : 0.04));
+    const J = this.shown ? Object.fromEntries(Object.entries(target).map(([key, v]) => {
+      const was = this.shown[key];
+      if (typeof v === 'number') return [key, was + (v - was) * k];
+      return [key, { ...v, x: was.x + (v.x - was.x) * k, y: was.y + (v.y - was.y) * k }];
+    })) : target;
+    this.shown = J;
     this.tilt = (this.tilt ?? 0) + (J.tilt - (this.tilt ?? 0)) * Math.min(1, dt * 6);  // smooth the head's movement
     J.tilt = this.tilt;
+    const turn = Math.max(-1, Math.min(1, J.turn || 0));
+    this.turn = (this.turn ?? 0) + (turn - (this.turn ?? 0)) * Math.min(1, dt * 5);
+    J.turn = this.turn;
     drawRobot(p, J, now, this.mood);
 
     // Particles
@@ -347,8 +411,7 @@ export class RobotScene {
     }
 
     const ctx = this.canvas.getContext('2d');
-    const img = ctx.createImageData(W, H);
-    new Uint32Array(img.data.buffer).set(p.data);
-    ctx.putImageData(img, 0, 0);
+    new Uint32Array(this.img.data.buffer).set(p.data);
+    ctx.putImageData(this.img, 0, 0);
   }
 }

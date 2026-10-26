@@ -68,11 +68,15 @@ export class Pix {
   capsule(ax, ay, bx, by, r, c) {
     const x0 = Math.floor(Math.min(ax, bx) - r), x1 = Math.ceil(Math.max(ax, bx) + r);
     const y0 = Math.floor(Math.min(ay, by) - r), y1 = Math.ceil(Math.max(ay, by) + r);
-    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy || 1;
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy || 1, r2 = r * r;
+    const opaque = c >>> 24 === 255, data = this.data, w = this.w;
     for (let y = Math.max(0, y0); y <= Math.min(this.h - 1, y1); y++) {
-      for (let x = Math.max(0, x0); x <= Math.min(this.w - 1, x1); x++) {
-        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2));
-        if (Math.hypot(x - ax - t * dx, y - ay - t * dy) <= r) this.set(x, y, c);
+      for (let x = Math.max(0, x0); x <= Math.min(w - 1, x1); x++) {
+        // Squared distance to the segment (no square root), and a direct write when opaque.
+        let t = ((x - ax) * dx + (y - ay) * dy) / len2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const ex = x - ax - t * dx, ey = y - ay - t * dy;
+        if (ex * ex + ey * ey <= r2) { if (opaque) data[y * w + x] = c; else this.set(x, y, c); }
       }
     }
   }
