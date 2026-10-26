@@ -114,30 +114,37 @@ export function scorePose(hold, level, body) {
   return best;
 }
 
-// Sway: how much the body drifts while holding still. Keeps a few seconds of the
-// body's centre, head and hands, and measures how far they wander from their average
-// position (root mean square), in torso lengths. Measuring drift over a window rather
-// than frame-to-frame speed averages out most of the tracking's own jitter.
-const SWAY_POINTS = [[b => mid(b.sh, b.hip), 2], [b => b.nose, 1], [b => mid(b.arms.L.c, b.arms.R.c), 1]];
+// Sway: how much the body moves while holding still. Each part (the torso's centre,
+// the head and each hand) is first smoothed over about a fifth of a second, which takes
+// out most of the tracking's own frame-to-frame jitter but keeps real fidgets and sway.
+// Then, over the last couple of seconds, it measures how far each part wanders from its
+// average position (root mean square), in torso lengths. The sway is the part that
+// moved most, so a fidgeting hand or a nodding head counts in full rather than being
+// averaged away by the parts that stayed still.
+const SWAY_PARTS = [b => mid(b.sh, b.hip), b => b.nose, b => b.arms.L.c, b => b.arms.R.c];
+const SWAY_SMOOTH = 0.2;  // seconds
 
 export class SwayMeter {
-  constructor(window = 3) { this.window = window; this.reset(); }
+  constructor(window = 2.5) { this.window = window; this.reset(); }
 
-  reset() { this.samples = []; this.t = 0; }
+  reset() { this.samples = []; this.t = 0; this.smooth = null; }
 
   update(body, dt) {
     this.t += dt;
-    this.samples.push({ t: this.t, pts: SWAY_POINTS.map(([at]) => at(body)), scale: body.torsoLen });
+    const raw = SWAY_PARTS.map(at => at(body));
+    const k = 1 - Math.exp(-dt / SWAY_SMOOTH);
+    this.smooth = this.smooth ? this.smooth.map((p, i) => ({ x: p.x + (raw[i].x - p.x) * k, y: p.y + (raw[i].y - p.y) * k })) : raw;
+    this.samples.push({ t: this.t, pts: this.smooth, scale: body.torsoLen });
     while (this.t - this.samples[0].t > this.window) this.samples.shift();
     const n = this.samples.length;
     if (n < 5) return 0;
     const scale = this.samples.reduce((t, s) => t + s.scale, 0) / n;
-    let total = 0, weights = 0;
-    SWAY_POINTS.forEach(([, w], k) => {
-      const mx = this.samples.reduce((t, s) => t + s.pts[k].x, 0) / n, my = this.samples.reduce((t, s) => t + s.pts[k].y, 0) / n;
-      const rms = Math.sqrt(this.samples.reduce((t, s) => t + (s.pts[k].x - mx) ** 2 + (s.pts[k].y - my) ** 2, 0) / n);
-      total += rms * w; weights += w;
+    let worst = 0;
+    SWAY_PARTS.forEach((_, i) => {
+      const mx = this.samples.reduce((t, s) => t + s.pts[i].x, 0) / n, my = this.samples.reduce((t, s) => t + s.pts[i].y, 0) / n;
+      const rms = Math.sqrt(this.samples.reduce((t, s) => t + (s.pts[i].x - mx) ** 2 + (s.pts[i].y - my) ** 2, 0) / n);
+      worst = Math.max(worst, rms);
     });
-    return total / weights / scale;
+    return worst / scale;
   }
 }

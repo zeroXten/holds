@@ -71,6 +71,17 @@ for (const [a, b] of [['tray', 'claws'], ['claws', 'tray'], ['wings', 'palms'], 
   const ok = still < limit * 0.5 && wobbly > limit;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} sway: still ${still.toFixed(3)}, swaying ${wobbly.toFixed(3)} (stillest limit ${limit})`);
+  // One hand fidgeting (the rest still) counts in full rather than being averaged away.
+  const easiest = wuji.criteria(1).find(c => c.id === 'still').max;
+  const m = new SwayMeter();
+  let fidget = 0;
+  for (let i = 0; i < 90; i++) {
+    const lm = syntheticLandmarks(wuji.figure(1), { width: W, height: H, noise: 0.002 }).map((p, k) => ([15, 17, 19, 21].includes(k) ? { ...p, x: p.x + 0.02 * Math.sin(i / 15 * Math.PI) } : p));
+    fidget = m.update(makeBody(lm, W, H), 1 / 30);
+  }
+  const fok = fidget > easiest * 1.5;  // a ±3 cm fidget, once a second
+  if (!fok) failures++;
+  console.log(`${fok ? 'ok  ' : 'FAIL'} sway: one hand fidgeting ${fidget.toFixed(3)} (easiest limit ${easiest})`);
 }
 
 // A sagging iron bridge (hips dropped ~15°) should fail.

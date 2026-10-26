@@ -1188,7 +1188,7 @@ export const HOLDS = [
     criteria: level => gates([
       {
         id: 'still', label: 'Steady', cue: 'Find a spot to look at and settle', weight: 3, joints: [11, 12, 23, 24],
-        value: b => b.sway ?? 0, max: by(level, [0.05, 0.045, 0.04, 0.055]), soft: 0.04,
+        value: b => b.sway ?? 0, max: by(level, [0.03, 0.027, 0.03, 0.035]), soft: 0.025,
       },
       {
         id: 'lift', label: 'Foot lifted', joints: s => s.other.idx,
@@ -1226,7 +1226,8 @@ export const HOLDS = [
     criteria: level => gates([
       {
         id: 'still', label: 'Still', cue: 'Let everything settle and stay still', weight: 3, joints: [0, 11, 12, 23, 24],
-        value: b => b.sway ?? 0, max: by(level, [0.035, 0.03, 0.027, 0.025]), soft: 0.03,
+        // Sway in torso lengths: ~0.012 for ±1 cm of movement in any part, ~0.025 for ±2 cm.
+        value: b => b.sway ?? 0, max: by(level, [0.015, 0.014, 0.013, 0.012]), soft: 0.015,
       },
       {
         id: 'arms', label: 'Arms relaxed', cue: 'Let your arms hang at your sides', joints: [13, 14, 15, 16],
@@ -1253,7 +1254,8 @@ export const HOLDS = [
     criteria: level => gates([
       {
         id: 'still', label: 'Still', cue: 'Settle, and let the body be still', weight: 3, joints: [0, 11, 12, 23, 24],
-        value: b => b.sway ?? 0, max: by(level, [0.035, 0.03, 0.027, 0.025]), soft: 0.03,
+        // Sway in torso lengths: ~0.012 for ±1 cm of movement in any part, ~0.025 for ±2 cm.
+        value: b => b.sway ?? 0, max: by(level, [0.015, 0.014, 0.013, 0.012]), soft: 0.015,
       },
       {
         id: 'seated', label: 'Seated', cue: 'Sit down: cross-legged or on a chair', joints: [23, 24, 25, 26],
