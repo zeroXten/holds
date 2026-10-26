@@ -16,7 +16,7 @@ const C = {
   robe: rgb('#e8891e'), robeLight: rgb('#f6a84e'), robeDark: rgb('#b85a12'), drape: rgb('#a8321e'), drapeLight: rgb('#c8482c'),
   wrap: rgb('#f2ead8'), wrapLine: rgb('#cbbd9e'), shoe: rgb('#2a2622'),
   gold: rgb('#f0c040'), bead: rgb('#6a3418'), beadLight: rgb('#9a5a30'),
-  eye: rgb('#6ff3ff'), eyeGlow: rgb('#6ff3ff', 90), cheek: rgb('#ff8fa8', 160),
+  eye: rgb('#6ff3ff'), eyeGlow: rgb('#6ff3ff', 90), eyeHot: rgb('#e8ffff'), visor: rgb('#1f2a33'), led: rgb('#ffb02e'),
 };
 
 // ---- Drawing ----
@@ -31,10 +31,12 @@ function tube(p, a, b, r, fill, light) {
   if (light && r >= 2) p.capsule(a.x - r * 0.35, a.y - r * 0.35, b.x - r * 0.35, b.y - r * 0.35, Math.max(1, r * 0.3), light);
 }
 
-// Robo Monk is mostly monk: saffron robes and sleeves, a red kasaya over one shoulder,
-// big prayer beads, white leg wraps and black cloth shoes, a bald head with the six
-// head dots. The robot shows in the silver skin, glowing eyes and metal hands.
-// J: body points in art pixels. mood: 'normal' | 'happy'. t: seconds, for blinking.
+// Robo Monk: the Shaolin uniform (saffron robes and sleeves, a red kasaya over one
+// shoulder, prayer beads, white leg wraps, black cloth shoes) on a deadpan, neutral
+// robot: an angular metal head with a visor and a speaker grille, the six monk's dots
+// as amber LEDs on the crown, blocky metal hands. Not cute, not menacing.
+// J: body points in art pixels (plus `tilt`, the head's angle). mood: 'normal' | 'happy'
+// (the visor flares). t: seconds, for the visor's scan and flicker.
 export function drawRobot(p, J, t, mood = 'normal') {
   const sh = mid(J.ls, J.rs), hip = mid(J.lh, J.rh);
   const T = Math.max(8, len(sh, hip));            // torso length sets the scale
@@ -90,38 +92,66 @@ export function drawRobot(p, J, t, mood = 'normal') {
     tube(p, E, W, r * 1.25, C.robe, C.robeLight);
     p.disc(W.x, W.y, r * 1.3 + 1, C.outline);
     p.disc(W.x, W.y, r * 1.3, C.robeDark);  // cuff
-    const hand = { x: W.x + (W.x - E.x) / (len(E, W) || 1) * r * 0.9, y: W.y + (W.y - E.y) / (len(E, W) || 1) * r * 0.9 };
-    p.disc(hand.x, hand.y, r * 1.15 + 1, C.outline);
-    p.disc(hand.x, hand.y, r * 1.15, C.metal);
-    p.set(hand.x - r * 0.4, hand.y - r * 0.4, C.metalLight);
+    // A blocky metal hand along the line of the forearm, with a knuckle seam.
+    const fx = (W.x - E.x) / (len(E, W) || 1), fy = (W.y - E.y) / (len(E, W) || 1);
+    const tip = { x: W.x + fx * r * 1.9, y: W.y + fy * r * 1.9 };
+    const hand = (k, c) => p.poly([
+      [W.x - fy * r * k, W.y + fx * r * k], [W.x + fy * r * k, W.y - fx * r * k],
+      [tip.x + fy * r * k * 0.85, tip.y - fx * r * k * 0.85], [tip.x - fy * r * k * 0.85, tip.y + fx * r * k * 0.85]], c);
+    hand(1.05 + 1 / r, C.outline);
+    hand(1.05, C.metal);
+    const kn = { x: W.x + fx * r * 1.15, y: W.y + fy * r * 1.15 };
+    p.line(kn.x - fy * r * 0.9, kn.y + fx * r * 0.9, kn.x + fy * r * 0.9, kn.y - fx * r * 0.9, C.metalDark);
   }
 
-  // Head: bald, silver, the six monk's dots, round ears, glowing eyes.
+  // Head: angular metal, tilted to match hers. Drawn from points in head units (R).
   const head = J.head ?? { x: sh.x, y: sh.y - T * 0.5 };
-  tube(p, sh, head, r * 0.7, C.metalDark);
-  for (const sx of [-1, 1]) {
-    p.disc(head.x + sx * R * 0.95, head.y + R * 0.1, R * 0.22 + 1, C.outline);
-    p.disc(head.x + sx * R * 0.95, head.y + R * 0.1, R * 0.22, C.metal);
+  const tilt = Math.max(-0.45, Math.min(0.45, J.tilt ?? 0)), ct = Math.cos(tilt), st = Math.sin(tilt);
+  const at = (dx, dy) => [head.x + (dx * ct - dy * st) * R, head.y + (dx * st + dy * ct) * R];
+  const shape = pts => pts.map(([x, y]) => at(x, y));
+  // Segmented neck
+  for (const k of [0.25, 0.55, 0.85]) {
+    const n = { x: sh.x + (head.x - sh.x) * k * 0.6, y: sh.y + (head.y - sh.y) * k * 0.6 };
+    p.ellipse(n.x, n.y, r * 1.05 + 1, r * 0.45 + 1, C.outline);
+    p.ellipse(n.x, n.y, r * 1.05, r * 0.45, C.metalDark);
   }
-  p.disc(head.x, head.y, R + 1, C.outline);
-  p.disc(head.x, head.y, R, C.metal);
-  p.disc(head.x - R * 0.35, head.y - R * 0.45, R * 0.3, C.metalLight);
-  for (const [dx, dy] of [[-0.3, -0.62], [0, -0.68], [0.3, -0.62], [-0.15, -0.48], [0.15, -0.48]]) p.set(head.x + dx * R, head.y + dy * R, C.gold);
-  const blink = (t % 4) < 0.15;
+  // Side panels
   for (const sx of [-1, 1]) {
-    const ex = head.x + sx * R * 0.35, ey = head.y + R * 0.08;
-    if (mood === 'happy') {
-      p.line(ex - R * 0.16, ey + R * 0.06, ex, ey - R * 0.1, C.eye);
-      p.line(ex, ey - R * 0.1, ex + R * 0.16, ey + R * 0.06, C.eye);
-    } else if (blink) {
-      p.hline(ex - R * 0.14, ex + R * 0.14, ey, C.eye);
-    } else {
-      p.disc(ex, ey, R * 0.19, C.eyeGlow);
-      p.disc(ex, ey, R * 0.11, C.eye);
-    }
-    p.disc(head.x + sx * R * 0.58, head.y + R * 0.38, R * 0.1, C.cheek);
+    const panel = shape([[sx * 0.88, -0.35], [sx * 1.08, -0.3], [sx * 1.08, 0.3], [sx * 0.88, 0.35]]);
+    p.poly(panel.map(([x, y]) => [x + sx, y]), C.outline);
+    p.poly(panel, C.metalDark);
   }
-  for (let i = -2; i <= 2; i++) p.set(head.x + i * R * 0.07, head.y + R * 0.45 - Math.abs(i) * R * 0.04, C.outline);
+  // Skull: chamfered box with a slightly domed crown
+  const skull = [[-0.62, -1.02], [0.62, -1.02], [0.9, -0.72], [0.92, 0.3], [0.68, 0.98], [-0.68, 0.98], [-0.92, 0.3], [-0.9, -0.72]];
+  p.poly(shape(skull.map(([x, y]) => [x * 1.08, y * 1.06])), C.outline);
+  p.poly(shape(skull), C.metal);
+  p.poly(shape([[0.5, -1.02], [0.62, -1.02], [0.9, -0.72], [0.92, 0.3], [0.68, 0.98], [0.5, 0.98]]), C.metalDark);   // shaded side
+  p.poly(shape([[-0.55, -0.95], [-0.2, -0.95], [-0.42, -0.62], [-0.72, -0.62]]), C.metalLight);                     // glint
+  // The six monk's dots, as amber LEDs on the crown
+  for (const [dx, dy] of [[-0.3, -0.82], [0, -0.86], [0.3, -0.82], [-0.15, -0.68], [0.15, -0.68], [0, -0.74]]) {
+    const [x, y] = at(dx, dy);
+    p.set(x, y, C.led);
+  }
+  // Visor: a dark band with a glowing bar and a slowly scanning "pupil"
+  p.poly(shape([[-0.82, -0.32], [0.82, -0.32], [0.78, 0.08], [-0.78, 0.08]]), C.visor);
+  const flare = mood === 'happy', dim = !flare && (t % 5) < 0.12;
+  if (!dim) {
+    const [ax, ay] = at(-0.7, -0.12), [bx, by] = at(0.7, -0.12);
+    p.line(ax, ay, bx, by, flare ? C.eyeHot : C.eye);
+    if (flare) { const [cx2, cy2] = at(-0.7, -0.2), [dx2, dy2] = at(0.7, -0.2); p.line(cx2, cy2, dx2, dy2, C.eye); }
+    const scan = Math.sin(t * 0.8) * 0.45;
+    const [px, py] = at(scan, -0.12);
+    p.disc(px, py, Math.max(1, R * 0.12), C.eyeGlow);
+    p.capsule(px - R * 0.12, py, px + R * 0.12, py, Math.max(0.8, R * 0.06), C.eyeHot);
+  }
+  // Jaw seam and speaker grille
+  const [j1x, j1y] = at(-0.86, 0.38), [j2x, j2y] = at(0.86, 0.38);
+  p.line(j1x, j1y, j2x, j2y, C.metalDark);
+  p.poly(shape([[-0.32, 0.5], [0.32, 0.5], [0.3, 0.82], [-0.3, 0.82]]), C.visor);
+  for (const gx of [-0.18, 0, 0.18]) {
+    const [g1x, g1y] = at(gx, 0.56), [g2x, g2y] = at(gx, 0.76);
+    p.line(g1x, g1y, g2x, g2y, C.metalDark);
+  }
 
   // Big prayer beads (mala) hanging round the neck, drawn last so they sit on the robe.
   const neckL = { x: sh.x - ux * R * 0.55, y: sh.y - uy * R * 0.55 + r }, neckR = { x: sh.x + ux * R * 0.55, y: sh.y + uy * R * 0.55 + r };
@@ -198,6 +228,12 @@ function toJoints(lm, view, mirrored) {
     ls: at(11), rs: at(12), le: at(13), re: at(14), lw: at(15), rw: at(16),
     lh: at(23), rh: at(24), lk: at(25), rk: at(26), la: at(27), ra: at(28), lt: at(31), rt: at(32),
     head: { x: (ears.x + nose.x) / 2, y: (ears.y + nose.y) / 2 - len(at(11), at(12)) * 0.08 },
+    // Head tilt from the line between the ears, only when they're clearly apart
+    // (side-on they line up and the angle would be noise).
+    tilt: (() => {
+      const [a, b] = at(7).x < at(8).x ? [at(7), at(8)] : [at(8), at(7)];
+      return len(a, b) > len(at(11), at(12)) * 0.35 ? Math.atan2(b.y - a.y, b.x - a.x) : 0;
+    })(),
   };
 }
 
@@ -283,7 +319,10 @@ export class RobotScene {
     }
     if (now > this.moodUntil) this.mood = 'normal';
 
-    drawRobot(p, toJoints(lm, view, mirrored), now, this.mood);
+    const J = toJoints(lm, view, mirrored);
+    this.tilt = (this.tilt ?? 0) + (J.tilt - (this.tilt ?? 0)) * Math.min(1, dt * 6);  // smooth the head's movement
+    J.tilt = this.tilt;
+    drawRobot(p, J, now, this.mood);
 
     // Particles
     this.particles = this.particles.filter(q => (q.life -= dt) > 0);
