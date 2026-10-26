@@ -1144,7 +1144,7 @@ function shopStreak() {
   const b = state.streak.broken;
   return `
   <div class="streak-head"><span class="big-flame">🔥 ${n}</span><span>day streak${next ? `<br><small>${next.days - n} more day${next.days - n === 1 ? '' : 's'} to the ${next.name}: ${milestoneReward(next)}</small>` : ''}</span></div>
-  <p class="shop-intro">Every streak day adds 5% to your coins (up to +50%). Milestones pay out on top: coins, free freezes, or ${MILESTONE_DAY_MULT}× coins for the day. Protecting your streak is cheapest when planned ahead.</p>
+  <p class="shop-intro">Each day of your streak after the first adds 5% to your coins (up to +50%, from day 11). Milestones pay out on top: coins, free freezes, or ${MILESTONE_DAY_MULT}× coins for the day. Protecting your streak is cheapest when planned ahead.</p>
   ${b ? `<div class="home-card warn"><p><b>Your ${b.streak}-day streak ended.</b> Repair it: ${REPAIR_PRICE_PER_DAY} coins per missed day.</p>
     <div class="row"><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div></div>` : ''}
   <h3>Rest days <small>${COIN} ${REST_DAY_PRICE} each · up to 2 a week</small></h3>

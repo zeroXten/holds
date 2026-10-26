@@ -170,7 +170,8 @@ export const nextMilestone = (state, today = dayKey()) => STREAK_MILESTONES.find
 // (counting today, as training today extends the streak) and a milestone day's double.
 export function coinBoost(state, today = dayKey()) {
   const days = trained(state, today) ? streak(state, today) : streak(state, today) + 1;
-  const streakMult = 1 + STREAK_STEP * Math.min(days, STREAK_MAX_DAYS);
+  // Day 1 of a streak earns the normal rate; each day after adds STREAK_STEP.
+  const streakMult = 1 + STREAK_STEP * Math.min(Math.max(days - 1, 0), STREAK_MAX_DAYS);
   const double = state.doubleDay === today;
   return { days, streakMult, double, total: streakMult * (double ? MILESTONE_DAY_MULT : 1) };
 }

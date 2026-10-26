@@ -189,13 +189,21 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   const today = P.dayKey();
   for (let i = 9; i >= 1; i--) train(s, P.addDays(today, -i));
   for (const days of [3, 7]) s.streak.claimed[days] = P.addDays(today, -9);
-  check('streak bonus counts today', P.coinBoost(s, today).days === 10 && Math.abs(P.coinBoost(s, today).streakMult - 1.5) < 1e-9 && !P.coinBoost(s, today).double);
+  check('streak bonus counts today', P.coinBoost(s, today).days === 10 && Math.abs(P.coinBoost(s, today).streakMult - 1.45) < 1e-9 && !P.coinBoost(s, today).double);
   const o = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 10, avgForm: 0, camera: false, reached: true });
   check('10-day milestone doubles its session', o.milestones.map(m => m.days).join() === '10' && o.milestoneDouble === 10 && o.coins === 20 && s.coins === 20, JSON.stringify({ coins: o.coins, wallet: s.coins }));
   const b = P.coinBoost(s, today);
-  check('rest of the day is doubled', b.double && Math.abs(b.total - 2 * 1.5) < 1e-9);
+  check('rest of the day is doubled', b.double && Math.abs(b.total - 2 * 1.45) < 1e-9);
   const again = P.recordSession(s, { holdId: 'bow', level: 1, held: 31, target: 30, coins: 10, avgForm: 0, camera: false, reached: true, boostDouble: true });
   check('already-doubled sessions aren\'t doubled again', again.milestoneDouble === 0 && again.coins === 10);
+}
+
+// No streak bonus on the first day of a streak.
+{
+  const s = fresh(0);
+  check('day 1 has no streak bonus', P.coinBoost(s).days === 1 && P.coinBoost(s).streakMult === 1);
+  train(s, P.addDays(P.dayKey(), -1));
+  check('day 2 is +5%', Math.abs(P.coinBoost(s).streakMult - 1.05) < 1e-9);
 }
 
 // The hold of the day never repeats the day before's.
