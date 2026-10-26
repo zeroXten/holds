@@ -1017,7 +1017,7 @@ function renderStreakStrip() {
   $('#streak-strip').innerHTML = `
     <span class="ss-head"><b>🔥 ${n ? `${n}-day streak` : 'No streak yet'}</b>
       <span>${[
-        ...(boost.streakMult > 1 ? [`+${Math.round((boost.streakMult - 1) * 100)}% streak bonus`] : []),
+        ...(boost.streakMult > 1 ? [`+${Math.round((boost.streakMult - 1) * 100)}% streak bonus`] : n && boost.nextStepIn ? [`+5% from day ${boost.days + boost.nextStepIn}`] : []),
         ...(boost.double ? [`${MILESTONE_DAY_MULT}× day`] : []),
         ...(state.streak.freezes ? [`<span class="freezes" title="Streak freezes">❄${state.streak.freezes}</span>`] : []),
       ].join(' · ')}</span></span>
@@ -1153,7 +1153,7 @@ function shopStreak() {
   const b = state.streak.broken;
   return `
   <div class="streak-head"><span class="big-flame">🔥 ${n}</span><span>day streak${next ? `<br><small>${next.days - n} more day${next.days - n === 1 ? '' : 's'} to the ${next.name}: ${milestoneReward(next)}</small>` : ''}</span></div>
-  <p class="shop-intro">Each day of your streak after the first adds 5% to your coins (up to +50%, from day 11). Milestones pay out on top: coins, free freezes, or ${MILESTONE_DAY_MULT}× coins for the day. Protecting your streak is cheapest when planned ahead.</p>
+  <p class="shop-intro">Each full week of your streak adds 5% to your coins (+5% from day 8, +10% from day 15, up to +50%). Milestones pay out on top: coins, free freezes, or ${MILESTONE_DAY_MULT}× coins for the day. Protecting your streak is cheapest when planned ahead.</p>
   ${b ? `<div class="home-card warn"><p><b>Your ${b.streak}-day streak ended.</b> Repair it: ${REPAIR_PRICE_PER_DAY} coins per missed day.</p>
     <div class="row"><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div></div>` : ''}
   <h3>Rest days <small>${COIN} ${REST_DAY_PRICE} each · up to 2 a week</small></h3>

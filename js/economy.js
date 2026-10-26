@@ -9,8 +9,8 @@ export const coinRateFor = (hold, level) => LEVEL_MULT[level - 1] * (STYLE_MULT[
 export const TARGET_BONUS = 2;               // coins for reaching a target (split across sides)
 export const DAILY_MULT = 3;                 // hold of the day: this many times the coins, on its first session each day
 export const DAILY_MIN_SECONDS = 10;         // ...a session this long uses up the day's multiplier
-export const STREAK_STEP = 0.05;             // +5% coins per streak day after the first...
-export const STREAK_MAX_DAYS = 10;           // ...up to +50% (from day 11)
+export const STREAK_STEP = 0.05;             // +5% coins for each full week of streak...
+export const STREAK_MAX_WEEKS = 10;          // ...up to +50% (from day 71)
 export const MILESTONE_DAY_MULT = 2;         // reaching a streak milestone doubles your coins for the rest of that day
 export const HONOUR_FORM = 0.75;             // form factor without the camera
 
@@ -140,7 +140,7 @@ export const AVATAR_ACCESSORIES = [
 ];
 
 // ---- Streak milestones: a one-off reward each time a streak reaches these lengths ----
-// (on top of the everyday streak bonus: +5% coins per day after the first, up to +50%). Rewards are
+// (on top of the everyday streak bonus: +5% coins per full week, up to +50%). Rewards are
 // mixed: coins, a free freeze, and `double`: the rest of that day earns MILESTONE_DAY_MULT×.
 // A double day grows with what you earn, so it carries the later milestones.
 export const STREAK_MILESTONES = [

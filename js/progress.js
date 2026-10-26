@@ -6,7 +6,7 @@ import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
   REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
-  DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_DAYS, MILESTONE_DAY_MULT,
+  DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT,
 } from './economy.js';
 
 const KEY = 'holds.v1';
@@ -170,10 +170,13 @@ export const nextMilestone = (state, today = dayKey()) => STREAK_MILESTONES.find
 // (counting today, as training today extends the streak) and a milestone day's double.
 export function coinBoost(state, today = dayKey()) {
   const days = trained(state, today) ? streak(state, today) : streak(state, today) + 1;
-  // Day 1 of a streak earns the normal rate; each day after adds STREAK_STEP.
-  const streakMult = 1 + STREAK_STEP * Math.min(Math.max(days - 1, 0), STREAK_MAX_DAYS);
+  // The first week of a streak earns the normal rate; each full week adds STREAK_STEP
+  // (+5% from day 8, +10% from day 15...).
+  const weeks = Math.floor(Math.max(days - 1, 0) / 7);
+  const streakMult = 1 + STREAK_STEP * Math.min(weeks, STREAK_MAX_WEEKS);
+  const nextStepIn = weeks < STREAK_MAX_WEEKS ? 7 * (weeks + 1) + 1 - days : null;  // days until it next rises
   const double = state.doubleDay === today;
-  return { days, streakMult, double, total: streakMult * (double ? MILESTONE_DAY_MULT : 1) };
+  return { days, streakMult, nextStepIn, double, total: streakMult * (double ? MILESTONE_DAY_MULT : 1) };
 }
 
 // Pays out any milestone the current streak has reached and not yet claimed.
