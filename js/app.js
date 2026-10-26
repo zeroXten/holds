@@ -115,7 +115,6 @@ function renderHome() {
   renderStreakStrip();
   renderHomeCards();
   drawScenes(true);
-  $('#intro').hidden = state.history.length > 0;
   const daily = P.dailyHold(state);
   if (!hero || !P.isUnlocked(state, hero.id)) hero = daily;
   renderHero();
@@ -884,7 +883,7 @@ $('#export').onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `shaolin-holds-${P.dayKey()}.json`;
+  a.download = `mabu-backup-${P.dayKey()}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
@@ -894,7 +893,7 @@ $('#import-file').onchange = async e => {
   if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    if (!P.isBackup(data)) throw new Error('Not a Shaolin Holds backup');
+    if (!P.isBackup(data)) throw new Error('Not a Mabu backup');
     if (!confirm('Replace your current progress with this backup?')) return;
     localStorage.setItem('holds.v1', JSON.stringify(data));
     state = P.load();
@@ -1287,6 +1286,11 @@ $('#hold-sheet').addEventListener('close', () => {
   $('#hold-sheet').returnValue = '';
 });
 $('#settings-btn').onclick = openSettings;
+
+// Welcome: once on first use, and whenever asked for from Settings.
+function openWelcome() { $('#welcome').showModal(); }
+$('#welcome').addEventListener('close', () => { if (!state.welcomed) { state.welcomed = true; P.save(state); } });
+$('#how-btn').onclick = () => { $('#settings').close(); openWelcome(); };
 $('#rank-btn').onclick = renderProgress;
 $('#progress-btn').onclick = renderProgress;
 $('#end-btn').onclick = () => endSession();
@@ -1306,6 +1310,7 @@ P.protectStreak(state);
 const settled = P.settleBets(state, P.dayKey(), { notify: false });
 show('home');
 renderHome();
+if (!state.welcomed) openWelcome();
 flushNotices();
 settled.forEach(celebrateBet);
 animateScenes();

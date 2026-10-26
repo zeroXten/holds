@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Shaolin Holds</title>
+  <title>Mabu</title>
   <meta name="description" content="Gamified Shaolin stance training. Your phone's camera checks your form and scores every second you hold.">
   <meta name="theme-color" content="#17120e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Holds">
+  <meta name="apple-mobile-web-app-title" content="Mabu">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -26,6 +26,7 @@
 
   <!-- Home -->
   <section id="home" class="screen">
+    <p class="brand"><b>Mabu</b><span lang="zh">马步</span></p>
     <header class="topbar">
       <button class="rank" id="rank-btn" aria-label="Progress">
         <canvas class="avatar-mini" id="avatar-mini" width="13" height="20" aria-hidden="true"></canvas>
@@ -60,18 +61,6 @@
       <div class="row hero-btns"><button class="btn primary big" id="hero-start">Start</button></div>
       <button class="text-btn back-daily" id="back-daily" hidden>Back to the hold of the day</button>
     </article>
-
-    <div id="intro" class="intro" hidden>
-      <h2>How it works</h2>
-      <ol>
-        <li>Prop your phone up 2–3&nbsp;m away, about waist height, screen facing you.</li>
-        <li>Step back until your whole body is in view. The camera checks your stance as you hold it.</li>
-        <li>You earn a coin for every 10 seconds in good form, and faster in bonus time past the target.</li>
-        <li>The hold of the day earns 3× coins. Spend coins to unlock new holds.</li>
-        <li>Hit the target on 3 different days to unlock the next level.</li>
-      </ol>
-      <p class="small">The camera is only used on your phone. No video leaves the device.</p>
-    </div>
 
     <h2 class="section-title">All holds</h2>
     <div id="grid"></div>
@@ -228,7 +217,28 @@
         <input type="file" id="import-file" accept="application/json" hidden>
         <button type="button" class="btn danger" id="reset">Reset progress</button>
       </div>
+      <button type="button" class="btn" id="how-btn">How Mabu works</button>
       <p class="version"><span id="version"></span> <span id="version-check"></span></p>
+      <p class="credit">Created by <a href="https://www.linkedin.com/in/zeroxten/" target="_blank" rel="noopener">zeroXten</a></p>
+    </form>
+  </dialog>
+
+  <!-- Welcome: shown on first use, and from Settings -->
+  <dialog id="welcome" class="sheet">
+    <form method="dialog" class="sheet-inner welcome">
+      <p class="welcome-kicker"><span lang="zh">马步</span> · Mǎ Bù · horse stance</p>
+      <h2>Welcome to Mabu</h2>
+      <p class="about">Shaolin training starts with horse stance: holding a position, still and steady, until legs, tendons and patience grow strong. Mabu turns those holds into a daily practice, with a camera coach and a temple to build.</p>
+      <ol class="welcome-steps">
+        <li><b>Set up the camera.</b> Prop your phone 2–3&nbsp;m away at about waist height, then step back until your whole body is in view. The lines on your body go green when your form is good, and the chips say what to fix.</li>
+        <li><b>Hold.</b> Every 10 seconds in good form earns a coin. Keep going past the target for bonus time, which earns faster.</li>
+        <li><b>Level up.</b> Reach a hold’s target on 3 different days to unlock its next level.</li>
+        <li><b>Come back each day.</b> The hold of the day pays 3× on your first go, and streaks bring bonuses and milestone rewards.</li>
+        <li><b>Spend your coins</b> on new holds, your temple, your monk, or bets on yourself.</li>
+      </ol>
+      <p class="small">The camera runs on your phone only: no video ever leaves it. Progress is saved on this device, so export a backup in Settings now and then.</p>
+      <button class="btn primary big" value="ok">Start training</button>
+      <p class="credit">Created by <a href="https://www.linkedin.com/in/zeroxten/" target="_blank" rel="noopener">zeroXten</a></p>
     </form>
   </dialog>
 

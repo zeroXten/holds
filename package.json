@@ -1,6 +1,6 @@
 {
-  "name": "shaolin-holds",
-  "version": "1.10.3",
+  "name": "mabu",
+  "version": "1.11.0",
   "private": true,
   "type": "module",
   "scripts": {

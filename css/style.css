@@ -134,12 +134,14 @@ p { margin: 0; }
 .chip .flame { color: var(--accent); }
 
 /* ---------- Intro ---------- */
-.intro {
-  background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius);
-  padding: 16px 18px; margin-top: 16px;
-}
-.intro h2 { font-size: 1.1rem; margin-bottom: 6px; }
-.intro ol { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 4px; }
+/* ---------- Name and welcome ---------- */
+.brand { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; }
+.brand b { font-family: var(--display); font-size: 1.55rem; letter-spacing: .01em; }
+.brand span { color: var(--accent); font-size: 1rem; font-weight: 600; }
+.welcome-kicker { color: var(--accent); font-weight: 700; font-size: .85rem; letter-spacing: .04em; }
+.welcome-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.credit { font-size: .82rem; color: var(--muted); text-align: center; }
+.credit a { color: var(--accent); font-weight: 600; }
 
 /* ---------- Hero ---------- */
 .hero {

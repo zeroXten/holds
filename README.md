@@ -1,4 +1,4 @@
-# Shaolin Holds
+# Mabu
 
 A gamified trainer for Shaolin isometric stances. Prop your phone up, step back, and the front camera watches your stance. You earn coins while you hold good form, with spoken coaching when your form slips.
 
