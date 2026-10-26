@@ -12,7 +12,7 @@ const BASE = {
   red: '#b8352b', redLight: '#d85a40', redDark: '#7a1f1a',
   roof: '#3f5f63', roofLight: '#6b9095', roofDark: '#26393c',
   plaster: '#e9dcc0', plasterDark: '#c4b38f', lattice: '#5a2a1c',
-  gold: '#e5b13a', goldDark: '#a87820',
+  gold: '#e5b13a', goldDark: '#a87820', goldLight: '#f6d77a',
   bronze: '#8a6a3a', bronzeLight: '#b89a5a', bronzeDark: '#5a4224',
   foliage: '#4a7a3a', foliageLight: '#7aaa4a', foliageDark: '#2c4a26',
   bamboo: '#6a9a3a', bambooLight: '#9ac45a', bambooDark: '#3e6a26',
@@ -24,7 +24,7 @@ const BASE = {
   lantern: '#d8382a', lanternLight: '#ff7a48',
 };
 // Light sources keep their colour at night.
-const LIGHTS = { glow: '#ffc860', window: '#ffcf70', lanternLight: '#ff8a50', gold: '#e5b13a' };
+const LIGHTS = { glow: '#ffc860', window: '#ffcf70', lanternLight: '#ff8a50', gold: '#e5b13a', goldLight: '#f6d77a' };
 
 const THEMES = {
   dawn: {
@@ -509,10 +509,119 @@ function snowfall(p, W, H, t) {
 
 export const SCENE_H = 104;
 
+// Stage 6: a red courtyard wall with tiled coping right across, and a side hall at each end.
+function monasteryWall(p, c, W, cx, G, night, snow) {
+  const top = G - 11;
+  p.rect(0, top, W, 11, c.red);
+  p.hline(0, W, top + 2, c.redLight);
+  p.hline(0, W, G - 1, c.redDark);
+  p.rect(0, top - 3, W, 3, c.roof);
+  p.hline(0, W, top - 3, snow ? c.white : c.roofLight);
+  for (let x = 1; x < W; x += 3) p.set(x, top - 1, c.roofDark);
+  for (const x of [cx - 80, cx + 80]) sideHall(p, c, x, G, night, snow);
+}
+
+function sideHall(p, c, x, G, night, snow) {
+  p.rect(x - 12, G - 3, 24, 3, c.stone);
+  p.hline(x - 12, x + 11, G - 3, c.stoneLight);
+  const top = G - 14;
+  p.rect(x - 9, top, 18, 11, c.plaster);
+  p.rect(x - 3, top + 3, 6, 8, night ? c.window : c.redDark);
+  for (const off of [-10, 8]) { p.rect(x + off, top, 2, 11, c.red); p.vline(x + off, top, G - 4, c.redLight); }
+  roof(p, c, x, G - 20, 28, 6, snow);
+}
+
+// Stages 6–8 keep the grand temple, in gold from stage 7.
+const gilded = c => ({ ...c, roof: c.gold, roofLight: c.goldLight, roofDark: c.goldDark });
+
+// Stage 8: a halo of light behind the temple and banks of cloud around the mountain.
+function cloudHalo(p, c, cx, G, t) {
+  const y0 = G - 42;
+  for (let i = 0; i < 3; i++) glowAt(p, cx, y0, 46 - i * 12, c.goldLight);
+  // Slowly turning rays.
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + t * 0.04;
+    for (let r = 20; r < 58; r++) {
+      const fade = Math.round(150 * (1 - (r - 20) / 38));
+      p.set(cx + Math.cos(a) * r, y0 + Math.sin(a) * r * 0.75, (c.goldLight & 0x00ffffff) | (fade << 24));
+    }
+  }
+}
+
+function cloudBanks(p, W, G, t) {
+  const white = rgb('#ffffff', 200), shade = rgb('#e8ecf4', 200);
+  for (let i = 0; i < 9; i++) {
+    const x = ((hash(i * 4.7) * W + t * (1 + (i % 3) * 0.5)) % (W + 50)) - 25, y = G - 17 - (i % 3) * 5;
+    p.ellipse(x, y + 1, 14, 3, shade); p.ellipse(x - 5, y, 7, 3, white); p.ellipse(x + 5, y - 1, 8, 4, white);
+  }
+}
+
 const STAGES = [
   (p, c, cx, G, lit, snow) => shrineStone(p, c, cx, G, snow),
-  waysideShrine, smallTemple, hall, grandTemple,
+  waysideShrine, smallTemple, hall, grandTemple, grandTemple, grandTemple, grandTemple,
 ];
+
+// ---- Late-game decorations ----
+
+function banners(p, c, cx, G, t, snow) {
+  [cx - 45, cx + 43].forEach((x, i) => {
+    p.rect(x, G - 34, 2, 37, c.woodDark);
+    p.vline(x, G - 34, G + 2, c.wood);
+    p.set(x, G - 35, c.gold); p.set(x + 1, G - 35, c.gold);
+    p.hline(x - 1, x + 6, G - 32, c.woodDark);
+    for (let y = G - 31; y < G - 12; y++) {
+      const sway = Math.round(Math.sin(t * 1.4 + i + (y - G) * 0.15) * (y - (G - 31)) / 14);
+      for (let dx = 0; dx < 5; dx++) p.set(x + 2 + dx + sway, y, dx === 0 || dx === 4 ? c.redDark : (y % 5 === 0 && dx === 2 ? c.gold : c.red));
+    }
+    if (snow) p.hline(x - 1, x + 6, G - 33, c.white);
+  });
+}
+
+// A golden Buddha seen through the hall's open doors (stage 4 and up).
+function buddha(p, c, cx, G, tier, night) {
+  const g = tier >= 4 ? G - 5 : G, top = g - 20;
+  p.rect(cx - 5, top + 2, 10, 14, night ? c.woodDark : c.outline);
+  glowAt(p, cx, top + 9, 7, c.glow);
+  p.disc(cx, top + 6, 1.6, c.gold);
+  p.ellipse(cx, top + 11, 3.5, 3, c.gold);
+  p.hline(cx - 1, cx + 1, top + 10, c.goldLight);
+  p.hline(cx - 4, cx + 3, top + 14, c.goldDark);
+  p.set(cx, top + 4, c.goldLight);
+}
+
+function dragonPillars(p, c, cx, G, H, t) {
+  for (const x of [cx - 15, cx + 13]) {
+    p.rect(x, G - 8, 3, H - G + 8, c.red);
+    p.vline(x, G - 8, H, c.redLight);
+    p.vline(x + 2, G - 8, H, c.redDark);
+    p.rect(x - 1, G - 10, 5, 2, c.gold);
+    p.rect(x - 1, H - 3, 5, 3, c.stone);
+    // A golden dragon spiralling up the pillar.
+    for (let y = G - 6; y < H - 3; y++) {
+      const k = Math.sin((y + t * 4) * 0.45);
+      if (Math.abs(k) < 0.5) p.set(x + (k > 0 ? 0 : 2), y, c.gold);
+      else p.set(x + 1, y, c.goldDark);
+    }
+    p.set(x + 1, G - 7, c.goldLight);
+  }
+}
+
+function trainingYard(p, c, cx, G) {
+  // Wooden dummy: a post with three arms and a leg.
+  const x = cx + 64, y = G + 4;
+  p.rect(x, y, 3, 14, c.wood);
+  p.vline(x, y, y + 13, c.woodLight);
+  p.hline(x - 3, x - 1, y + 3, c.woodDark); p.hline(x + 3, x + 5, y + 3, c.woodDark);
+  p.hline(x - 3, x - 1, y + 6, c.woodDark);
+  p.line(x + 3, y + 9, x + 6, y + 12, c.woodDark);
+  p.hline(x - 1, x + 3, y + 14, c.earthDark);
+  // A rack of staffs.
+  const rx = cx + 72;
+  p.hline(rx - 1, rx + 7, G + 6, c.woodDark);
+  p.hline(rx - 1, rx + 7, G + 15, c.woodDark);
+  for (let i = 0; i < 4; i++) p.vline(rx + i * 2, G + 1, G + 17, i % 2 ? c.woodLight : c.wood);
+  p.vline(rx - 1, G + 5, G + 18, c.woodDark); p.vline(rx + 7, G + 5, G + 18, c.woodDark);
+}
 
 export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0 } = {}) {
   const { th, c } = palette(theme);
@@ -530,15 +639,23 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0 } 
   mountains(p, c, th, W, G, 'mid', 11.2);
   mountains(p, c, th, W, G, 'near', 21.9);
 
-  if (has('pagoda')) pagoda(p, c, cx + 56, G, lit, snow);
-  STAGES[Math.max(0, Math.min(STAGES.length - 1, tier))](p, c, cx, G, lit, snow);
-  if (has('bell')) bellTower(p, c, cx - 56, G, t, snow);
+  const stage = Math.max(0, Math.min(STAGES.length - 1, tier));
+  const tc = stage >= 6 ? gilded(c) : c;  // the temple's own colours
+  if (stage >= 7) { cloudHalo(p, c, cx, G, t); cloudBanks(p, W, G, t); }
+  if (stage >= 5) monasteryWall(p, tc, W, cx, G, lit, snow);
+  if (has('pagoda')) pagoda(p, tc, cx + 56, G, lit, snow);
+  STAGES[stage](p, tc, cx, G, lit, snow);
+  if (has('buddha') && stage >= 3) buddha(p, c, cx, G, stage, lit);
+  if (has('bell')) bellTower(p, tc, cx - 56, G, t, snow);
 
   ground(p, c, W, H, G);
   if (has('path')) path(p, c, W, H, G);
   if (has('posts')) poles(p, c, cx - 46, G, snow); else lonePost(p, c, cx - 47, G);
   if (has('pond')) pond(p, c, cx + 44, G + 12, t);
   if (has('lions')) lions(p, c, cx, G);
+  if (has('banners')) banners(p, c, cx, G, t, snow);
+  if (has('dragons')) dragonPillars(p, c, cx, G, H, t);
+  if (has('yard')) trainingYard(p, c, cx, G);
   if (has('lanterns') && !has('gate')) lanterns(p, c, W, G, cx, false, t, lit);
   if (has('incense')) burner(p, c, cx, G, t);
   if (has('bamboo')) bamboo(p, c, W, H, t, snow);

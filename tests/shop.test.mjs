@@ -155,7 +155,7 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('upgrade temple', P.upgradeTemple(s) && s.temple.tier === 1 && s.coins === 275 - E.TEMPLE_TIERS[1].price);
   s.coins = 1000;
   check('upgrades in order', P.upgradeTemple(s) && s.temple.tier === 2 && P.buyTempleItem(s, 'bell'));
-  s.coins = 2000;
+  s.coins = 20000;
   while (P.upgradeTemple(s));
   check('last stage', s.temple.tier === E.TEMPLE_TIERS.length - 1 && P.nextTier(s) === null);
   check('buy theme switches to it', P.buyTheme(s, 'night') && s.temple.theme === 'night' && P.useTheme(s, 'dawn') && s.temple.theme === 'dawn');
@@ -177,22 +177,23 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   const today = P.dayKey();
   for (let i = 6; i >= 1; i--) train(s, P.addDays(today, -i));
   const o = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 0, avgForm: 0, camera: false, reached: true });
-  check('1-week milestone', o.milestones.length === 1 && o.milestones[0].days === 7 && s.streak.freezes === 1 && s.coins === 20, JSON.stringify(o.milestones));
+  check('3-day and 1-week milestones', o.milestones.map(m => m.days).join() === '3,7' && s.streak.freezes === 1 && s.coins === 15 + 25 && !o.milestoneDouble, JSON.stringify(o.milestones));
   const again = P.recordSession(s, { holdId: 'bow', level: 1, held: 31, target: 30, coins: 0, avgForm: 0, camera: false, reached: true });
-  check('paid once per streak', again.milestones.length === 0 && s.coins === 20);
-  check('next milestone', P.nextMilestone(s, today).days === 14);
+  check('paid once per streak', again.milestones.length === 0 && s.coins === 40);
+  check('next milestone', P.nextMilestone(s, today).days === 10);
 }
 
 // A milestone makes the rest of the day double coins, including the session that reached it.
 {
   const s = fresh(0);
   const today = P.dayKey();
-  for (let i = 6; i >= 1; i--) train(s, P.addDays(today, -i));
-  check('streak bonus counts today', P.coinBoost(s, today).days === 7 && Math.abs(P.coinBoost(s, today).streakMult - 1.35) < 1e-9 && !P.coinBoost(s, today).double);
+  for (let i = 9; i >= 1; i--) train(s, P.addDays(today, -i));
+  for (const days of [3, 7]) s.streak.claimed[days] = P.addDays(today, -9);
+  check('streak bonus counts today', P.coinBoost(s, today).days === 10 && Math.abs(P.coinBoost(s, today).streakMult - 1.5) < 1e-9 && !P.coinBoost(s, today).double);
   const o = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 10, avgForm: 0, camera: false, reached: true });
-  check('milestone doubles its session', o.milestoneDouble === 10 && o.coins === 20 && s.coins === 20 + 20, JSON.stringify({ coins: o.coins, wallet: s.coins }));
+  check('10-day milestone doubles its session', o.milestones.map(m => m.days).join() === '10' && o.milestoneDouble === 10 && o.coins === 20 && s.coins === 20, JSON.stringify({ coins: o.coins, wallet: s.coins }));
   const b = P.coinBoost(s, today);
-  check('rest of the day is doubled', b.double && Math.abs(b.total - 2 * 1.35) < 1e-9);
+  check('rest of the day is doubled', b.double && Math.abs(b.total - 2 * 1.5) < 1e-9);
   const again = P.recordSession(s, { holdId: 'bow', level: 1, held: 31, target: 30, coins: 10, avgForm: 0, camera: false, reached: true, boostDouble: true });
   check('already-doubled sessions aren\'t doubled again', again.milestoneDouble === 0 && again.coins === 10);
 }

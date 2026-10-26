@@ -102,11 +102,12 @@ p { margin: 0; }
 .rank-text small { color: var(--muted); font-size: .75rem; }
 .sash {
   width: 14px; height: 38px; border-radius: 4px; flex: none;
-  background: var(--sash, #f4efe6);
+  /* Black sash degrees: a gold band per degree at the tail. */
+  background: repeating-linear-gradient(to top, #e5b13a 0 2px, transparent 2px 4px) bottom 2px center / 100% calc(var(--deg, 0) * 4px) no-repeat, var(--sash, #f4efe6);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15);
   position: relative;
 }
-.sash::after { content: ""; position: absolute; left: -4px; right: -4px; top: 14px; height: 7px; border-radius: 3px; background: inherit; box-shadow: inherit; }
+.sash::after { content: ""; position: absolute; left: -4px; right: -4px; top: 14px; height: 7px; border-radius: 3px; background: var(--sash, #f4efe6); box-shadow: inherit; }
 .sash.big { width: 20px; height: 56px; }
 .sash.big::after { top: 20px; height: 10px; left: -6px; right: -6px; }
 .xpbar { display: block; width: 130px; max-width: 100%; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }

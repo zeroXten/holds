@@ -35,6 +35,15 @@ const boostParts = b => [
   ...(b.double ? [`${MILESTONE_DAY_MULT}× milestone day`] : []),
 ];
 const boostText = b => boostParts(b).map(t => ` · ${t}`).join('');
+// A milestone's reward in words: "+25 coins and a free freeze".
+const milestoneReward = m => {
+  const parts = [
+    ...(m.coins ? [`+${m.coins} coins`] : []),
+    ...(m.freeze ? ['a free freeze'] : []),
+    ...(m.double ? [`${MILESTONE_DAY_MULT}× coins all day`] : []),
+  ];
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0];
+};
 const boostTags = () => boostParts(P.coinBoost(state)).map(t => `<span class="tag strong">${t}</span>`).join('');
 
 const coinRate = (hold, level) => `${coinRateFor(hold, level)}× coins${hold.style === 'soft' ? ' (soft)' : ''}`;
@@ -91,6 +100,7 @@ function pips(hs) {
 function renderHome() {
   const r = P.rankFor(state.lifetime);
   $('#sash').style.setProperty('--sash', r.color);
+  $('#sash').style.setProperty('--deg', r.degree ?? 0);
   $('#rank-name').textContent = r.name;
   $('#xp-fill').style.width = `${Math.round(r.progress * 100)}%`;
   $('#xp-text').textContent = r.next ? `${state.lifetime.toLocaleString()} / ${r.next.coins.toLocaleString()} coins earned` : `${state.lifetime.toLocaleString()} coins earned`;
@@ -612,7 +622,7 @@ function renderSummary(hold, level, r, o, boost) {
       : `<div class="banner bad">Level test not passed: −${o.test.price} coins. You need the full target${r.camera ? ` with ${TEST_FORM}+ form` : ''}.</div>`);
   }
   for (const b of o.bets) extra.push(b.result === 'won' ? `<div class="banner good">Bet won: ${b.def.name}! +${b.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${b.def.name}.</div>`);
-  for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! +${m.coins} coins${m.freeze ? ' and a free streak freeze' : ''}, and ${MILESTONE_DAY_MULT}× coins for the rest of today.</div>`);
+  for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! ${milestoneReward(m)}${m.double ? ' (starting with this hold)' : ''}.</div>`);
   $('#sum-extra').innerHTML = extra.join('');
   if (o.test?.passed) setTimeout(() => audio.play('level'), 300);
   // The big moments get the full-screen treatment, once the summary has appeared.
@@ -643,7 +653,7 @@ function renderSummary(hold, level, r, o, boost) {
   $('#sum-level').innerHTML = lvl;
 
   const items = [
-    ...(o.rankUp ? [`<div class="badge earned rank"><span class="sash" style="--sash:${o.rank.color}"></span><b>${o.rank.name}</b><small>New rank</small></div>`] : []),
+    ...(o.rankUp ? [`<div class="badge earned rank"><span class="sash" style="--sash:${o.rank.color};--deg:${o.rank.degree ?? 0}"></span><b>${o.rank.name}</b><small>New rank</small></div>`] : []),
     ...o.badges.map(b => `<div class="badge earned">${medal()}<b>${b.name}</b><small>${b.desc}</small></div>`),
   ];
   $('#sum-badges').innerHTML = items.join('');
@@ -683,7 +693,7 @@ function renderProgress() {
   show('progress');
   const r = P.rankFor(state.lifetime), t = P.totals(state);
   $('#rank-card').innerHTML = `
-    <span class="sash big" style="--sash:${r.color}"></span>
+    <span class="sash big" style="--sash:${r.color};--deg:${r.degree ?? 0}"></span>
     <div><h2>${r.name}</h2><span class="xpbar"><i style="width:${Math.round(r.progress * 100)}%"></i></span>
     <small>${state.lifetime.toLocaleString()} coins earned${r.next ? ` · ${(r.next.coins - state.lifetime).toLocaleString()} to ${r.next.name}` : ''}</small></div>`;
   const week = P.areaLoad(state, { days: 7 });
@@ -962,9 +972,9 @@ function celebrateBetStep(st) {
 
 function celebrateMilestone(m) {
   celebrate({
-    win: true, kicker: 'Streak milestone', title: `🔥 ${m.name}!`, coins: m.coins,
-    msg: `${m.freeze ? 'Bonus coins and a free streak freeze' : 'Bonus coins for showing up, day after day'}, and every hold earns ${MILESTONE_DAY_MULT}× coins for the rest of today.`,
-    say: `${m.name}! Plus ${m.coins} coins`,
+    win: true, kicker: 'Streak milestone', title: `🔥 ${m.name}!`, coins: m.coins || undefined,
+    msg: `${milestoneReward(m)}.${m.double ? ' Every hold you do today earns double.' : ''} Keep the fire going.`,
+    say: `${m.name}! ${m.coins ? `Plus ${m.coins} coins` : m.double ? 'Double coins today' : 'A free freeze'}`,
   });
 }
 
@@ -992,12 +1002,12 @@ function renderStreakStrip() {
   // A milestone further off than the strip shows gets its own dot after a gap.
   const far = next && toGo > SHOW_AHEAD
     ? `<span class="ss-gap">···</span><span class="ss-day open goal"><i>🎁</i><small>Day ${next.days}</small></span>` : '';
-  const reward = next ? `+${next.coins} coins${next.freeze ? ', a free freeze' : ''} and ${MILESTONE_DAY_MULT}× coins all day` : '';
+  const reward = next ? milestoneReward(next) : '';
   const when = toGo === 0 ? 'Train today for' : toGo === 1 ? 'Tomorrow:' : `${toGo} days to go:`;
   $('#streak-strip').innerHTML = `
     <span class="ss-head"><b>🔥 ${n ? `${n}-day streak` : 'No streak yet'}</b>
       <span>${[
-        ...(boost.streakMult > 1 ? [`+${Math.round((boost.streakMult - 1) * 100)}% coins${doneToday ? '' : ' today'}`] : []),
+        ...(boost.streakMult > 1 ? [`+${Math.round((boost.streakMult - 1) * 100)}% streak bonus`] : []),
         ...(boost.double ? [`${MILESTONE_DAY_MULT}× day`] : []),
         ...(state.streak.freezes ? [`<span class="freezes" title="Streak freezes">❄${state.streak.freezes}</span>`] : []),
       ].join(' · ')}</span></span>
@@ -1109,8 +1119,8 @@ function shopStreak() {
   const days = Array.from({ length: 7 }, (_, i) => P.addDays(today, i + 1));
   const b = state.streak.broken;
   return `
-  <div class="streak-head"><span class="big-flame">🔥 ${n}</span><span>day streak${next ? `<br><small>${next.days - n} more day${next.days - n === 1 ? '' : 's'} to the ${next.name}: +${next.coins} coins${next.freeze ? ' and a free freeze' : ''}</small>` : ''}</span></div>
-  <p class="shop-intro">Every streak day adds 5% to your coins (up to +50%). Milestones pay out on top, and the day you reach one earns ${MILESTONE_DAY_MULT}× coins. Protecting your streak is cheapest when planned ahead.</p>
+  <div class="streak-head"><span class="big-flame">🔥 ${n}</span><span>day streak${next ? `<br><small>${next.days - n} more day${next.days - n === 1 ? '' : 's'} to the ${next.name}: ${milestoneReward(next)}</small>` : ''}</span></div>
+  <p class="shop-intro">Every streak day adds 5% to your coins (up to +50%). Milestones pay out on top: coins, free freezes, or ${MILESTONE_DAY_MULT}× coins for the day. Protecting your streak is cheapest when planned ahead.</p>
   ${b ? `<div class="home-card warn"><p><b>Your ${b.streak}-day streak ended.</b> Repair it: ${REPAIR_PRICE_PER_DAY} coins per missed day.</p>
     <div class="row"><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div></div>` : ''}
   <h3>Rest days <small>${COIN} ${REST_DAY_PRICE} each · up to 2 a week</small></h3>
@@ -1125,7 +1135,7 @@ function shopStreak() {
   <div class="shop-row"><p class="shop-note">Covers a day you miss without planning. Used automatically. You have <b>${state.streak.freezes} of ${FREEZE_MAX}</b>.</p>
     ${state.streak.freezes >= FREEZE_MAX ? '<span class="owned-tag">Full</span>' : buyBtn('buy-freeze', 'freeze', FREEZE_PRICE)}</div>
   <h3>Milestones</h3>
-  <ul class="milestones">${STREAK_MILESTONES.map(m => `<li class="${n >= m.days ? 'done' : ''}"><span>${m.name}</span><span>+${m.coins}${m.freeze ? ' + ❄' : ''} · ${MILESTONE_DAY_MULT}× day</span></li>`).join('')}</ul>`;
+  <ul class="milestones">${STREAK_MILESTONES.map(m => `<li class="${n >= m.days ? 'done' : ''}"><span>${m.name}</span><span>${[...(m.coins ? [`+${m.coins}`] : []), ...(m.freeze ? ['❄'] : []), ...(m.double ? [`${MILESTONE_DAY_MULT}× day`] : [])].join(' · ')}</span></li>`).join('')}</ul>`;
 }
 
 function shopBets() {

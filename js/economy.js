@@ -78,6 +78,9 @@ export const TEMPLE_TIERS = [
   { id: 'small', name: 'Small Temple', price: 120, desc: 'One room, red columns and a tiled roof.' },
   { id: 'hall', name: 'Temple Hall', price: 250, desc: 'The main hall with two sweeping roofs.' },
   { id: 'grand', name: 'Grand Temple', price: 500, desc: 'A raised hall with three roofs, a balustrade and gold.' },
+  { id: 'monastery', name: 'Mountain Monastery', price: 1500, desc: 'A walled monastery: a red courtyard wall and side halls.' },
+  { id: 'golden', name: 'Golden Temple', price: 3000, desc: 'Gilded roofs on every hall, catching the light.' },
+  { id: 'cloud', name: 'Cloud Temple', price: 6000, desc: 'High above the mist, glowing at the top of the mountain.' },
 ];
 
 export const TEMPLE_ITEMS = [
@@ -95,6 +98,11 @@ export const TEMPLE_ITEMS = [
   { id: 'gate', name: 'Mountain Gate', price: 200, desc: 'A painted archway framing the view.' },
   { id: 'waterfall', name: 'Waterfall', price: 200, desc: 'Falling water on the far mountain.' },
   { id: 'pagoda', name: 'Pagoda', price: 400, desc: 'A three-tiered pagoda beside the hall.', needs: 3 },
+  // The late game
+  { id: 'banners', name: 'Silk Banners', price: 600, desc: 'Tall red and gold banners either side of the temple.' },
+  { id: 'buddha', name: 'Golden Buddha', price: 900, desc: 'A golden statue glowing through the open doors of the hall.', needs: 3 },
+  { id: 'dragons', name: 'Dragon Pillars', price: 1200, desc: 'Red pillars wrapped in golden dragons, framing the path.' },
+  { id: 'yard', name: 'Training Yard', price: 1500, desc: 'A wooden dummy and a rack of staffs for training.' },
 ];
 
 export const THEMES = [
@@ -107,14 +115,19 @@ export const THEMES = [
 ];
 
 // ---- Streak milestones: a one-off reward each time a streak reaches these lengths ----
-// (on top of the everyday streak bonus of +5% coins per day, up to +50%), and the
-// rest of that day earns double (MILESTONE_DAY_MULT)
+// (on top of the everyday streak bonus of +5% coins per day, up to +50%). Rewards are
+// mixed: coins, a free freeze, and `double`: the rest of that day earns MILESTONE_DAY_MULT×.
+// A double day grows with what you earn, so it carries the later milestones.
 export const STREAK_MILESTONES = [
-  { days: 7, name: '1-week streak', coins: 20, freeze: true },
-  { days: 14, name: '2-week streak', coins: 40 },
-  { days: 30, name: '1-month streak', coins: 100, freeze: true },
-  { days: 60, name: '2-month streak', coins: 150 },
-  { days: 100, name: '100-day streak', coins: 250, freeze: true },
-  { days: 180, name: '6-month streak', coins: 300 },
-  { days: 365, name: '1-year streak', coins: 500 },
+  { days: 3, name: '3-day streak', coins: 15 },
+  { days: 7, name: '1-week streak', coins: 25, freeze: true },
+  { days: 10, name: '10-day streak', double: true },
+  { days: 14, name: '2-week streak', coins: 50 },
+  { days: 21, name: '3-week streak', freeze: true },
+  { days: 30, name: '1-month streak', coins: 150, double: true },
+  { days: 42, name: '6-week streak', freeze: true },
+  { days: 60, name: '2-month streak', coins: 300 },
+  { days: 100, name: '100-day streak', coins: 500, freeze: true, double: true },
+  { days: 182, name: '6-month streak', coins: 1000, double: true },
+  { days: 365, name: '1-year streak', coins: 2500, double: true },
 ];

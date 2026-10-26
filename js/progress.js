@@ -23,6 +23,12 @@ export const RANKS = [
   { coins: 1600, name: 'Brown Sash', color: '#8a5a32' },
   { coins: 2400, name: 'Red Sash', color: '#c8322b' },
   { coins: 3500, name: 'Black Sash', color: '#1d1a17' },
+  // Degrees (duan) of the black sash, shown as gold bands.
+  { coins: 6000, name: 'Black Sash · 1st Duan', color: '#1d1a17', degree: 1 },
+  { coins: 10000, name: 'Black Sash · 2nd Duan', color: '#1d1a17', degree: 2 },
+  { coins: 16000, name: 'Black Sash · 3rd Duan', color: '#1d1a17', degree: 3 },
+  { coins: 25000, name: 'Black Sash · 4th Duan', color: '#1d1a17', degree: 4 },
+  { coins: 40000, name: 'Black Sash · 5th Duan', color: '#1d1a17', degree: 5 },
 ];
 
 export const BADGES = [
@@ -171,7 +177,7 @@ function claimMilestones(state, today) {
   for (const m of STREAK_MILESTONES) {
     if (n < m.days || state.streak.claimed[m.days] === start) continue;
     state.streak.claimed[m.days] = start;
-    let coins = m.coins, freeze = false;
+    let coins = m.coins ?? 0, freeze = false;
     if (m.freeze) {
       // A free freeze, or its price in coins if you already hold the maximum.
       if (state.streak.freezes < FREEZE_MAX) { state.streak.freezes++; freeze = true; } else coins += FREEZE_PRICE;
@@ -626,9 +632,9 @@ export function recordSession(state, s) {
   }
   const bets = settleBets(state, today, { notify: false });  // the summary screen shows them
   const milestones = claimMilestones(state, today);
-  // A milestone makes today a double-coins day, starting with this session.
+  // Some milestones make today a double-coins day, starting with this session.
   let milestoneDouble = 0;
-  if (milestones.length && state.doubleDay !== today) {
+  if (milestones.some(m => m.double) && state.doubleDay !== today) {
     state.doubleDay = today;
     if (!s.boostDouble) {
       milestoneDouble = coins * (MILESTONE_DAY_MULT - 1);
