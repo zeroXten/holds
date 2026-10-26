@@ -96,7 +96,11 @@ p { margin: 0; }
 .small { font-size: .85rem; color: var(--muted); }
 
 /* ---------- Top bar ---------- */
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+/* Your monk, rank and progress: a full row of their own under the name and coins. */
+.home-rank { width: 100%; margin-bottom: 14px; }
+.home-rank .rank-text { flex: 1; }
+.home-rank .xpbar { width: 100%; }
 .rank {
   display: flex; align-items: center; gap: 10px;
   border: 0; background: none; padding: 4px; text-align: left; min-width: 0;
@@ -135,7 +139,7 @@ p { margin: 0; }
 
 /* ---------- Intro ---------- */
 /* ---------- Name and welcome ---------- */
-.brand { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; }
+.brand { display: flex; align-items: baseline; gap: 8px; margin: 0; }
 .brand b { font-family: var(--display); font-size: 1.55rem; letter-spacing: .01em; }
 .brand span { color: var(--accent); font-size: 1rem; font-weight: 600; }
 .brand i, .dotfit { font-style: normal; color: var(--muted); font-weight: 600; }
