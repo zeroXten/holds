@@ -48,12 +48,12 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
 
 // Not enough freezes: offered a repair priced per missed day, within the window.
 {
-  const s = fresh(200);
+  const s = fresh(1000);
   train(s, '2026-10-18', '2026-10-19', '2026-10-20');
   P.protectStreak(s, '2026-10-23');  // missed 21st and 22nd, no freezes
   const b = s.streak.broken;
   check('repair offered', b && b.streak === 3 && b.missed.length === 2 && b.price === 2 * E.REPAIR_PRICE_PER_DAY, JSON.stringify(b));
-  check('repair restores streak', P.repairStreak(s) && P.streak(s, '2026-10-23') === 3 && s.coins === 200 - b.price);
+  check('repair restores streak', P.repairStreak(s) && P.streak(s, '2026-10-23') === 3 && s.coins === 1000 - b.price);
   const late = fresh(200);
   train(late, '2026-10-18');
   P.protectStreak(late, '2026-10-24');  // 5 missed days: too late
