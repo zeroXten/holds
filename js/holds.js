@@ -960,6 +960,218 @@ export const HOLDS = [
       };
     },
   },
+
+  // ---- Arms and upper body ----
+
+  {
+    id: 'tray', name: 'Carrying the Tray', native: '', view: 'side', sides: false, camera: true,
+    areas: { upper: 1 }, style: 'hard',
+    hint: 'Stand side-on to the phone',
+    video: 'isometric bicep hold 90 degrees',
+    about: 'An isometric hold for the biceps and forearms: elbows bent to a right angle at your sides, palms up, as if carrying a heavy tray. Empty hands is gentle; something in each hand (water bottles, tins, a bag of books) makes it real work.',
+    levels: [
+      { name: 'Empty tray', target: 45, desc: 'Stand tall, upper arms against your sides. Bend your elbows to 90° so your forearms point straight ahead, palms up. Squeeze your arms as if a heavy tray rests on your palms.' },
+      { name: 'Loaded tray', target: 45, desc: 'The same, holding something in each hand: a full water bottle or a tin. Elbows stay tucked in; don’t lean back.' },
+      { name: 'Heavy tray', target: 60, desc: 'Something heavier in each hand (2 litre bottles, or a bag of books across both palms). Shoulders down, elbows still at 90°.' },
+      { name: 'Iron tray', target: 90, desc: 'Your heaviest load, held for a minute and a half. Keep breathing; the forearms stay level to the end.' },
+    ],
+    criteria: () => [
+      {
+        id: 'bend', label: 'Elbows at 90°', weight: 2, joints: [13, 14, 15, 16],
+        cue: { low: 'Lift your hands a little: forearms level', high: 'Bend your elbows to 90°' },
+        value: b => (b.arms.L.angle + b.arms.R.angle) / 2, min: 70, max: 110, soft: 20,
+      },
+      {
+        id: 'tucked', label: 'Elbows at your sides', cue: 'Tuck your elbows in against your sides', joints: [11, 12, 13, 14],
+        value: b => Math.max(lean(b.arms.L.a, b.arms.L.b), lean(b.arms.R.a, b.arms.R.b)), max: 25, soft: 20,
+      },
+      {
+        id: 'level', label: 'Forearms level', cue: 'Keep your forearms level, palms up', joints: [13, 14, 15, 16],
+        value: b => Math.max(tilt(b.arms.L.b, b.arms.L.c), tilt(b.arms.R.b, b.arms.R.c)), max: 20, soft: 20,
+      },
+      upright(10, 'Stand tall, don’t lean back', 12),
+    ],
+    figure: () => ({ view: 'side', torso: 180, legs: { L: [2, 0], R: [-2, 0] }, arms: { L: [3, 93], R: [1, 91] } }),
+  },
+
+  {
+    id: 'claws', name: 'Showing Claws, Spreading Wings', native: 'Chū Zhǎo Liàng Chì', view: 'side', sides: false, camera: true,
+    areas: { upper: 1 }, style: 'soft',
+    hint: 'Stand side-on to the phone',
+    video: 'yi jin jing show claws spread wings',
+    about: 'A Yi Jin Jing posture: the palms push slowly forward from the chest until the arms are straight in front at shoulder height, fingers up and spread. Works the fronts of the shoulders and the arms.',
+    levels: [
+      { name: 'Pushing palms', target: 30, desc: 'Feet hip width, knees soft. From your chest, push your palms slowly forward until your arms are straight in front at shoulder height, palms facing away, fingers pointing up.' },
+      { name: 'Spreading wings', target: 60, desc: 'Spread your fingers wide and press out through the heels of the hands, as if pushing a wall away. Shoulders down.' },
+      { name: 'Long push', target: 90, desc: 'The same for a minute and a half, breathing slowly. Arms stay level.' },
+      { name: 'Unmoving claws', target: 120, desc: 'Two minutes, completely still. Press forward a little more with every out-breath.' },
+    ],
+    criteria: () => [
+      ...armsAtShoulders({ low: 'Raise your arms to shoulder height', high: 'Lower your arms to shoulder height' }),
+      {
+        id: 'forward', label: 'Arms forward', cue: 'Reach straight out in front', joints: [13, 14, 15, 16],
+        value: b => Math.min(Math.abs(b.arms.L.c.x - b.arms.L.a.x) / b.arms.L.len, Math.abs(b.arms.R.c.x - b.arms.R.a.x) / b.arms.R.len), min: 0.85, soft: 0.25,
+      },
+      upright(10, 'Stand tall', 12),
+    ],
+    figure: () => ({ view: 'side', torso: 180, legs: { L: [2, 0], R: [-2, 0] }, arms: { L: [90, 90], R: [88, 88] } }),
+  },
+
+  {
+    id: 'wings', name: 'Iron Wings', native: '', view: 'front', sides: false, camera: true,
+    areas: { upper: 1 }, style: 'hard',
+    video: 'isometric arms out to the sides hold',
+    about: 'Arms held straight out to the sides at shoulder height: a classic kung fu shoulder endurance drill. Simple, and much harder than it looks after the first minute.',
+    levels: [
+      { name: 'Palms down', target: 60, desc: 'Feet together, standing tall. Arms straight out to the sides at shoulder height, palms down, fingers together.' },
+      { name: 'Palms up', target: 60, desc: 'The same with the palms turned up. Shoulders stay down, away from your ears.' },
+      { name: 'Iron fists', target: 90, desc: 'Make fists, palms down, and squeeze them. Arms level for a minute and a half.' },
+      { name: 'Weighted wings', target: 60, desc: 'Hold something in each hand (a water bottle or a tin), arms straight and level.' },
+    ],
+    criteria: () => [
+      ...armsAtShoulders({ low: 'Raise your arms to shoulder height', high: 'Lower your arms to shoulder height' }),
+      {
+        id: 'wide', label: 'Arms wide', cue: 'Stretch your arms out wide to the sides', joints: [15, 16],
+        value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, min: 3, soft: 1,
+      },
+      upright(8, 'Stand tall', 12),
+    ],
+    figure: () => ({ view: 'front', torso: 180, legs: { L: [2, 0], R: [-2, 0] }, arms: { L: [90, 90], R: [-90, -90] } }),
+  },
+
+  {
+    id: 'drawbow', name: 'Drawing the Bow', native: 'Zuǒ Yòu Kāi Gōng', view: 'front', sides: true, camera: true,
+    areas: { upper: 0.6, legs: 0.4 }, style: 'soft',
+    video: 'ba duan jin drawing the bow to shoot the vulture',
+    about: 'The second of the Ba Duan Jin, held still: in a horse-riding stance, one arm pushes out straight to the side while the other draws the string back to your chest. Works the upper back and shoulders, with the legs.',
+    levels: [
+      { name: 'High stance', target: 30, desc: 'Feet wide, knees a little bent. One arm straight out to the side at shoulder height, index finger up, looking along it. The other fist pulled back to the front of your shoulder, elbow out at shoulder height. Then switch sides.' },
+      { name: 'Drawing the bow', target: 45, desc: 'Sink a little lower. Pull the drawing elbow back further and open the chest.' },
+      { name: 'Full draw', target: 60, desc: 'Lower again, thighs about 45° from level. Push the bow arm away and pull the string as if they stretch apart.' },
+      { name: 'Shooting the vulture', target: 90, desc: 'A minute and a half each side, steady and low, eyes on the raised finger.' },
+    ],
+    criteria: level => {
+      const bow = (b, s) => b.arms[s.key], string = (b, s) => b.arms[s.key === 'L' ? 'R' : 'L'];
+      const bowIdx = s => (s.key === 'L' ? [11, 13, 15] : [12, 14, 16]), stringIdx = s => (s.key === 'L' ? [12, 14, 16] : [11, 13, 15]);
+      return [
+        {
+          id: 'push', label: 'Bow arm straight', cue: 'Push the bow arm out straight', joints: bowIdx,
+          value: (b, s) => bow(b, s).angle, min: 155, soft: 30,
+        },
+        {
+          id: 'out', label: 'Arm out to the side', cue: 'Reach the bow arm out to the side', joints: bowIdx,
+          value: (b, s) => Math.abs(bow(b, s).c.x - bow(b, s).a.x) / bow(b, s).len, min: 0.8, soft: 0.25,
+        },
+        {
+          id: 'draw', label: 'String drawn', cue: 'Pull your fist back to your shoulder', weight: 1.5, joints: stringIdx,
+          value: (b, s) => string(b, s).angle, max: 70, soft: 30,
+        },
+        {
+          id: 'height', label: 'Arms at shoulder height', joints: s => [...bowIdx(s), ...stringIdx(s)],
+          cue: { low: 'Raise your arms to shoulder height', high: 'Lower your arms to shoulder height' },
+          value: (b, s) => Math.max(Math.abs(bow(b, s).c.y - bow(b, s).a.y), Math.abs(string(b, s).b.y - string(b, s).a.y)) / b.torsoLen, max: 0.25, soft: 0.3,
+        },
+        {
+          id: 'depth', label: 'Sitting into the stance', cue: 'Bend your knees and sink a little', joints: [23, 24, 25, 26],
+          value: b => Math.max(kneeDrop(b.legs.L), kneeDrop(b.legs.R)), max: by(level, [0.9, 0.8, 0.65, 0.65]), soft: 0.25,
+        },
+        {
+          id: 'width', label: 'Wide stance', cue: 'Widen your stance', joints: [27, 28],
+          value: b => dist(b.la, b.ra) / b.shoulderW, min: 1.5, soft: 0.6,
+        },
+        upright(12),
+      ];
+    },
+    figure: level => {
+      const thigh = by(level, [28, 38, 50, 50]), shin = 6;
+      return {
+        view: 'front', torso: 180,
+        legs: { L: [thigh, shin], R: [-thigh, -shin] },
+        arms: { L: [90, 90], R: [-90, 70] },
+      };
+    },
+  },
+
+  {
+    id: 'palms', name: 'Pressing Palms', native: 'Hé Zhǎng', view: 'front', sides: false, camera: true,
+    areas: { upper: 1 }, style: 'hard',
+    video: 'isometric palm press chest exercise',
+    about: 'The palms-together salute turned into a strength hold: press your palms into each other as hard as you can in front of your chest. Works the chest, shoulders and arms with nothing but yourself to push against.',
+    levels: [
+      { name: 'Prayer press', target: 30, desc: 'Stand tall. Palms together in front of your chest, fingers up, forearms level and elbows out to the sides. Press the palms together firmly.' },
+      { name: 'Firm press', target: 45, desc: 'Press harder, about three quarters of your strength. Keep breathing; don’t hold your breath.' },
+      { name: 'Forward press', target: 60, desc: 'Slide your pressed hands a fist’s width forward from your chest, elbows still level. Press with everything.' },
+      { name: 'Iron palms', target: 90, desc: 'Full pressure for a minute and a half. Shoulders down, chest open, steady breaths.' },
+    ],
+    criteria: () => [
+      {
+        id: 'together', label: 'Palms together', cue: 'Press your palms together in the middle', weight: 1.5, joints: [15, 16],
+        value: handsOffCentre, max: 0.3, soft: 0.25,
+      },
+      {
+        id: 'chest', label: 'Hands at chest', joints: [15, 16], cue: { low: 'Raise your hands to your chest', high: 'Lower your hands to your chest' },
+        value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.sh.y) / b.torsoLen, min: -0.05, max: 0.5, soft: 0.25,
+      },
+      {
+        id: 'elbows', label: 'Elbows out', cue: 'Lift your elbows out to the sides', joints: [13, 14],
+        value: b => Math.abs(b.arms.L.b.x - b.arms.R.b.x) / b.shoulderW, min: 1.4, soft: 0.5,
+      },
+      {
+        id: 'level', label: 'Forearms level', cue: 'Lift your elbows: forearms level', joints: [13, 14, 15, 16],
+        value: b => Math.max(tilt(b.arms.L.b, b.arms.L.c), tilt(b.arms.R.b, b.arms.R.c)), max: 25, soft: 20,
+      },
+      upright(8, 'Stand tall', 12),
+    ],
+    figure: () => ({ view: 'front', torso: 180, legs: { L: [2, 0], R: [-2, 0] }, arms: { L: [35, -90], R: [-35, 90] } }),
+  },
+
+  {
+    id: 'yanfei', name: 'Little Swallow Flies', native: 'Xiǎo Yàn Fēi', view: 'side', sides: false, camera: true,
+    areas: { core: 0.8, upper: 0.2 }, style: 'hard',
+    landscape: true,
+    hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
+    video: 'xiao yan fei back exercise',
+    about: 'A classic Chinese back exercise: lying face down, lift your chest (and later your legs) off the floor like a swallow in flight. Strengthens the lower back, the backs of the shoulders and the glutes.',
+    levels: [
+      { name: 'Chest lift', target: 20, desc: 'Lie face down, arms by your sides, palms up. Lift your chest and head a little off the floor, looking at the floor just ahead. Legs stay down.' },
+      { name: 'Swallow', target: 30, desc: 'Lift your chest and your straight legs off the floor together. Only your belly and hips stay down.' },
+      { name: 'Flying swallow', target: 45, desc: 'Chest and legs up, and lift your arms back beside you like wings, squeezing your shoulder blades together.' },
+      { name: 'Superman', target: 30, desc: 'Chest and legs up with your arms stretched forward past your head. The hardest lever for the back.' },
+    ],
+    criteria: level => [
+      {
+        id: 'down', label: 'Lying face down', cue: 'Lie face down on the floor', joints: [11, 12, 23, 24],
+        value: b => tilt(b.sh, b.hip), max: 40, soft: 20,
+      },
+      {
+        id: 'chest', label: 'Chest lifted', cue: 'Lift your chest off the floor', weight: 1.5, joints: [11, 12, 23, 24],
+        value: b => (b.hip.y - b.sh.y) / b.torsoLen, min: 0.2, soft: 0.15,
+      },
+      ...(level > 1 ? [
+        {
+          id: 'legs', label: 'Legs lifted', cue: 'Lift your legs off the floor', joints: [23, 24, 25, 26, 27, 28],
+          value: b => (b.hip.y - anklesMid(b).y) / b.torsoLen, min: 0.08, soft: 0.1,
+        },
+        {
+          id: 'straight', label: 'Straight legs', cue: 'Straighten your legs', joints: [25, 26],
+          value: b => Math.min(b.legs.L.angle, b.legs.R.angle), min: 150, soft: 30,
+        },
+      ] : []),
+      ...(level === 4 ? [{
+        id: 'reach', label: 'Arms forward', cue: 'Stretch your arms forward past your head', joints: [13, 14, 15, 16],
+        value: b => (dist(b.hip, mid(b.arms.L.c, b.arms.R.c)) - dist(b.hip, b.sh)) / b.torsoLen, min: 0.6, soft: 0.4,
+      }] : []),
+    ],
+    figure: level => {
+      // Face down, head to the left, resting on the belly and hips.
+      const up = 18, legs = level === 1 ? [88, 88] : [102, 102];
+      const arms = level === 4 ? [-(90 + up + 5), -(90 + up + 5)] : level === 3 ? [112, 112] : [96, 96];
+      return {
+        view: 'side', compact: true, torso: -(90 + up), ground: 'pelvis', groundGap: 5,
+        legs: { L: legs, R: legs }, arms: { L: arms, R: arms },
+      };
+    },
+  },
 ];
 
 export const holdById = id => HOLDS.find(h => h.id === id);

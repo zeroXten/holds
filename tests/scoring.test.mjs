@@ -34,6 +34,15 @@ for (const id of ['horse', 'bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'si
   }
 }
 
+// The arm holds look alike to the camera in places; each one's pose must fail the others.
+for (const [a, b] of [['tray', 'claws'], ['claws', 'tray'], ['wings', 'palms'], ['palms', 'wings'], ['wings', 'drawbow'], ['drawbow', 'wings']]) {
+  const ha = HOLDS.find(h => h.id === a), hb = HOLDS.find(h => h.id === b);
+  const r = score(hb, 1, ha.figure(1));
+  const ok = r.score < 50;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${a} pose as ${b} scores ${r.score}`);
+}
+
 // A sagging iron bridge (hips dropped ~15°) should fail.
 {
   const hold = HOLDS.find(h => h.id === 'bridge');

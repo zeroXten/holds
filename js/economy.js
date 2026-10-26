@@ -19,7 +19,7 @@ export const BONUS_TIERS = [
 
 // The first holds are free; the rest are bought with coins, each unlock costing more.
 export const STARTER_HOLDS = ['horse', 'bow', 'weituo', 'sky'];
-export const UNLOCK_PRICES = [20, 30, 45, 60, 80, 100, 125, 150, 180, 210, 240, 270, 300, 330, 360];
+export const UNLOCK_PRICES = [20, 30, 45, 60, 80, 100, 125, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510, 540];
 
 // Camera form score → coin rate: 0.75x at a scrape-through 50, 1.25x at perfect form.
 export const formFactor = score => Math.max(0.75, Math.min(1.25, 0.75 + 0.5 * (score - 50) / 50));
