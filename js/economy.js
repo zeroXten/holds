@@ -40,10 +40,10 @@ export function bonusTier(held, target) {
 // ---- Shop: protecting the streak (cheapest when planned ahead, dearest after the fact) ----
 export const REST_DAY_PRICE = 10;       // book a rest day in advance
 export const REST_DAYS_PER_WEEK = 2;
-export const FREEZE_PRICE = 75;         // used automatically on a missed day; more than a day's training
-                                        // earns, as milestones give them away (1, 3 and 6 weeks, 100 days)
+export const FREEZE_PRICE = 100;        // used automatically on a missed day; a hard day's training to
+                                        // earn, as milestones give them away (1, 3 and 6 weeks, 100 days)
 export const FREEZE_MAX = 2;
-export const REPAIR_PRICE_PER_DAY = 100; // buy back a broken streak: always dearer than a freeze
+export const REPAIR_PRICE_PER_DAY = 300; // buy back a broken streak: far dearer than a freeze
 export const REPAIR_WINDOW_DAYS = 3;    // ...if you come back within this many missed days
 
 // ---- Bets on yourself: stake coins, win more if you do it in time ----
