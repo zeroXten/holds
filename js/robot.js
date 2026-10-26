@@ -40,7 +40,7 @@ export function drawRobot(p, J, t, mood = 'normal') {
   const sh = mid(J.ls, J.rs), hip = mid(J.lh, J.rh);
   const T = Math.max(8, len(sh, hip));            // torso length sets the scale
   const r = Math.max(1.5, T * 0.1);              // limb thickness
-  const R = Math.max(4, T * 0.34);               // head radius
+  const R = Math.max(4, T * 0.3);                // head radius
 
   // Legs: loose robe trousers to the knee, white wraps on the shin, black cloth shoes.
   for (const s of ['l', 'r']) {
@@ -87,7 +87,9 @@ export function drawRobot(p, J, t, mood = 'normal') {
   // Arms go in front of the beads and head (drawn at the end), unless the camera
   // says a hand is clearly behind the body.
   const behind = arm => (J[arm + 'w'].z ?? 0) > (J.headZ ?? 0) + 0.15;
-  for (const arm of ['l', 'r']) if (behind(arm)) drawArm(p, J, arm, r);
+  // Sleeves hang from the outer edge of the robe, not from inside it.
+  const armOut = arm => { const k = (arm === 'l' ? -1 : 1) * r * 1.3; return { x: ux * k + down.x * r * 0.3, y: uy * k + down.y * r * 0.3 }; };
+  for (const arm of ['l', 'r']) if (behind(arm)) drawArm(p, J, arm, r, armOut(arm));
 
   // Prayer beads (mala): two rounded loops hanging from behind the neck, on top of the
   // robe but under the head. A longer one with bigger beads, a shorter one inside it.
@@ -118,7 +120,9 @@ export function drawRobot(p, J, t, mood = 'normal') {
   loop(R * 0.42 * open, T * 0.4, Math.max(1, r * 0.36), C.bead, C.beadLight);
 
   // Head: angular metal, tilted to match hers. Drawn from points in head units (R).
-  const head = J.head ?? { x: sh.x, y: sh.y - T * 0.5 };
+  // A little higher than the camera's head point, so there's a neck and no shrug.
+  const head0 = J.head ?? { x: sh.x, y: sh.y - T * 0.5 };
+  const head = { x: head0.x - down.x * r * 0.9, y: head0.y - down.y * r * 0.9 };
   const tilt = Math.max(-0.45, Math.min(0.45, J.tilt ?? 0)), ct = Math.cos(tilt), st = Math.sin(tilt);
   const at = (dx, dy) => [head.x + (dx * ct - dy * st) * R, head.y + (dx * st + dy * ct) * R];
   const shape = pts => pts.map(([x, y]) => at(x, y));
@@ -172,12 +176,15 @@ export function drawRobot(p, J, t, mood = 'normal') {
     p.line(g1x, g1y, g2x, g2y, C.metalDark);
   }
 
-  for (const arm of ['l', 'r']) if (!behind(arm)) drawArm(p, J, arm, r);
+  for (const arm of ['l', 'r']) if (!behind(arm)) drawArm(p, J, arm, r, armOut(arm));
 }
 
 // One arm: a wide saffron sleeve down to the wrist, a cuff, and a blocky metal hand.
-function drawArm(p, J, side, r) {
-  const S = J[side + 's'], E = J[side + 'e'], W = J[side + 'w'];
+// `out`: how far to move the shoulder outwards; the elbow moves about half as far and
+// the hand barely at all, so hands that meet in the middle still meet.
+function drawArm(p, J, side, r, out = { x: 0, y: 0 }) {
+  const shift = (pt, k) => ({ ...pt, x: pt.x + out.x * k, y: pt.y + out.y * k });
+  const S = shift(J[side + 's'], 1), E = shift(J[side + 'e'], 0.55), W = shift(J[side + 'w'], 0.15);
   tube(p, S, E, r * 1.45, C.robe, C.robeLight);
   tube(p, E, W, r * 1.25, C.robe, C.robeLight);
   p.disc(W.x, W.y, r * 1.3 + 1, C.outline);
