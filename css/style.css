@@ -101,6 +101,7 @@ p { margin: 0; }
 .home-rank { width: 100%; margin-bottom: 14px; }
 .home-rank .rank-text { flex: 1; }
 .home-rank .xpbar { width: 100%; }
+.home-rank .avatar-mini { width: 39px; height: 60px; }  /* 3 screen pixels per art pixel */
 .rank {
   display: flex; align-items: center; gap: 10px;
   border: 0; background: none; padding: 4px; text-align: left; min-width: 0;
