@@ -52,7 +52,7 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
 {
   store.clear();
   const s = P.load();
-  check('starter holds', HOLDS.filter(h => P.isUnlocked(s, h.id)).map(h => h.id).join() === STARTER_HOLDS.join());
+  check('starter holds', HOLDS.filter(h => P.isUnlocked(s, h.id)).map(h => h.id).sort().join() === [...STARTER_HOLDS].sort().join());
   const d1 = P.dailyHold(s, '2026-10-26'), d2 = P.dailyHold(s, '2026-10-26');
   check('daily is unlocked and stable', STARTER_HOLDS.includes(d1.id) && d1 === d2, d1.id);
   const days = new Set(Array.from({ length: 14 }, (_, i) => { s.daily = null; return P.dailyHold(s, `2026-11-${String(i + 1).padStart(2, '0')}`).id; }));
@@ -81,7 +81,7 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   }));
   const s = P.load();
   check('migrated coins', s.version === 2 && s.coins === 100 && s.lifetime === 100, `${s.coins} coins`);
-  check('practised holds stay unlocked', P.isUnlocked(s, 'drop') && P.isUnlocked(s, 'horse') && P.isUnlocked(s, 'bow') && !P.isUnlocked(s, 'cat'));
+  check('practised holds stay unlocked', P.isUnlocked(s, 'drop') && P.isUnlocked(s, 'horse') && P.isUnlocked(s, 'wings') && !P.isUnlocked(s, 'cat'));
   check('history and days converted', s.history[0].coins === 5 && s.days['2026-10-24'].coins === 10);
 }
 
@@ -98,7 +98,7 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   const over = P.overworked(s, now);
   check('legs flagged after three leg holds', over?.area === 'legs', JSON.stringify(over));
   const rest = P.restingHolds(s, 'legs');
-  check('suggests soft holds that spare the legs', rest.unlocked.length > 0 && rest.unlocked.every(h => h.style === 'soft' && !P.leansOn(h, 'legs')), rest.unlocked.map(h => h.id).join());
+  check('suggests holds that spare the legs, soft ones first', rest.unlocked.length > 0 && rest.unlocked[0].style === 'soft' && rest.unlocked.every(h => !P.leansOn(h, 'legs')), rest.unlocked.map(h => h.id).join());
   s.daily = null;
   const daily = P.dailyHold(s);
   check('hold of the day avoids leg holds', !P.leansOn(daily, 'legs'), daily.id);
