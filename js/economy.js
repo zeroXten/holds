@@ -38,7 +38,7 @@ export function bonusTier(held, target) {
 }
 
 // ---- Shop: protecting the streak (cheapest when planned ahead, dearest after the fact) ----
-export const REST_DAY_PRICE = 10;       // book a rest day in advance
+export const REST_DAY_PRICE = 30;       // book a rest day in advance: a real cost, but well below a freeze
 export const REST_DAYS_PER_WEEK = 2;
 export const FREEZE_PRICE = 100;        // used automatically on a missed day; a hard day's training to
                                         // earn, as milestones give them away (1, 3 and 6 weeks, 100 days)
