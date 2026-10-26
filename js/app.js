@@ -760,8 +760,9 @@ async function openRobot() {
   const mine = robot = {};
   let source;
   try {
-    // The fast model: copying big movements doesn't need the accurate one.
-    source = DEMO ? new RobotDemoSource() : await CameraSource.open($('#robot-video'), 'lite');
+    // The fast model on a small picture: copying big movements doesn't need the accurate
+    // one, and a full-size camera feed makes every detection (and so every frame) slow.
+    source = DEMO ? new RobotDemoSource() : await CameraSource.open($('#robot-video'), 'lite', { width: 640, height: 480 });
   } catch (e) {
     $('#robot-hint').textContent = 'The robot needs the camera to see you.';
     return;
@@ -771,7 +772,7 @@ async function openRobot() {
   setTimeout(() => { $('#robot-hint').textContent = ''; }, 6000);
   mine.source = source;
   mine.wake = await wakeLock();
-  mine.scene = new RobotScene({ canvas: $('#robot-canvas'), bubble: $('#robot-bubble'), source, state });
+  mine.scene = new RobotScene({ canvas: $('#robot-canvas'), source, state });
   const loop = () => {
     if (robot !== mine) return;
     mine.scene.frame();
@@ -786,7 +787,6 @@ function closeRobot() {
   robot.source?.stop();
   robot.wake?.release?.().catch(() => {});
   audio.hush();
-  $('#robot-bubble').hidden = true;
   robot = null;
 }
 

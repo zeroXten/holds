@@ -215,10 +215,10 @@ export function gesture(b) {
 }
 
 const REACTIONS = {
-  handsUp: { text: 'Hooray! 🙌', say: 'Hooray!', fx: 'sparkle', mood: 'happy' },
-  armsWide: { text: 'I’m flying! ✈️', say: 'Wheee! I’m flying!', fx: 'wind', mood: 'happy' },
-  legUp: { text: 'Crane stance! 🦩', say: 'Crane stance!', fx: 'feather', mood: 'happy' },
-  squat: { text: 'Hi-ya! 🥋', say: 'Horse stance! Hi-ya!', fx: 'stars', mood: 'happy' },
+  handsUp: { say: 'Hooray!', fx: 'sparkle', mood: 'happy' },
+  armsWide: { say: 'Wheee! I’m flying!', fx: 'wind', mood: 'happy' },
+  legUp: { say: 'Crane stance!', fx: 'feather', mood: 'happy' },
+  squat: { say: 'Horse stance! Hi-ya!', fx: 'stars', mood: 'happy' },
 };
 
 // ---- Demo mode: a front-on routine through every move the robot reacts to ----
@@ -303,8 +303,8 @@ function toJoints(lm, view, mirrored) {
 
 export class RobotScene {
   // source: a CameraSource or DemoSource; state: app progress (for the temple background).
-  constructor({ canvas, bubble, source, state }) {
-    Object.assign(this, { canvas, bubble, source, state });
+  constructor({ canvas, source, state }) {
+    Object.assign(this, { canvas, source, state });
     this.framer = new AutoFrame();
     this.particles = [];
     this.mood = 'normal';
@@ -318,13 +318,8 @@ export class RobotScene {
     this.last = performance.now() / 1000;
   }
 
-  say(text, phrase, ms = 2500) {
-    this.bubble.textContent = text;
-    this.bubble.hidden = false;
-    clearTimeout(this.bubbleTimer);
-    this.bubbleTimer = setTimeout(() => { this.bubble.hidden = true; }, ms);
-    if (phrase) audio.say(phrase, { priority: true, pitch: 1.6 });
-  }
+  // Spoken only: no text on screen.
+  say(phrase) { audio.say(phrase, { priority: true, pitch: 1.6 }); }
 
   burst(kind, at) {
     const colors = { sparkle: [C.gold, C.metalLight, C.eye], wind: [C.metalLight, C.eye], feather: [C.metalLight, C.robe], stars: [C.gold, C.drape, C.robe] }[kind];
@@ -371,7 +366,7 @@ export class RobotScene {
       if (!this.greeted && this.seenFor > 1) {
         this.greeted = true;
         this.cooldown.any = now + 2.5;  // let the hello land before any reactions
-        this.say('Hello! 👋', 'Hello! I’m Robo Monk. I copy you!', 3500);
+        this.say('Hello! I’m Robo Monk. I copy you!');
       }
       const g = gesture(makeBody(lm, fw, fh));
       this.heldFor = g && g === this.current ? this.heldFor + dt : 0;
@@ -380,7 +375,7 @@ export class RobotScene {
         const r = REACTIONS[g];
         this.cooldown[g] = now + 4;
         this.cooldown.any = now + 1.5;
-        this.say(r.text, r.say);
+        this.say(r.say);
         audio.play('robot');
         this.mood = r.mood;
         this.moodUntil = now + 1.8;
@@ -388,14 +383,14 @@ export class RobotScene {
         this.burst(r.fx, g === 'handsUp' ? [J.lw, J.rw] : g === 'legUp' ? [J.lk, J.rk] : [J.lw, J.rw, J.head]);
       }
     } else if (this.greeted && this.lostFor > 2 && this.lostFor - dt <= 2) {
-      this.say('Where are you? 👀', 'Where are you?');
+      this.say('Where are you?');
     }
     if (now > this.moodUntil) this.mood = 'normal';
 
-    // Ease the drawn pose towards the target: quickly while copying her, slowly when
-    // switching between her and the neutral pose so it doesn't jump.
+    // Follow her directly (the tracker has already smoothed her), but ease when switching
+    // between her and the neutral pose so it doesn't jump.
     const target = toJoints(lm, view, mirrored);
-    const k = Math.min(1, dt / (now < (this.blendUntil ?? 0) ? 0.25 : 0.04));
+    const k = now < (this.blendUntil ?? 0) ? Math.min(1, dt / 0.25) : 1;
     const J = this.shown ? Object.fromEntries(Object.entries(target).map(([key, v]) => {
       const was = this.shown[key];
       if (typeof v === 'number') return [key, was + (v - was) * k];
