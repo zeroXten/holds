@@ -1,4 +1,4 @@
-import { HOLDS, HOLD_GROUPS, holdById, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
+import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
   coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FREEZE_PRICE, FREEZE_MAX,
@@ -59,7 +59,7 @@ const targetText = (hold, t) => hold.flow ? `${t} slow cycles` : hold.sides ? `$
 // A best or a target in the hold's own unit: seconds, or cycles for flowing holds.
 const amount = (hold, n) => (hold.flow ? `${n} cycle${n === 1 ? '' : 's'}` : fmtLong(n));
 const videoUrl = hold => `https://www.youtube.com/results?search_query=${encodeURIComponent(hold.video)}`;
-const viewHint = hold => hold.hint ?? (hold.view === 'front' ? 'Face the camera' : 'Stand side-on to the camera');
+const viewHint = (hold, level = 1) => `${prefersLandscape(hold, level) ? 'Phone on its side (landscape). ' : ''}${hold.hint ?? (hold.view === 'front' ? 'Face the camera' : 'Stand side-on to the camera')}`;
 
 document.body.classList.toggle('demo', DEMO);
 
@@ -135,7 +135,7 @@ function renderHero() {
   $('#hero-meta').innerHTML = `
     <span class="tag strong">${targetText(hero, lv.target)}</span>
     <span class="tag">${coinRate(hero, hs.level)}</span>
-    <span class="tag">${hero.camera ? viewHint(hero) : 'Honour system'}</span>
+    <span class="tag">${hero.camera ? viewHint(hero, hs.level) : 'Honour system'}</span>
     ${best ? `<span class="tag">Best ${amount(hero, best)}</span>` : ''}`;
 }
 
@@ -232,7 +232,7 @@ function renderSheetLevel() {
     <span class="tag">${coinRate(hold, sheetLevel)}</span>
     ${P.isDaily(state, hold.id) ? `<span class="tag strong">${P.dailyAvailable(state, hold.id) ? `Hold of the day: ${DAILY_MULT}× coins on your first go` : `Hold of the day: ${DAILY_MULT}× used today`}</span>` : ''}
     ${boostTags()}
-    ${hold.camera ? `<span class="tag">${viewHint(hold)}</span>` : '<span class="tag">Honour system</span>'}
+    ${hold.camera ? `<span class="tag">${viewHint(hold, sheetLevel)}</span>` : '<span class="tag">Honour system</span>'}
     ${best ? `<span class="tag">Best ${amount(hold, best)}</span>` : ''}
     ${!locked && sheetLevel === hs.level && !hs.mastered ? pips(hs) : ''}`;
 }
@@ -382,9 +382,7 @@ function updateHud(v) {
   switch (v.state) {
     case 'framing':
       setStatus('wait', 'Step back so your whole body is in view');
-      $('#s-cue').textContent = run.hold.landscape && innerHeight > innerWidth
-        ? 'Tip: turn your phone sideways (landscape) so you can stand closer.'
-        : `${viewHint(run.hold)}, about 2–3 m from the phone.`;
+      $('#s-cue').textContent = orientationTip(run) ?? `${viewHint(run.hold, run.level)}, about 2–3 m from the phone.`;
       break;
     case 'ready':
       setStatus('wait', 'Get into position');
@@ -447,7 +445,7 @@ function updateFlowHud(v) {
   switch (v.state) {
     case 'framing':
       setStatus('wait', 'Step back so your whole body is in view');
-      $('#s-cue').textContent = `${viewHint(run.hold)}, about 2–3 m from the phone.`;
+      $('#s-cue').textContent = orientationTip(run) ?? `${viewHint(run.hold, run.level)}, about 2–3 m from the phone.`;
       break;
     case 'ready':
       setStatus('wait', 'Hands at your belly to begin');
@@ -467,6 +465,14 @@ function updateFlowHud(v) {
       $('#s-cue').textContent = v.tooFast ? `At least ${v.minCycle} seconds for each cycle` : flowStep(v);
       break;
   }
+}
+
+// A nudge when the phone is held the less useful way round for this pose.
+function orientationTip(r) {
+  const wide = prefersLandscape(r.hold, r.level), upright = innerHeight > innerWidth;
+  if (wide && upright) return 'Tip: turn your phone on its side (landscape). This pose is wider than it is tall, so you can stand closer.';
+  if (!wide && !upright) return 'Tip: hold your phone upright (portrait). This pose is taller than it is wide, so it fits from closer that way.';
+  return null;
 }
 
 // Screen space taken by the controls: the timer at the top and form meter at the bottom
@@ -524,7 +530,10 @@ function drawSkeleton(frame, v, view, mirrored) {
   const active = v.state !== 'framing';
   const color = s => !active ? COLORS.idle : s === undefined ? (v.inPose ? COLORS.good : COLORS.idle)
     : s >= 0.85 ? COLORS.good : s >= 0.5 ? COLORS.warn : COLORS.bad;
-  const width = Math.max(4, cw / 90);
+  // Line width follows the body's size on screen (its torso), not the screen's width:
+  // a small figure in landscape shouldn't get the same chunky lines as a big one.
+  const torso = lm[11] && lm[23] ? Math.hypot(...[0, 1].map(k => (pt(lm[11])[k] + pt(lm[12])[k] - pt(lm[23])[k] - pt(lm[24])[k]) / 2)) : 100;
+  const width = Math.max(2.5, Math.min(7, torso / 22));
   ctx.lineCap = 'round';
   for (const [a, b] of BONES) {
     if (!lm[a] || !lm[b] || (lm[a].visibility ?? 1) < 0.3 || (lm[b].visibility ?? 1) < 0.3) continue;

@@ -4,15 +4,15 @@
 // `areas` says what a hold works, as weights that add up to 1 (used to spot when one
 // part of you has done a lot lately). `style` is 'hard' (external strength) or 'soft'
 // (internal: qigong-style standing work).
-// `video` is a YouTube search for demonstrations of the stance. `landscape` marks wide
-// or lying-down holds that fit the camera far better with the phone turned sideways.
+// `video` is a YouTube search for demonstrations of the stance. Whether the phone is
+// better on its side is worked out from each level's figure (see prefersLandscape).
 //
 // Criteria: value(body, side) → number, judged against min and/or max with a
 // `soft` margin over which the score falls from 1 to 0. For one-sided holds
 // `side.main` is the working leg and `side.other` the second leg.
 
 import { kneeDrop, lean, dist, mid } from './scoring.js';
-import { legReaching } from './figure.js';
+import { legReaching, buildJoints } from './figure.js';
 
 const HIPS_SHOULDERS = [11, 12, 23, 24];
 
@@ -113,8 +113,7 @@ export const HOLDS = [
   {
     id: 'bow', name: 'Bow Stance', native: 'Gōng Bù', view: 'side', sides: true, camera: true,
     areas: { legs: 1 }, style: 'hard',
-    hint: 'Turn the phone sideways (landscape) and stand side-on to it',
-    landscape: true,
+    hint: 'Stand side-on to the phone',
     video: 'gong bu bow stance kung fu tutorial',
     about: 'A long forward stance: front leg bent like a bow, back leg straight like the arrow.',
     levels: [
@@ -236,8 +235,7 @@ export const HOLDS = [
   {
     id: 'drop', name: 'Drop Stance', native: 'Pū Bù', view: 'front', sides: true, camera: true,
     areas: { legs: 0.7, mobility: 0.3 }, style: 'hard',
-    hint: 'Turn the phone sideways (landscape) and face it',
-    landscape: true,
+    hint: 'Face the phone',
     video: 'pu bu drop stance kung fu tutorial',
     about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together.',
     levels: [
@@ -503,9 +501,8 @@ export const HOLDS = [
   {
     id: 'sideplank', name: 'Side Plank', native: 'Cè Píngbǎn Zhīchēng', view: 'front', sides: true, camera: true,
     areas: { core: 0.8, upper: 0.2 }, style: 'hard',
-    landscape: true,
     video: 'side plank progression tutorial',
-    hint: 'Turn the phone sideways (landscape), low to the ground, with your front facing it',
+    hint: 'Phone low to the ground, with your front facing it',
     about: 'Not strictly Shaolin, but one of the best holds for the sides of the core and a stable spine.',
     levels: [
       { name: 'Knee side plank', target: 40, desc: 'On one forearm, elbow under the shoulder, knees bent. Lift your hips so shoulders, hips and knees make one line. Then switch sides.' },
@@ -562,9 +559,8 @@ export const HOLDS = [
   {
     id: 'birddog', name: 'Bird Dog', native: 'Niǎo Gǒu Shì', view: 'side', sides: true, camera: true,
     areas: { core: 0.7, balance: 0.3 }, style: 'hard',
-    landscape: true,
     video: 'bird dog exercise how to',
-    hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
+    hint: 'Phone low to the ground, side-on to you',
     about: 'Not strictly Shaolin, but a gentle, highly rated hold for the lower back and a core that resists twisting.',
     levels: [
       { name: 'Leg reach', target: 30, desc: 'On hands and knees, hands under shoulders. Reach one leg straight back, level with your back. Then switch legs.' },
@@ -620,9 +616,8 @@ export const HOLDS = [
   {
     id: 'hollow', name: 'Hollow Hold', native: '', view: 'side', sides: false, camera: true,
     areas: { core: 1 }, style: 'hard',
-    landscape: true,
     video: 'hollow body hold progression',
-    hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
+    hint: 'Phone low to the ground, side-on to you',
     about: 'Borrowed from gymnastics: lower back pressed into the floor, shoulders and legs lifted. Builds the front of the core.',
     levels: [
       { name: 'Tuck hollow', target: 30, desc: 'On your back, knees pulled in, feet off the floor. Lift your shoulders and press your lower back down.' },
@@ -723,9 +718,8 @@ export const HOLDS = [
   {
     id: 'bridge', name: 'Iron Bridge', native: '', view: 'side', sides: false, camera: true,
     areas: { core: 0.7, legs: 0.3 }, style: 'hard',
-    landscape: true,
     video: 'iron bridge between two chairs bodyweight hold',
-    hint: 'Turn the phone sideways (landscape), low to the ground, and lie side-on to it',
+    hint: 'Phone low to the ground; lie side-on to it',
     about: 'The body held rigid as an iron plank, built up from a floor bridge to the strongman-style demonstration of lying stiff between two chairs. A demonstration feat rather than a classical stance.',
     levels: [
       { name: 'Shoulder bridge', target: 45, desc: 'On your back, knees bent, feet flat. Drive your hips up until shoulders, hips and knees make one straight line.' },
@@ -778,8 +772,7 @@ export const HOLDS = [
   {
     id: 'swallow', name: 'Swallow Balance', native: 'Yàn Shì Píng Héng', view: 'side', sides: true, camera: true,
     areas: { balance: 0.4, legs: 0.4, core: 0.2 }, style: 'hard',
-    hint: 'Turn the phone sideways (landscape) and stand side-on to it',
-    landscape: true,
+    hint: 'Stand side-on to the phone',
     video: 'yan shi ping heng swallow balance wushu',
     about: 'Balance on one leg with the body tipped forward and the other leg reaching back, like a swallow in flight.',
     levels: [
@@ -824,8 +817,7 @@ export const HOLDS = [
   {
     id: 'kick', name: 'Kick Hold', native: 'Dēng Tuǐ', view: 'side', sides: true, camera: true,
     areas: { legs: 0.5, balance: 0.3, mobility: 0.2 }, style: 'hard',
-    hint: 'Turn the phone sideways (landscape) and stand side-on to it',
-    landscape: true,
+    hint: 'Stand side-on to the phone',
     video: 'deng tui heel kick kung fu',
     about: 'Hold a front heel kick out in the air: hip strength, hamstring flexibility and balance.',
     levels: [
@@ -862,9 +854,8 @@ export const HOLDS = [
   {
     id: 'plank', name: 'Fist Plank', native: '', view: 'side', sides: false, camera: true,
     areas: { core: 0.6, upper: 0.4 }, style: 'hard',
-    landscape: true,
     video: 'knuckle plank fist plank',
-    hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
+    hint: 'Phone low to the ground, side-on to you',
     about: 'The top of a knuckle push-up, held. Builds the core, wrists and shoulders that strikes come from.',
     levels: [
       { name: 'Kneeling plank', target: 30, desc: 'On your fists and knees, fists under your shoulders. Hold shoulders, hips and knees in one straight line.' },
@@ -1128,8 +1119,7 @@ export const HOLDS = [
   {
     id: 'yanfei', name: 'Little Swallow Flies', native: 'Xiǎo Yàn Fēi', view: 'side', sides: false, camera: true,
     areas: { core: 0.8, upper: 0.2 }, style: 'hard',
-    landscape: true,
-    hint: 'Turn the phone sideways (landscape), low to the ground, side-on to you',
+    hint: 'Phone low to the ground, side-on to you',
     video: 'xiao yan fei back exercise',
     about: 'A classic Chinese back exercise: lying face down, lift your chest (and later your legs) off the floor like a swallow in flight. Strengthens the lower back, the backs of the shoulders and the glutes.',
     levels: [
@@ -1175,6 +1165,25 @@ export const HOLDS = [
 ];
 
 export const holdById = id => HOLDS.find(h => h.id === id);
+
+// Whether a level's pose is better filmed with the phone on its side. A 4:3 camera held
+// sideways sees a quarter less height, so turning it only helps when the body (padded
+// the way the auto-framing pads it) is wider than it is tall; for an upright pose it
+// means standing about a third further away. Landscape when it lets you stand at least
+// 10% closer.
+const landscapeCache = new Map();
+export function prefersLandscape(hold, level = 1) {
+  const key = `${hold.id}:${level}`;
+  if (!landscapeCache.has(key)) {
+    const j = Object.values(buildJoints(hold.figure(level)));
+    const xs = j.map(p => p[0]), ys = j.map(p => p[1]);
+    const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys);
+    const pw = w * 1.1 + h * 0.35, ph = h * 1.3 + w * 0.15;  // framing.js targetView's padding
+    const distance = orient => (orient === 'portrait' ? Math.max(pw / 3, ph / 4) : Math.max(pw / 4, ph / 3));
+    landscapeCache.set(key, distance('landscape') <= 0.9 * distance('portrait'));
+  }
+  return landscapeCache.get(key);
+}
 
 // How the home screen groups the holds, each group roughly easiest to hardest.
 // Holds that work two areas sit where most of the effort goes.

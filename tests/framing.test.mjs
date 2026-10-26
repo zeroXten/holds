@@ -1,9 +1,9 @@
 // Auto-framing should fit the whole body between the on-screen controls with a margin, fill a good
 // share of the screen, and fall back to the whole picture when nobody is seen.
 // Run: node tests/framing.test.mjs
-import { HOLDS } from '../js/holds.js';
+import { HOLDS, prefersLandscape } from '../js/holds.js';
 import { syntheticLandmarks, standing } from '../js/figure.js';
-import { AutoFrame, bodyBox } from '../js/framing.js';
+import { AutoFrame, bodyBox, targetView } from '../js/framing.js';
 
 let failures = 0;
 const check = (name, ok, detail) => { if (!ok) failures++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}: ${detail}`); };
@@ -71,6 +71,21 @@ for (const [orient, [cw, ch]] of Object.entries(screens)) {
     check(`landscape panel ${id}`, left >= inset.left - 1 && right <= cw + 1 && top >= inset.top - 1 && bottom <= ch + 1,
       `body x ${Math.round(left)}–${Math.round(right)}, y ${Math.round(top)}–${Math.round(bottom)}`);
   }
+}
+
+// Too close, with the feet guessed off the bottom of the picture: there's nothing to
+// show past the frame's edge, so the picture mustn't shrink into black bars for it.
+{
+  const [cw, ch] = screens.landscape, [vw, vh] = cams.landscape;
+  const fit = Math.min(cw / vw, ch / vh);
+  const v = targetView({ x: vw * 0.45, y: vh * 0.03, w: vw * 0.12, h: vh * 1.05 }, vw, vh, cw, ch, { top: 60, left: 300 });
+  check('off-frame body keeps the picture big', v.s >= fit * 0.8, `zoom ${(v.s / fit).toFixed(2)}x`);
+}
+
+// The phone on its side only for poses wider than they are tall.
+for (const [id, level, want] of [['bow', 1, false], ['bow', 4, false], ['kick', 3, false], ['sky', 1, false], ['plank', 2, true], ['yanfei', 1, true], ['drop', 4, true]]) {
+  const got = prefersLandscape(HOLDS.find(h => h.id === id), level);
+  check(`${id} L${level} ${want ? 'landscape' : 'portrait'}`, got === want, got ? 'landscape' : 'portrait');
 }
 
 // Nobody in view: ease back to showing the whole picture.

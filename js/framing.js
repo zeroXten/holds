@@ -39,8 +39,11 @@ export function targetView(box, vw, vh, cw, ch, inset = {}) {
   const rh = Math.max(ch * 0.4, ch - top - bottom), rw = cw - left;
   // Landmarks stop at the nose, wrists and ankles: pad for the head, hands and feet.
   // Long boxes (lying down) get a little extra height too.
-  const x0 = box.x - 0.175 * box.h - 0.05 * box.w, x1 = box.x + box.w + 0.175 * box.h + 0.05 * box.w;
-  const y0 = box.y - 0.22 * box.h - 0.075 * box.w, y1 = box.y + box.h + 0.08 * box.h + 0.075 * box.w;
+  let x0 = box.x - 0.175 * box.h - 0.05 * box.w, x1 = box.x + box.w + 0.175 * box.h + 0.05 * box.w;
+  let y0 = box.y - 0.22 * box.h - 0.075 * box.w, y1 = box.y + box.h + 0.08 * box.h + 0.075 * box.w;
+  // There's no picture beyond the camera frame, so padding (or a body part the model
+  // guesses is off the edge) past it would only shrink the picture into black bars.
+  x0 = Math.max(0, x0); x1 = Math.min(vw, x1); y0 = Math.max(0, y0); y1 = Math.min(vh, y1);
   const s = Math.max(fit * MIN_ZOOM, Math.min(rw / (x1 - x0), rh / (y1 - y0), fit * MAX_ZOOM));
   // Centre the padded body in the clear area, avoid empty edges where the picture allows...
   let tx = clampAxis(left + rw / 2 - s * (x0 + x1) / 2, s * vw, cw);
