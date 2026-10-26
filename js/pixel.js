@@ -64,6 +64,33 @@ export class Pix {
 
   disc(cx, cy, r, c) { this.ellipse(cx, cy, r, r, c); }
 
+  // A thick line with round ends (every pixel within r of the segment a→b).
+  capsule(ax, ay, bx, by, r, c) {
+    const x0 = Math.floor(Math.min(ax, bx) - r), x1 = Math.ceil(Math.max(ax, bx) + r);
+    const y0 = Math.floor(Math.min(ay, by) - r), y1 = Math.ceil(Math.max(ay, by) + r);
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy || 1;
+    for (let y = Math.max(0, y0); y <= Math.min(this.h - 1, y1); y++) {
+      for (let x = Math.max(0, x0); x <= Math.min(this.w - 1, x1); x++) {
+        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2));
+        if (Math.hypot(x - ax - t * dx, y - ay - t * dy) <= r) this.set(x, y, c);
+      }
+    }
+  }
+
+  // A filled polygon (even-odd scanline fill); pts: [[x, y], ...].
+  poly(pts, c) {
+    const ys = pts.map(p => p[1]);
+    for (let y = Math.max(0, Math.floor(Math.min(...ys))); y <= Math.min(this.h - 1, Math.ceil(Math.max(...ys))); y++) {
+      const xs = [];
+      for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length];
+        if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) xs.push(x1 + ((y - y1) / (y2 - y1)) * (x2 - x1));
+      }
+      xs.sort((a, b) => a - b);
+      for (let i = 0; i + 1 < xs.length; i += 2) this.hline(Math.ceil(xs[i]), Math.floor(xs[i + 1]), y, c);
+    }
+  }
+
   // Draws an ASCII sprite: each character is a key in `pal` ('.' or space = transparent).
   sprite(x, y, rows, pal, flip = false) {
     rows.forEach((row, j) => {

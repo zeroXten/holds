@@ -9,6 +9,7 @@ import * as P from './progress.js';
 import { STRICTNESS } from './session.js';
 import { createSession } from './flow.js';
 import { CameraSource, DemoSource, loadLandmarker } from './pose.js';
+import { RobotScene, RobotDemoSource } from './robot.js';
 import { AutoFrame } from './framing.js';
 import * as audio from './audio.js';
 import { VERSION } from './version.js';
@@ -40,6 +41,8 @@ const targetText = (hold, t) => hold.flow ? `${t} slow cycles` : hold.sides ? `$
 const amount = (hold, n) => (hold.flow ? `${n} cycle${n === 1 ? '' : 's'}` : fmtLong(n));
 const videoUrl = hold => `https://www.youtube.com/results?search_query=${encodeURIComponent(hold.video)}`;
 const viewHint = hold => hold.hint ?? (hold.view === 'front' ? 'Face the camera' : 'Stand side-on to the camera');
+
+document.body.classList.toggle('demo', DEMO);
 
 function show(id) {
   $$('.screen').forEach(s => { s.hidden = s.id !== id; });
@@ -737,6 +740,57 @@ $('#install-btn').onclick = async () => {
 };
 
 // Compares this version with the newest one online, so you know you're testing the latest.
+// ---------- Robo Monk (easter egg) ----------
+
+// Tap the version number 5 times quickly to meet Robo Monk.
+let versionTaps = [];
+$('#version').addEventListener('click', () => {
+  const now = performance.now();
+  versionTaps = [...versionTaps.filter(t => now - t < 2000), now];
+  if (versionTaps.length >= 5) { versionTaps = []; $('#settings').close(); openRobot(); }
+});
+
+let robot = null;  // { scene, source, raf }
+
+async function openRobot() {
+  closeRobot();
+  audio.unlock();
+  show('robot');
+  $('#robot-hint').textContent = DEMO ? 'Demo mode' : 'Waking up the robot…';
+  const mine = robot = {};
+  let source;
+  try {
+    source = DEMO ? new RobotDemoSource() : await CameraSource.open($('#robot-video'), state.settings.model);
+  } catch (e) {
+    $('#robot-hint').textContent = 'The robot needs the camera to see you.';
+    return;
+  }
+  if (robot !== mine) { source.stop(); return; }
+  $('#robot-hint').textContent = 'Stand back so it can see all of you, then move!';
+  setTimeout(() => { $('#robot-hint').textContent = ''; }, 6000);
+  mine.source = source;
+  mine.wake = await wakeLock();
+  mine.scene = new RobotScene({ canvas: $('#robot-canvas'), bubble: $('#robot-bubble'), source, state });
+  const loop = () => {
+    if (robot !== mine) return;
+    mine.scene.frame();
+    mine.raf = requestAnimationFrame(loop);
+  };
+  mine.raf = requestAnimationFrame(loop);
+}
+
+function closeRobot() {
+  if (!robot) return;
+  cancelAnimationFrame(robot.raf);
+  robot.source?.stop();
+  robot.wake?.release?.().catch(() => {});
+  audio.hush();
+  $('#robot-bubble').hidden = true;
+  robot = null;
+}
+
+$('#robot-x').onclick = () => { closeRobot(); show('home'); renderHome(); };
+
 async function checkVersion() {
   const el = $('#version-check');
   el.className = '';

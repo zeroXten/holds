@@ -39,6 +39,7 @@ const SOUNDS = {
   end: [[523, 0, 0.25], [392, 0.22, 0.45]],
   level: [[523, 0, 0.15], [659, 0.13, 0.15], [784, 0.26, 0.15], [1047, 0.39, 0.6]],
   point: [[1320, 0, 0.06, 'sine', 0.08]],
+  robot: [[523, 0, 0.08, 'square', 0.1], [784, 0.09, 0.08, 'square', 0.1], [1046, 0.18, 0.14, 'square', 0.1]],
 };
 
 export function play(name) {
@@ -49,7 +50,7 @@ export function play(name) {
 
 // Speak a phrase. `minGap` stops the same phrase repeating too often;
 // `priority` phrases interrupt whatever is being said.
-export function say(text, { minGap = 0, priority = false } = {}) {
+export function say(text, { minGap = 0, priority = false, pitch = 1 } = {}) {
   if (!settings.voice || !('speechSynthesis' in window)) return false;
   const now = performance.now();
   if (minGap && now - (spokenAt.get(text) ?? -1e9) < minGap) return false;
@@ -57,6 +58,7 @@ export function say(text, { minGap = 0, priority = false } = {}) {
   if (priority) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 1.05;
+  u.pitch = pitch;
   speechSynthesis.speak(u);
   spokenAt.set(text, now);
   lastSpoke = now;
