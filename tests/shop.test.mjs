@@ -198,6 +198,18 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('already-doubled sessions aren\'t doubled again', again.milestoneDouble === 0 && again.coins === 10);
 }
 
+// The hold of the day never repeats the day before's.
+{
+  const s = fresh(0);
+  let prev = null, repeats = 0;
+  for (let i = 0; i < 60; i++) {
+    const h = P.dailyHold(s, P.addDays('2026-10-01', i)).id;
+    if (h === prev) repeats++;
+    prev = h;
+  }
+  check('hold of the day changes every day', repeats === 0, `${repeats} repeats`);
+}
+
 // The hold of the day's multiplier is used up by its first proper session.
 {
   const s = fresh(0);

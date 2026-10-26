@@ -506,14 +506,15 @@ function seeded(str) {
 }
 
 // The same for the whole day: a date-seeded shuffle of all holds, taking the first
-// one you've unlocked (skipping any that lean on an area you've overworked, if there's
-// another choice). Saved, so it doesn't change later in the day.
+// one you've unlocked (skipping the last hold of the day, and any that lean on an area
+// you've overworked, if there's another choice). Saved, so it doesn't change later in the day.
 export function dailyHold(state, today = dayKey()) {
   if (state.daily?.day === today && isUnlocked(state, state.daily.holdId)) return HOLDS.find(h => h.id === state.daily.holdId);
   const rand = seeded(today);
   const order = HOLDS.map(h => [rand(), h]).sort((a, b) => a[0] - b[0]).map(([, h]) => h);
-  const over = overworked(state);
-  const open = order.filter(h => isUnlocked(state, h.id));
+  const over = overworked(state), last = state.daily?.holdId;
+  const fresh = order.filter(h => isUnlocked(state, h.id) && h.id !== last);
+  const open = fresh.length ? fresh : order.filter(h => isUnlocked(state, h.id));
   const hold = (over && open.find(h => !leansOn(h, over.area))) || open[0] || HOLDS[0];
   state.daily = { day: today, holdId: hold.id };
   save(state);
