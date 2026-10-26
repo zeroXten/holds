@@ -449,7 +449,7 @@ body.demo .stage video { display: none; }
 .temple-banner.static { cursor: default; }
 .temple-banner canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
 button.chip { cursor: pointer; }
-.freezes { font-size: .75rem; color: #7fc8ff; font-weight: 700; }
+.freezes { color: #4aa8e8; font-weight: 800; }
 .freezes:empty { display: none; }
 
 /* ---------- Home cards ---------- */

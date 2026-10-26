@@ -94,8 +94,6 @@ function renderHome() {
   $('#rank-name').textContent = r.name;
   $('#xp-fill').style.width = `${Math.round(r.progress * 100)}%`;
   $('#xp-text').textContent = r.next ? `${state.lifetime.toLocaleString()} / ${r.next.coins.toLocaleString()} coins earned` : `${state.lifetime.toLocaleString()} coins earned`;
-  $('#streak').textContent = P.streak(state);
-  $('#freezes').textContent = state.streak.freezes ? `❄${state.streak.freezes}` : '';
   $('#wallet').textContent = state.coins.toLocaleString();
   document.documentElement.dataset.scene = state.temple.theme;
   renderStreakStrip();
@@ -998,7 +996,11 @@ function renderStreakStrip() {
   const when = toGo === 0 ? 'Train today for' : toGo === 1 ? 'Tomorrow:' : `${toGo} days to go:`;
   $('#streak-strip').innerHTML = `
     <span class="ss-head"><b>🔥 ${n ? `${n}-day streak` : 'No streak yet'}</b>
-      <span>${boost.streakMult > 1 ? `+${Math.round((boost.streakMult - 1) * 100)}% coins${doneToday ? '' : ' today'}` : ''}${boost.double ? ` · ${MILESTONE_DAY_MULT}× day` : ''}</span></span>
+      <span>${[
+        ...(boost.streakMult > 1 ? [`+${Math.round((boost.streakMult - 1) * 100)}% coins${doneToday ? '' : ' today'}`] : []),
+        ...(boost.double ? [`${MILESTONE_DAY_MULT}× day`] : []),
+        ...(state.streak.freezes ? [`<span class="freezes" title="Streak freezes">❄${state.streak.freezes}</span>`] : []),
+      ].join(' · ')}</span></span>
     <span class="ss-days">${dots}${far}</span>
     <span class="ss-next">${!doneToday ? `<b>Train today</b> to make it ${n + 1}. ` : ''}${next ? `${next.name} · ${when} ${reward}` : 'Every milestone reached. Keep the fire going.'}</span>`;
 }
@@ -1209,7 +1211,6 @@ window.addEventListener('resize', () => drawScenes(true));
 
 $('#temple-banner').onclick = () => openShop('temple');
 $('#wallet-chip').onclick = () => openShop('temple');
-$('#streak-chip').onclick = () => openShop('streak');
 $('#streak-strip').onclick = () => openShop('streak');
 
 $('#shuffle').onclick = () => { hero = P.pickHold(state, hero.id); renderHero(); };
