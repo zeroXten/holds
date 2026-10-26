@@ -1,6 +1,6 @@
 {
-  "name": "Mabu: Shaolin holds",
-  "short_name": "Mabu",
+  "name": "Mabu.fit: Shaolin holds",
+  "short_name": "Mabu.fit",
   "description": "Gamified Shaolin stance training with camera form checking.",
   "start_url": "./",
   "scope": "./",

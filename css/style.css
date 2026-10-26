@@ -138,6 +138,7 @@ p { margin: 0; }
 .brand { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; }
 .brand b { font-family: var(--display); font-size: 1.55rem; letter-spacing: .01em; }
 .brand span { color: var(--accent); font-size: 1rem; font-weight: 600; }
+.brand i, .dotfit { font-style: normal; color: var(--muted); font-weight: 600; }
 .welcome-kicker { color: var(--accent); font-weight: 700; font-size: .85rem; letter-spacing: .04em; }
 .welcome-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
 .credit { font-size: .82rem; color: var(--muted); text-align: center; }
