@@ -1,9 +1,11 @@
 import { HOLDS, HOLD_GROUPS, holdById, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
-  coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
+  coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
+  AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FREEZE_PRICE, FREEZE_MAX,
   REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice, MILESTONE_DAY_MULT,
 } from './economy.js';
 import { drawTemple, SCENE_H } from './temple.js';
+import { renderAvatar } from './avatar.js';
 import { figureSVG } from './figure.js';
 import * as P from './progress.js';
 import { STRICTNESS } from './session.js';
@@ -99,8 +101,7 @@ function pips(hs) {
 
 function renderHome() {
   const r = P.rankFor(state.lifetime);
-  $('#sash').style.setProperty('--sash', r.color);
-  $('#sash').style.setProperty('--deg', r.degree ?? 0);
+  renderAvatar($('#avatar-mini'), P.avatarLook(state));
   $('#rank-name').textContent = r.name;
   $('#xp-fill').style.width = `${Math.round(r.progress * 100)}%`;
   $('#xp-text').textContent = r.next ? `${state.lifetime.toLocaleString()} / ${r.next.coins.toLocaleString()} coins earned` : `${state.lifetime.toLocaleString()} coins earned`;
@@ -1075,10 +1076,11 @@ function renderShop() {
   $('#shop-wallet').textContent = state.coins.toLocaleString();
   $$('#shop-tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === shopTab));
   $('#shop-preview').hidden = !(shopTab === 'temple' || shopTab === 'themes');
-  $('#shop-body').innerHTML = { temple: shopTemple, themes: shopThemes, streak: shopStreak, bets: shopBets }[shopTab]();
+  $('#shop-body').innerHTML = { temple: shopTemple, themes: shopThemes, monk: shopMonk, streak: shopStreak, bets: shopBets }[shopTab]();
   if (shopTab === 'themes') {
-    $$('#shop-body canvas[data-theme]').forEach(cv => drawTemple(cv, state, 3.3, cv.dataset.theme));
+    $$('#shop-body canvas[data-theme]').forEach(cv => drawTemple(cv, state, 3.3, cv.dataset.theme, templeMonk()));
   }
+  if (shopTab === 'monk') renderAvatar($('#monk-preview'), P.avatarLook(state));
   drawScenes(true);
 }
 
@@ -1100,6 +1102,28 @@ function shopTemple() {
     : `<li class="owned"><div><b>${now.name}</b><small>Your temple is complete.</small></div><span class="owned-tag">Built</span></li>`}</ul>
   <h3>Decorations <small>${owned} of ${TEMPLE_ITEMS.length}</small></h3>
   <ul class="shop-list">${[...TEMPLE_ITEMS].sort((a, b) => a.price - b.price).map(item).join('')}</ul>`;
+}
+
+// Your monk: a big preview, then characters, outfits and accessories to buy and wear.
+function shopMonk() {
+  const a = state.avatar, r = P.rankFor(state.lifetime);
+  const row = (kind, i) => {
+    const owned = P.ownsAvatar(state, i.id);
+    const on = kind === 'accessory' ? a.wear[i.slot] === i.id : a[kind] === i.id;
+    const btn = !owned ? buyBtn('buy-avatar', `${kind}:${i.id}`, i.price)
+      : on && kind !== 'accessory' ? '<span class="owned-tag">Wearing</span>'
+      : `<button class="btn buy" data-act="wear-avatar" data-id="${kind}:${i.id}">${on ? 'Take off' : 'Wear'}</button>`;
+    return `<li class="${on ? 'owned' : ''}"><div><b>${i.name}</b><small>${i.desc}</small></div>${btn}</li>`;
+  };
+  const list = (kind, items) => `<ul class="shop-list">${items.map(i => row(kind, i)).join('')}</ul>`;
+  return `<div class="monk-stage">
+    <canvas id="monk-preview" class="avatar-big" width="13" height="20"></canvas>
+    <div><p class="shop-intro">Your monk wears your sash: <b>${r.name}</b>. It changes as you earn your way up.</p>
+      <button class="btn" data-act="avatar-temple">${a.inTemple ? 'Shown in your temple · Hide' : 'Show in your temple'}</button></div>
+  </div>
+  <h3>Characters</h3>${list('character', AVATAR_CHARACTERS)}
+  <h3>Outfits</h3>${list('outfit', AVATAR_OUTFITS)}
+  <h3>Accessories <small>one each for head, neck and hand</small></h3>${list('accessory', AVATAR_ACCESSORIES)}`;
 }
 
 function shopThemes() {
@@ -1164,6 +1188,9 @@ document.addEventListener('click', e => {
   const id = b.dataset.id;
   const actions = {
     'upgrade-temple': () => P.upgradeTemple(state) && `${TEMPLE_TIERS[state.temple.tier].name} built!`,
+    'buy-avatar': () => { const [kind, item] = id.split(':'); return P.buyAvatarItem(state, kind, item) && `${P.avatarItem(kind, item).name}: yours!`; },
+    'wear-avatar': () => { const [kind, item] = id.split(':'); return P.wearAvatarItem(state, kind, item) && ''; },
+    'avatar-temple': () => { P.toggleAvatarInTemple(state); return ''; },
     'buy-item': () => P.buyTempleItem(state, id) && `${TEMPLE_ITEMS.find(i => i.id === id).name} built!`,
     'buy-theme': () => P.buyTheme(state, id) && `${THEMES.find(t => t.id === id).name} theme unlocked!`,
     'use-theme': () => P.useTheme(state, id) && '',
@@ -1197,6 +1224,9 @@ const ART_PX = 2;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let sceneTimer = null;
 
+// Your monk as drawn in the temple, or null when it's hidden.
+const templeMonk = () => (state.avatar.inTemple ? P.avatarLook(state) : null);
+
 function drawScenes(resize = false) {
   const screen = document.body.dataset.screen;
   const cv = screen === 'home' ? $('#temple-canvas') : screen === 'shop' && !$('#shop-preview').hidden ? $('#shop-canvas') : null;
@@ -1207,7 +1237,7 @@ function drawScenes(resize = false) {
     cv.height = SCENE_H;
     cv.dataset.sized = '1';
   }
-  drawTemple(cv, state, reduceMotion ? 3.3 : performance.now() / 1000);
+  drawTemple(cv, state, reduceMotion ? 3.3 : performance.now() / 1000, state.temple.theme, templeMonk());
 }
 
 function animateScenes() {

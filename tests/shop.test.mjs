@@ -221,5 +221,25 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('first proper session uses it', P.isDaily(s, hold.id) && !P.dailyAvailable(s, hold.id));
 }
 
+// Your monk: buy to wear, swap characters and outfits, one accessory per slot.
+{
+  const s = fresh(2000);
+  check('starts as a young monk in saffron', s.avatar.character === 'young' && s.avatar.outfit === 'saffron' && P.ownsAvatar(s, 'young'));
+  check('buy a character wears it', P.buyAvatarItem(s, 'character', 'nun') && s.avatar.character === 'nun' && s.coins === 2000 - 300);
+  check('no double buy', !P.buyAvatarItem(s, 'character', 'nun'));
+  check('swap back to an owned one', P.wearAvatarItem(s, 'character', 'young') && s.avatar.character === 'young');
+  check('can\'t wear what you don\'t own', !P.wearAvatarItem(s, 'outfit', 'golden'));
+  P.buyAvatarItem(s, 'accessory', 'fan'); P.buyAvatarItem(s, 'accessory', 'staff');
+  check('one per slot', s.avatar.wear.hand === 'staff');
+  P.wearAvatarItem(s, 'accessory', 'staff');
+  check('take an accessory off', !s.avatar.wear.hand);
+  s.lifetime = 12000;
+  const look = P.avatarLook(s);
+  check('sash follows your rank', look.sash === '#1d1a17' && look.degree === 2);
+  store.clear();
+  store.set('holds.v1', JSON.stringify({ version: 2, coins: 0, lifetime: 0, unlocked: [], purchased: [], holds: {}, history: [], days: {}, badges: {}, settings: {} }));
+  check('old saves get a monk', P.load().avatar?.character === 'young');
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);

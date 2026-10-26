@@ -115,6 +115,30 @@ export const THEMES = [
   { id: 'snow', name: 'Snow', price: 150, desc: 'A hush of winter on the temple.' },
 ];
 
+// ---- Your monk: a character, an outfit and accessories (drawn in avatar.js) ----
+// The sash always shows your rank. Accessories go in slots, one each: head, neck, hand.
+export const AVATAR_CHARACTERS = [
+  { id: 'young', name: 'Young Monk', price: 0, desc: 'Shaved head, bright eyes, eager to train.' },
+  { id: 'nun', name: 'Shaolin Nun', price: 300, desc: 'Calm and steady, in a grey cap.' },
+  { id: 'warrior', name: 'Warrior Monk', price: 800, desc: 'A red headband and a fierce brow.' },
+  { id: 'elder', name: 'Elder Master', price: 1500, desc: 'White brows and a long white beard.' },
+];
+export const AVATAR_OUTFITS = [
+  { id: 'saffron', name: 'Saffron Robe', price: 0, desc: 'The classic orange robe.' },
+  { id: 'grey', name: 'Training Greys', price: 150, desc: 'Plain grey training clothes.' },
+  { id: 'black', name: 'Kung Fu Suit', price: 400, desc: 'Black jacket with white cuffs.' },
+  { id: 'winter', name: 'Winter Robe', price: 600, desc: 'Deep red, with a warm white collar.' },
+  { id: 'festival', name: 'Festival Robe', price: 1000, desc: 'Red and gold, for the new year.' },
+  { id: 'golden', name: 'Golden Master Robe', price: 2000, desc: 'Gold silk with a yellow trim.' },
+];
+export const AVATAR_ACCESSORIES = [
+  { id: 'mala', name: 'Mala Beads', slot: 'neck', price: 100, desc: 'A loop of wooden prayer beads.' },
+  { id: 'fan', name: 'Fighting Fan', slot: 'hand', price: 200, desc: 'A red and white folding fan.' },
+  { id: 'gourd', name: 'Water Gourd', slot: 'hand', price: 300, desc: 'A gourd of water on a cord.' },
+  { id: 'hat', name: 'Straw Hat', slot: 'head', price: 500, desc: 'A wide conical hat for the road.' },
+  { id: 'staff', name: 'Bo Staff', slot: 'hand', price: 800, desc: 'A long wooden staff, taller than you.' },
+];
+
 // ---- Streak milestones: a one-off reward each time a streak reaches these lengths ----
 // (on top of the everyday streak bonus of +5% coins per day, up to +50%). Rewards are
 // mixed: coins, a free freeze, and `double`: the rest of that day earns MILESTONE_DAY_MULT×.

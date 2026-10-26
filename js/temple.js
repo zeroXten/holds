@@ -3,6 +3,7 @@
 // temple grows through its stages and the courtyard gains each feature you buy. Themes change the time of day or season (and the app's accent colours).
 
 import { Pix, rgb, mix, bayer } from './pixel.js';
+import { drawAvatar, AVATAR_H } from './avatar.js';
 
 // ---- Palettes ----
 
@@ -623,7 +624,7 @@ function trainingYard(p, c, cx, G) {
   p.vline(rx - 1, G + 5, G + 18, c.woodDark); p.vline(rx + 7, G + 5, G + 18, c.woodDark);
 }
 
-export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0 } = {}) {
+export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, avatar = null } = {}) {
   const { th, c } = palette(theme);
   const has = id => owned.includes(id);
   const W = p.w, H = p.h, G = H - 22, cx = Math.round(W / 2);
@@ -660,6 +661,8 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0 } 
   if (has('incense')) burner(p, c, cx, G, t);
   if (has('bamboo')) bamboo(p, c, W, H, t, snow);
   if (has('plum')) plumTree(p, c, W, H, G, t);
+  // Your monk stands at the front, just right of the path.
+  if (avatar) drawAvatar(p, cx + 7, H - AVATAR_H, avatar);
   if (has('gate')) {
     gate(p, c, W, H, cx, snow);
     if (has('lanterns')) lanterns(p, c, W, G, cx, true, t, lit);
@@ -669,9 +672,9 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0 } 
 }
 
 // Draws the scene into a <canvas> whose width/height are in art pixels.
-export function drawTemple(canvas, state, t, theme = state.temple.theme) {
+export function drawTemple(canvas, state, t, theme = state.temple.theme, avatar = null) {
   const p = new Pix(canvas.width, canvas.height);
-  renderTemple(p, { owned: state.temple.owned, tier: state.temple.tier ?? 0, theme, t });
+  renderTemple(p, { owned: state.temple.owned, tier: state.temple.tier ?? 0, theme, t, avatar });
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(p.w, p.h);
   new Uint32Array(img.data.buffer).set(p.data);

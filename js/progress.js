@@ -5,6 +5,7 @@ import { HOLDS, AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
   REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
+  AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
   DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_DAYS, MILESTONE_DAY_MULT,
 } from './economy.js';
 
@@ -62,6 +63,8 @@ const blank = () => ({
   weekBet: null,  // a weekly bet, running alongside
   betLog: [],  // settled bets, newest first
   temple: { tier: 0, owned: [], theme: 'dawn', themes: ['dawn'] },
+  // Your monk: what's worn, what's owned, and whether it stands in the temple.
+  avatar: { character: 'young', outfit: 'saffron', wear: {}, owned: ['young', 'saffron'], inTemple: true },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
 });
 
@@ -104,6 +107,7 @@ export function load() {
         settings: { ...DEFAULT_SETTINGS, ...data.settings },
         streak: { ...fresh.streak, ...data.streak },
         temple: { ...fresh.temple, ...data.temple },
+        avatar: { ...fresh.avatar, ...data.avatar },
       };
     }
   } catch { /* storage unavailable or corrupt: start fresh */ }
@@ -376,6 +380,44 @@ export function settleBet(state, today = dayKey(), { notify = true, slot = 'bet'
 // Settles both slots; returns the bets that finished.
 export const settleBets = (state, today = dayKey(), opts = {}) =>
   ['bet', 'weekBet'].map(slot => settleBet(state, today, { ...opts, slot })).filter(Boolean);
+
+// ---- Your monk ----
+
+const AVATAR_KINDS = { character: AVATAR_CHARACTERS, outfit: AVATAR_OUTFITS, accessory: AVATAR_ACCESSORIES };
+export const avatarItem = (kind, id) => AVATAR_KINDS[kind]?.find(i => i.id === id);
+export const ownsAvatar = (state, id) => state.avatar.owned.includes(id);
+
+// Buying something puts it on straight away.
+export function buyAvatarItem(state, kind, id) {
+  const item = avatarItem(kind, id);
+  if (!item || ownsAvatar(state, id) || state.coins < item.price) return false;
+  state.coins -= item.price;
+  state.avatar.owned.push(id);
+  wearAvatarItem(state, kind, id);
+  return true;
+}
+
+// Characters and outfits swap; an accessory goes in its slot, or comes off if it's already on.
+export function wearAvatarItem(state, kind, id) {
+  const item = avatarItem(kind, id);
+  if (!item || !ownsAvatar(state, id)) return false;
+  const a = state.avatar;
+  if (kind === 'accessory') a.wear = { ...a.wear, [item.slot]: a.wear[item.slot] === id ? null : id };
+  else a[kind] = id;
+  save(state);
+  return true;
+}
+
+export function toggleAvatarInTemple(state) {
+  state.avatar.inTemple = !state.avatar.inTemple;
+  save(state);
+}
+
+// What the drawing needs: the choices plus the sash for your rank.
+export function avatarLook(state) {
+  const r = rankFor(state.lifetime), a = state.avatar;
+  return { character: a.character, outfit: a.outfit, wear: a.wear, sash: r.color, degree: r.degree ?? 0 };
+}
 
 // ---- The temple ----
 
