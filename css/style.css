@@ -180,6 +180,8 @@ p { margin: 0; }
 
 /* ---------- Grid ---------- */
 .section-title { font-size: 1.2rem; margin: 26px 0 12px; }
+.group-title { font-family: var(--sans); font-size: .82rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 20px 0 10px; }
+.group-title:first-child { margin-top: 0; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .card {
   display: grid; justify-items: start; gap: 4px; text-align: left;

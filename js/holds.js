@@ -1176,6 +1176,15 @@ export const HOLDS = [
 
 export const holdById = id => HOLDS.find(h => h.id === id);
 
+// How the home screen groups the holds, each group roughly easiest to hardest.
+// Holds that work two areas sit where most of the effort goes.
+export const HOLD_GROUPS = [
+  { name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat'] },
+  { name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow'] },
+  { name: 'Core & back', ids: ['plank', 'sideplank', 'birddog', 'hollow', 'bridge', 'yanfei'] },
+  { name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
+];
+
 export const AREAS = { legs: 'Legs', core: 'Core', upper: 'Arms & shoulders', balance: 'Balance', mobility: 'Mobility' };
 export const STYLES = { hard: 'Hard', soft: 'Soft' };
 // For sentences: "a lot of <work> lately. Give <rest> a rest".

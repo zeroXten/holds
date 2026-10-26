@@ -1,6 +1,6 @@
 // Every hold's own stick figure should pass its criteria, and standing upright
 // should not. Run: node tests/scoring.test.mjs
-import { HOLDS } from '../js/holds.js';
+import { HOLDS, HOLD_GROUPS } from '../js/holds.js';
 import { syntheticLandmarks, standing } from '../js/figure.js';
 import { makeBody, scorePose } from '../js/scoring.js';
 
@@ -41,6 +41,14 @@ for (const [a, b] of [['tray', 'claws'], ['claws', 'tray'], ['wings', 'palms'], 
   const ok = r.score < 50;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${a} pose as ${b} scores ${r.score}`);
+}
+
+// Every hold appears in exactly one home screen group.
+{
+  const grouped = HOLD_GROUPS.flatMap(g => g.ids);
+  const ok = grouped.length === HOLDS.length && HOLDS.every(h => grouped.includes(h.id));
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} hold groups cover every hold once`);
 }
 
 // A sagging iron bridge (hips dropped ~15°) should fail.

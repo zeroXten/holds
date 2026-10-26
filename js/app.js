@@ -1,4 +1,4 @@
-import { HOLDS, holdById, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
+import { HOLDS, HOLD_GROUPS, holdById, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
   coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
   REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice,
@@ -123,7 +123,7 @@ function renderHero() {
 function renderGrid() {
   const price = P.unlockPrice(state);
   const over = P.overworked(state);
-  $('#grid').innerHTML = HOLDS.map(h => {
+  const card = h => {
     const tired = over && P.leansOn(h, over.area);
     const kind = `<span class="card-kind ${h.style}">${STYLES[h.style]} · ${AREAS[mainArea(h)]}</span>`;
     const hs = P.holdState(state, h.id);
@@ -144,7 +144,9 @@ function renderGrid() {
       <span class="card-sub">Lv ${hs.level} · ${h.flow ? `${h.levels[hs.level - 1].target} cycles` : h.sides ? `${fmtLong(h.levels[hs.level - 1].target / 2)} ×2` : fmtLong(h.levels[hs.level - 1].target)}${best ? ` · best ${amount(h, best)}` : ''}</span>
       ${pips(hs)}
     </button>`;
-  }).join('');
+  };
+  $('#grid').innerHTML = HOLD_GROUPS.map(g => `<h3 class="group-title">${g.name}</h3>
+    <div class="grid">${g.ids.map(id => card(holdById(id))).join('')}</div>`).join('');
 }
 
 // ---------- Hold sheet ----------
