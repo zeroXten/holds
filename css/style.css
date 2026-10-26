@@ -170,12 +170,14 @@ p { margin: 0; }
 .level-line { margin-top: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .desc { color: var(--muted); margin-top: 6px; font-size: .95rem; }
 .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
-.tag { font-size: .8rem; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.tag { font-size: .8rem; padding: 4px 10px; border-radius: 10px; background: var(--surface-2); color: var(--muted); }
 .tag.strong { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); font-weight: 700; }
 
 .pips { display: inline-flex; gap: 4px; align-items: center; }
 .pips i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--gold); }
 .pips i.on { background: var(--gold); }
+.lvl-rule { flex-basis: 100%; font-size: .8rem; color: var(--muted); }
+.pips small { margin-left: 4px; font-size: .78rem; font-weight: 600; color: var(--muted); }
 .pips.mastered { font-size: .75rem; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .08em; }
 
 /* ---------- Figures ---------- */

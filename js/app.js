@@ -91,10 +91,15 @@ function flushNotices() {
   P.save(state);
 }
 
-function pips(hs) {
+// Days that counted towards the next level (target reached with good form), as dots;
+// with `label`, also in words.
+function pips(hs, { label = false } = {}) {
   if (hs.mastered) return '<span class="pips mastered">Mastered</span>';
-  return `<span class="pips" title="${hs.qualDays.length} of ${P.QUALIFY_DAYS} days to level up">${
-    Array.from({ length: P.QUALIFY_DAYS }, (_, i) => `<i class="${i < hs.qualDays.length ? 'on' : ''}"></i>`).join('')}</span>`;
+  const next = hs.level < 4 ? `level ${hs.level + 1}` : 'mastery';
+  const words = `${hs.qualDays.length} of ${P.QUALIFY_DAYS} days to ${next}`;
+  return `<span class="pips" title="${words}">${
+    Array.from({ length: P.QUALIFY_DAYS }, (_, i) => `<i class="${i < hs.qualDays.length ? 'on' : ''}"></i>`).join('')}${
+    label ? `<small>${words}</small>` : ''}</span>`;
 }
 
 // ---------- Home ----------
@@ -128,7 +133,7 @@ function renderHero() {
   $('#hero-fig').innerHTML = figureSVG(hero.figure(hs.level));
   $('#hero-name').textContent = hero.name;
   $('#hero-native').textContent = hero.native;
-  $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name} ${pips(hs)}`;
+  $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name} ${pips(hs, { label: true })}`;
   $('#hero-desc').textContent = lv.desc;
   $('#hero-video').href = videoUrl(hero);
   const best = hs.best[hs.level];
@@ -234,7 +239,8 @@ function renderSheetLevel() {
     ${boostTags()}
     ${hold.camera ? `<span class="tag">${viewHint(hold, sheetLevel)}</span>` : '<span class="tag">Honour system</span>'}
     ${best ? `<span class="tag">Best ${amount(hold, best)}</span>` : ''}
-    ${!locked && sheetLevel === hs.level && !hs.mastered ? pips(hs) : ''}`;
+    ${!locked && sheetLevel === hs.level && !hs.mastered ? `${pips(hs, { label: true })}
+      <span class="lvl-rule">Reach the target on ${P.QUALIFY_DAYS} different days${hold.camera ? ` (with ${P.QUALIFY_FORM}+ average form on camera)` : ''} to move up a level.</span>` : ''}`;
 }
 
 $('#hs-buy').onclick = () => {
