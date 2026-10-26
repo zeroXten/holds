@@ -7,7 +7,11 @@ export const STYLE_MULT = { hard: 1, soft: 0.5 }; // gentle (soft) holds earn at
 // Coin rate for a hold at a level, before form, bonus time and hold of the day.
 export const coinRateFor = (hold, level) => LEVEL_MULT[level - 1] * (STYLE_MULT[hold.style] ?? 1);
 export const TARGET_BONUS = 2;               // coins for reaching a target (split across sides)
-export const DAILY_MULT = 3;                 // hold of the day earns this many times the coins
+export const DAILY_MULT = 3;                 // hold of the day: this many times the coins, on its first session each day
+export const DAILY_MIN_SECONDS = 10;         // ...a session this long uses up the day's multiplier
+export const STREAK_STEP = 0.05;             // +5% coins per streak day...
+export const STREAK_MAX_DAYS = 10;           // ...up to +50%
+export const MILESTONE_DAY_MULT = 2;         // reaching a streak milestone doubles your coins for the rest of that day
 export const HONOUR_FORM = 0.75;             // form factor without the camera
 
 // Bonus time past the target, as a fraction of the target: the further you go, the faster coins come.
@@ -48,15 +52,16 @@ export const BETS = [
   { id: 'form90', name: 'Perfect form', desc: 'Reach a target with 90+ average form today (camera on).', stake: 10, payout: 25, days: 1 },
   // Bonus time pays in steps as you reach them, rather than all at the end.
   {
-    id: 'bonus', name: 'Bonus time', stake: 10, payout: 100, days: 1,
-    desc: 'Hold past your target today, all in one hold. Bonus time is measured against that hold’s own target. Pays at each step: half again, double, twice over and four times over.',
+    id: 'bonus', name: 'Bonus time', stake: 15, payout: 55, days: 1,
+    desc: 'Hold past your target today, all in one hold at your current level. Bonus time is measured against that hold’s own target, and gentle (soft) holds count half. Pays at each step: half again, double, twice over and three times over.',
     // `x`: bonus time as a multiple of the target (0.5 = half the target's length again).
-    steps: [{ x: 0.5, name: 'Half again', coins: 20 }, { x: 1, name: 'Double', coins: 15 }, { x: 2, name: 'Twice over', coins: 25 }, { x: 4, name: 'Four times over', coins: 40 }],
+    steps: [{ x: 0.5, name: 'Half again', coins: 10 }, { x: 1, name: 'Double', coins: 10 }, { x: 2, name: 'Twice over', coins: 15 }, { x: 3, name: 'Three times over', coins: 20 }],
   },
   // Retired (too easy to win while your bests are new); kept so old bets and history still read.
   { id: 'pb', name: 'New personal best', desc: 'Beat one of your personal bests today.', stake: 10, payout: 25, days: 1, retired: true },
-  { id: 'week5', name: 'Five-day week', desc: 'Train on 5 of the next 7 days.', stake: 40, payout: 100, days: 7 },
-  { id: 'streak7', name: 'Unbroken week', desc: 'Train every day for 7 days. Planned rest days count; freezes don’t.', stake: 50, payout: 125, days: 7 },
+  // Weekly bets run in a slot of their own, alongside the daily ones.
+  { id: 'week5', name: 'Five-day week', desc: 'Train on 5 of the next 7 days.', stake: 30, payout: 90, days: 7 },
+  { id: 'streak7', name: 'Unbroken week', desc: 'Train every day for 7 days. Planned rest days count; freezes don’t.', stake: 40, payout: 140, days: 7 },
 ];
 
 // ---- Level test-out: try the next level early; it only costs coins if you don't pass ----
@@ -102,7 +107,8 @@ export const THEMES = [
 ];
 
 // ---- Streak milestones: a one-off reward each time a streak reaches these lengths ----
-// (on top of the everyday streak bonus of +5% coins per day, up to +50%)
+// (on top of the everyday streak bonus of +5% coins per day, up to +50%), and the
+// rest of that day earns double (MILESTONE_DAY_MULT)
 export const STREAK_MILESTONES = [
   { days: 7, name: '1-week streak', coins: 20, freeze: true },
   { days: 14, name: '2-week streak', coins: 40 },

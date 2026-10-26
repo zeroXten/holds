@@ -71,7 +71,7 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
     P.recordSession(s, { holdId, level: 1, held: 31, target: 30, coins: 0, avgForm: 0, camera: false, reached: true });
   }
   check('bet won after 3 holds', s.bet === null && s.coins === 90 + 25, `coins ${s.coins}`);
-  check('no second bet the same day', !P.placeBet(s, 'form90', today) && P.betBlocker(s, 'form90', today).startsWith('One bet a day'));
+  check('no second bet the same day', !P.placeBet(s, 'form90', today) && P.betBlocker(s, 'form90', today).startsWith('One daily bet a day'));
   check('a new bet the next day', P.placeBet(s, 'form90', P.addDays(today, 1)));
   check('bet logged', s.betLog[0]?.result === 'won' && s.betLog[0].payout === 25 && s.lifetime >= 25);
 
@@ -82,9 +82,21 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
 
   const u = fresh(100);
   P.placeBet(u, 'streak7', '2026-10-20');
-  u.bet.days.push('2026-10-20');
-  P.settleBet(u, '2026-10-22');  // missed the 21st
-  check('unbroken week lost on a missed day', u.bet === null);
+  check('weekly bet in its own slot', u.weekBet?.id === 'streak7' && u.bet === null && u.coins === 60);
+  check('daily bet alongside a weekly one', P.placeBet(u, 'holds3', '2026-10-20') && u.bet?.id === 'holds3');
+  check('one weekly bet at a time', !P.placeBet(u, 'week5', '2026-10-21'));
+  u.weekBet.days.push('2026-10-20');
+  P.settleBets(u, '2026-10-22');  // missed the 21st
+  check('unbroken week lost on a missed day', u.weekBet === null);
+}
+
+// An old save with a weekly bet in the one bet slot moves it to the weekly slot.
+{
+  store.clear();
+  store.set('holds.v1', JSON.stringify({ version: 2, coins: 0, lifetime: 0, unlocked: [], purchased: [], holds: {}, history: [], days: {}, badges: {}, settings: {},
+    bet: { id: 'week5', start: '2026-10-25', end: '2026-10-31', holds: [], time: 0, days: [], done: false } }));
+  const t = P.load();
+  check('weekly bet migrates', t.bet === null && t.weekBet?.id === 'week5');
 }
 
 // Bonus time bet: steps are relative to the hold's target, must be reached within a
@@ -92,18 +104,24 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
 {
   const s = fresh(100);
   const today = P.dayKey();
-  check('place bonus bet', P.placeBet(s, 'bonus', today) && s.coins === 90);
+  check('place bonus bet', P.placeBet(s, 'bonus', today) && s.coins === 85);
   const rec = bonus => P.recordSession(s, { holdId: 'horse', level: 1, held: 30 + bonus * 30, target: 30, coins: 0, avgForm: 0, camera: false, reached: true, bonus });
   const a = rec(0.3);
-  check('no step at 0.3×', a.betSteps.length === 0 && s.coins === 90);
+  check('no step at 0.3×', a.betSteps.length === 0 && s.coins === 85);
   const b = rec(0.3);
-  check('two short holds don\'t add up', b.betSteps.length === 0 && s.coins === 90, `coins ${s.coins}`);
+  check('two short holds don\'t add up', b.betSteps.length === 0 && s.coins === 85, `coins ${s.coins}`);
+  const soft = P.recordSession(s, { holdId: 'weituo', level: 1, held: 120, target: 60, coins: 0, avgForm: 0, camera: false, reached: true, bonus: 0.8 });
+  check('soft holds count half', soft.betSteps.length === 0 && s.coins === 85, `coins ${s.coins}`);
   const c = rec(0.6);
-  check('half again in one hold', c.betSteps.length === 1 && c.betSteps[0].name === 'Half again' && s.coins === 110, `coins ${s.coins}`);
+  check('half again in one hold', c.betSteps.length === 1 && c.betSteps[0].name === 'Half again' && s.coins === 95, `coins ${s.coins}`);
+  s.holds.horse.level = 2;
+  const low = rec(1.2);
+  check('a level below yours doesn\'t count', low.betSteps.length === 0 && s.coins === 95, `coins ${s.coins}`);
+  s.holds.horse.level = 1;
   const d = rec(1.2);
-  check('double in one hold', d.betSteps.length === 1 && d.betSteps[0].name === 'Double' && s.coins === 125, `coins ${s.coins}`);
+  check('double in one hold', d.betSteps.length === 1 && d.betSteps[0].name === 'Double' && s.coins === 105, `coins ${s.coins}`);
   const r = P.settleBet(s, P.addDays(today, 1), { notify: false });
-  check('time up after two steps is a win, paid as it went', r.result === 'won' && r.payout === 35 && s.coins === 125 && s.betLog[0].payout === 35, JSON.stringify({ result: r.result, payout: r.payout, coins: s.coins }));
+  check('time up after two steps is a win, paid as it went', r.result === 'won' && r.payout === 20 && s.coins === 105 && s.betLog[0].payout === 20, JSON.stringify({ result: r.result, payout: r.payout, coins: s.coins }));
 }
 
 // The personal best bet is retired: can't be placed, and a running one is refunded.
@@ -163,6 +181,31 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   const again = P.recordSession(s, { holdId: 'bow', level: 1, held: 31, target: 30, coins: 0, avgForm: 0, camera: false, reached: true });
   check('paid once per streak', again.milestones.length === 0 && s.coins === 20);
   check('next milestone', P.nextMilestone(s, today).days === 14);
+}
+
+// A milestone makes the rest of the day double coins, including the session that reached it.
+{
+  const s = fresh(0);
+  const today = P.dayKey();
+  for (let i = 6; i >= 1; i--) train(s, P.addDays(today, -i));
+  check('streak bonus counts today', P.coinBoost(s, today).days === 7 && Math.abs(P.coinBoost(s, today).streakMult - 1.35) < 1e-9 && !P.coinBoost(s, today).double);
+  const o = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 10, avgForm: 0, camera: false, reached: true });
+  check('milestone doubles its session', o.milestoneDouble === 10 && o.coins === 20 && s.coins === 20 + 20, JSON.stringify({ coins: o.coins, wallet: s.coins }));
+  const b = P.coinBoost(s, today);
+  check('rest of the day is doubled', b.double && Math.abs(b.total - 2 * 1.35) < 1e-9);
+  const again = P.recordSession(s, { holdId: 'bow', level: 1, held: 31, target: 30, coins: 10, avgForm: 0, camera: false, reached: true, boostDouble: true });
+  check('already-doubled sessions aren\'t doubled again', again.milestoneDouble === 0 && again.coins === 10);
+}
+
+// The hold of the day's multiplier is used up by its first proper session.
+{
+  const s = fresh(0);
+  const hold = P.dailyHold(s);
+  check('daily available', P.dailyAvailable(s, hold.id));
+  P.recordSession(s, { holdId: hold.id, level: 1, held: 5, target: 30, coins: 1, avgForm: 0, camera: false, reached: false, daily: true });
+  check('a very short go doesn\'t use it', P.dailyAvailable(s, hold.id));
+  P.recordSession(s, { holdId: hold.id, level: 1, held: 31, target: 30, coins: 9, avgForm: 0, camera: false, reached: true, daily: true });
+  check('first proper session uses it', P.isDaily(s, hold.id) && !P.dailyAvailable(s, hold.id));
 }
 
 console.log(failures ? `${failures} failure(s)` : 'all passed');

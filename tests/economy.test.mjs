@@ -69,7 +69,7 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   // Recording a session adds coins to the wallet and to lifetime (rank).
   const before = { coins: s.coins, lifetime: s.lifetime };
   const o = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 4.25, avgForm: 0, camera: false, reached: true, daily: false });
-  check('session coins recorded', s.coins === before.coins + o.coins && s.lifetime === before.lifetime + o.coins && o.coins === Math.round(4.25 * o.streakMult), `${o.coins} coins`);
+  check('session coins recorded', s.coins === before.coins + o.coins && s.lifetime === before.lifetime + o.coins && o.coins === 4, `${o.coins} coins`);
 }
 
 // Version 1 progress converts: points → coins, practised holds stay unlocked.

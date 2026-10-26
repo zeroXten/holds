@@ -25,11 +25,12 @@ const GIVE_UP_AFTER = 3.5; // ...once the target has been reached
 const SWITCH_TIMEOUT = 15; // seconds allowed to change sides
 
 export class Session {
-  constructor({ hold, level, camera, strictness = 'normal', daily = false, now }) {
+  // `boost`: extra multipliers from outside the hold (streak, milestone day).
+  constructor({ hold, level, camera, strictness = 'normal', daily = false, boost = 1, now }) {
     Object.assign(this, { hold, level, camera, daily, now0: now, last: now });
     this.target = hold.levels[level - 1].target;
     // Coins per second before form and bonus-time multipliers.
-    this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1);
+    this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1) * boost;
     this.thr = STRICTNESS[strictness];
     this.required = requiredFor(hold, level);
     this.state = camera ? 'framing' : 'countdown';

@@ -5,6 +5,7 @@ import { HOLDS, AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
   REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
+  DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_DAYS, MILESTONE_DAY_MULT,
 } from './economy.js';
 
 const KEY = 'holds.v1';
@@ -51,7 +52,8 @@ const blank = () => ({
   holds: {}, history: [], days: {}, badges: {}, settings: { ...DEFAULT_SETTINGS },
   // covered: days that keep the streak alive without training ('rest' | 'freeze' | 'repair')
   streak: { freezes: 0, covered: {}, broken: null, claimed: {} },  // claimed: milestone days → the streak's start date
-  bet: null,
+  bet: null,      // today's bet
+  weekBet: null,  // a weekly bet, running alongside
   betLog: [],  // settled bets, newest first
   temple: { tier: 0, owned: [], theme: 'dawn', themes: ['dawn'] },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
@@ -82,6 +84,8 @@ export function load() {
       const fresh = blank();
       // A running "new personal best" bet (now retired) gets its stake back.
       if (data.bet?.id === 'pb') { data.coins = (data.coins ?? 0) + 10; data.bet = null; data.notices = [...(data.notices ?? []), 'The personal best bet has been retired: your 10-coin stake is back.']; }
+      // Weekly bets used to share the one bet slot; they have their own now.
+      if (data.bet && (BETS.find(b => b.id === data.bet.id)?.days ?? 1) > 1) { data.weekBet = data.bet; data.bet = null; }
       // The Temple Hall used to be a decoration; now it's a stage of the temple.
       if (data.temple?.owned?.includes('hall')) {
         data.temple.owned = data.temple.owned.filter(id => id !== 'hall');
@@ -139,7 +143,27 @@ export function streakStart(state, today = dayKey()) {
   return start;
 }
 
+// What each day from `from` to `to` was (or is planned to be), for the streak strip:
+// 'trained', 'rest', 'freeze', 'repair', 'missed', or 'open' for today and later.
+export function dayMarks(state, from, to, today = dayKey()) {
+  const out = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    const mark = trained(state, d) ? 'trained' : state.streak.covered[d] ?? (d >= today ? 'open' : 'missed');
+    out.push({ day: d, mark });
+  }
+  return out;
+}
+
 export const nextMilestone = (state, today = dayKey()) => STREAK_MILESTONES.find(m => m.days > streak(state, today)) ?? null;
+
+// Coin multipliers from outside the hold, for a session starting now: the streak bonus
+// (counting today, as training today extends the streak) and a milestone day's double.
+export function coinBoost(state, today = dayKey()) {
+  const days = trained(state, today) ? streak(state, today) : streak(state, today) + 1;
+  const streakMult = 1 + STREAK_STEP * Math.min(days, STREAK_MAX_DAYS);
+  const double = state.doubleDay === today;
+  return { days, streakMult, double, total: streakMult * (double ? MILESTONE_DAY_MULT : 1) };
+}
 
 // Pays out any milestone the current streak has reached and not yet claimed.
 function claimMilestones(state, today) {
@@ -247,12 +271,17 @@ export function cancelRest(state, day, today = dayKey()) {
 
 export const betDef = id => BETS.find(b => b.id === id);
 
-// One bet a day, won or lost, so an easy bet can't be farmed by placing it again and again.
+// Daily bets go in `bet`, weekly ones in `weekBet`, so a week-long bet doesn't stop you betting day to day.
+export const betSlot = def => (def.days > 1 ? 'weekBet' : 'bet');
+
+// One daily bet a day, won or lost, so an easy bet can't be farmed by placing it again
+// and again; and one weekly bet at a time.
 export function betBlocker(state, id, today = dayKey()) {
   const def = betDef(id);
   if (def.retired) return 'This bet has been retired.';
-  if (state.bet) return 'Finish your current bet first.';
-  if (state.lastBetDay === today) return 'One bet a day: the next one opens tomorrow.';
+  const slot = betSlot(def);
+  if (state[slot]) return slot === 'weekBet' ? 'Finish your weekly bet first.' : 'Finish today’s bet first.';
+  if (slot === 'bet' && state.lastBetDay === today) return 'One daily bet a day: the next one opens tomorrow.';
   if (id === 'holds3' && HOLDS.filter(h => isUnlocked(state, h.id)).length < 3) return 'Needs 3 unlocked holds.';
   if (state.coins < def.stake) return `Needs ${def.stake} coins.`;
   return null;
@@ -262,15 +291,15 @@ export function placeBet(state, id, today = dayKey()) {
   if (betBlocker(state, id, today)) return false;
   const def = betDef(id);
   state.coins -= def.stake;
-  state.lastBetDay = today;
-  state.bet = { id, start: today, end: addDays(today, def.days - 1), holds: [], time: 0, days: [], done: false, bonus: 0, paid: 0, paidCoins: 0 };
+  if (betSlot(def) === 'bet') state.lastBetDay = today;
+  state[betSlot(def)] = { id, start: today, end: addDays(today, def.days - 1), holds: [], time: 0, days: [], done: false, bonus: 0, paid: 0, paidCoins: 0 };
   save(state);
   return true;
 }
 
-// Progress text and fraction for the active bet.
-export function betProgress(state) {
-  const b = state.bet;
+// Progress text and fraction for an active bet ('bet' or 'weekBet').
+export function betProgress(state, slot = 'bet') {
+  const b = state[slot];
   if (!b) return null;
   const def = betDef(b.id);
   const p = {
@@ -292,8 +321,7 @@ function bonusProgress(def, b) {
     next ? `Best hold: ${x.toFixed(1)}× its target in bonus · next: ${next.name} (${next.x}×, +${next.coins})` : `Best hold: ${x.toFixed(1)}× in bonus · every step reached`];
 }
 
-function betWon(state) {
-  const b = state.bet;
+function betWon(state, b) {
   switch (b.id) {
     case 'bonus': return b.paid >= betDef('bonus').steps.length;
     case 'holds3': return b.holds.length >= 3;
@@ -311,12 +339,12 @@ function betWon(state) {
 
 // Settles the active bet: a win as soon as it's met, a loss once its time is up
 // (or, for the unbroken week, as soon as a day is missed).
-export function settleBet(state, today = dayKey(), { notify = true } = {}) {
-  const b = state.bet;
+export function settleBet(state, today = dayKey(), { notify = true, slot = 'bet' } = {}) {
+  const b = state[slot];
   if (!b) return null;
   const def = betDef(b.id);
   let result = null;
-  if (betWon(state)) result = 'won';
+  if (betWon(state, b)) result = 'won';
   else if (today > b.end) result = 'lost';
   else if (b.id === 'streak7') {
     for (let d = b.start; d < today; d = addDays(d, 1)) {
@@ -324,7 +352,7 @@ export function settleBet(state, today = dayKey(), { notify = true } = {}) {
     }
   }
   if (!result) return null;
-  const progress = betProgress(state).text;
+  const progress = betProgress(state, slot).text;
   let payout = def.payout;
   if (def.steps) {
     // Stepped bets have paid out as each step was reached; time up after at least one is a win.
@@ -334,10 +362,14 @@ export function settleBet(state, today = dayKey(), { notify = true } = {}) {
   if (notify) state.notices.push(result === 'won' ? `Bet won: ${def.name}! +${payout} coins.` : `Bet lost: ${def.name}. Better luck next time.`);
   state.betLog.unshift({ id: def.id, result, stake: def.stake, payout, progress, at: new Date().toISOString() });
   state.betLog.splice(30);
-  state.bet = null;
+  state[slot] = null;
   save(state);
   return { result, def, progress, payout, steps: def.steps ? b.paid : null };
 }
+
+// Settles both slots; returns the bets that finished.
+export const settleBets = (state, today = dayKey(), opts = {}) =>
+  ['bet', 'weekBet'].map(slot => settleBet(state, today, { ...opts, slot })).filter(Boolean);
 
 // ---- The temple ----
 
@@ -483,6 +515,8 @@ export function dailyHold(state, today = dayKey()) {
 }
 
 export const isDaily = (state, id) => state.daily?.day === dayKey() && state.daily.holdId === id;
+// The hold of the day's multiplier is for its first proper session each day.
+export const dailyAvailable = (state, id) => isDaily(state, id) && !state.daily.used;
 
 export function totals(state) {
   const time = state.history.reduce((t, h) => t + h.held, 0);
@@ -519,14 +553,15 @@ export function recordSession(state, s) {
   const hold = HOLDS.find(h => h.id === s.holdId);
   const hs = holdState(state, s.holdId);
   const before = { rank: rankFor(state.lifetime), streak: streak(state) };
-  const firstToday = !state.days[today];
   // One-sided holds only count as reached when both sides hit their target.
   const reached = s.reached ?? s.held >= s.target;
 
-  // Streak bonus: +5% per day of streak (including today), up to +50%.
-  const streakAfter = firstToday ? before.streak + 1 : Math.max(before.streak, 1);
-  const streakMult = 1 + 0.05 * Math.min(streakAfter, 10);
-  const coins = Math.round(s.coins * streakMult);
+  // The session's coins already include the streak bonus and any milestone-day double
+  // (see coinBoost), passed in as s.boost.
+  let coins = Math.round(s.coins);
+  if (s.daily && isDaily(state, s.holdId) && s.held >= DAILY_MIN_SECONDS) state.daily.used = true;
+  // Bonus time only counts at your current level (or a level test), and soft holds count half.
+  const bonusX = s.level >= hs.level ? (s.bonus ?? 0) * (hold.style === 'soft' ? 0.5 : 1) : 0;
 
   // Personal bests: seconds held, or cycles for flowing holds.
   const measure = s.unit === 'cycles' ? s.count : Math.round(s.held * 10) / 10;
@@ -568,17 +603,16 @@ export function recordSession(state, s) {
   });
   if (state.history.length > 1000) state.history.splice(0, state.history.length - 1000);
 
-  // Bet progress, then settle it (the stake was paid when the bet was placed).
+  // Bet progress, then settle (the stakes were paid when the bets were placed).
   const betSteps = [];  // bonus time steps reached in this session
-  if (state.bet) {
-    const b = state.bet;
+  for (const b of [state.bet, state.weekBet].filter(Boolean)) {
     if (reached && !b.holds.includes(s.holdId)) b.holds.push(s.holdId);
     b.time += s.held;
     if (!b.days.includes(today)) b.days.push(today);
     if ((b.id === 'form90' && reached && s.camera && s.avgForm >= 90) || (b.id === 'pb' && pb)) b.done = true;
     if (b.id === 'bonus') {
       // Steps are reached within a single hold, so keep today's best, not a running total.
-      b.bonus = Math.max(b.bonus ?? 0, s.bonus ?? 0);
+      b.bonus = Math.max(b.bonus ?? 0, bonusX);
       const steps = betDef('bonus').steps;
       while (b.paid < steps.length && b.bonus >= steps[b.paid].x) {
         const step = steps[b.paid];
@@ -590,8 +624,20 @@ export function recordSession(state, s) {
       }
     }
   }
-  const bet = settleBet(state, today, { notify: false });  // the summary screen shows it
+  const bets = settleBets(state, today, { notify: false });  // the summary screen shows them
   const milestones = claimMilestones(state, today);
+  // A milestone makes today a double-coins day, starting with this session.
+  let milestoneDouble = 0;
+  if (milestones.length && state.doubleDay !== today) {
+    state.doubleDay = today;
+    if (!s.boostDouble) {
+      milestoneDouble = coins * (MILESTONE_DAY_MULT - 1);
+      coins += milestoneDouble;
+      state.coins += milestoneDouble; state.lifetime += milestoneDouble;
+      state.days[today].coins += milestoneDouble;
+      state.history.at(-1).coins = coins;
+    }
+  }
 
   // Badges
   const t = totals(state);
@@ -618,8 +664,8 @@ export function recordSession(state, s) {
   // The cheapest locked hold's price, to nudge towards the next unlock.
   const locked = HOLDS.filter(h => !isUnlocked(state, h.id));
   return {
-    coins, baseCoins: s.coins, streakMult, streak: st, reached, pb, prevBest,
-    qualified, qualDays: hs.qualDays.length, levelUp, mastered, newLevel: hs.level, test, bet, betSteps, milestones,
+    coins, streak: st, reached, pb, prevBest, milestoneDouble,
+    qualified, qualDays: hs.qualDays.length, levelUp, mastered, newLevel: hs.level, test, bets, betSteps, milestones,
     badges: earn, rankUp: rankFor(state.lifetime).index > before.rank.index, rank: rankFor(state.lifetime),
     wallet: state.coins, nextUnlock: locked.length ? unlockPrice(state) : null,
   };

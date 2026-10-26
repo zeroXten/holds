@@ -1,7 +1,7 @@
 import { HOLDS, HOLD_GROUPS, holdById, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
   coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS, FREEZE_PRICE, FREEZE_MAX,
-  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice,
+  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice, MILESTONE_DAY_MULT,
 } from './economy.js';
 import { drawTemple, SCENE_H } from './temple.js';
 import { figureSVG } from './figure.js';
@@ -29,6 +29,14 @@ const COIN = '<svg viewBox="0 0 24 24" class="ico coin"><path fill-rule="evenodd
 const LOCK = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3z"/></svg>';
 // "Soft · Arms & shoulders · Balance": style, then areas from most to least worked.
 const areaTags = hold => [STYLES[hold.style], ...Object.entries(hold.areas).sort((a, b) => b[1] - a[1]).map(([a]) => AREAS[a])];
+// The streak bonus and milestone-day double, as short notes: " · +25% streak · 2× day".
+const boostParts = b => [
+  ...(b.streakMult > 1 ? [`+${Math.round((b.streakMult - 1) * 100)}% streak`] : []),
+  ...(b.double ? [`${MILESTONE_DAY_MULT}× milestone day`] : []),
+];
+const boostText = b => boostParts(b).map(t => ` · ${t}`).join('');
+const boostTags = () => boostParts(P.coinBoost(state)).map(t => `<span class="tag strong">${t}</span>`).join('');
+
 const coinRate = (hold, level) => `${coinRateFor(hold, level)}× coins${hold.style === 'soft' ? ' (soft)' : ''}`;
 
 const fmt = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -90,6 +98,7 @@ function renderHome() {
   $('#freezes').textContent = state.streak.freezes ? `❄${state.streak.freezes}` : '';
   $('#wallet').textContent = state.coins.toLocaleString();
   document.documentElement.dataset.scene = state.temple.theme;
+  renderStreakStrip();
   renderHomeCards();
   drawScenes(true);
   $('#intro').hidden = state.history.length > 0;
@@ -103,7 +112,8 @@ function renderHero() {
   const hs = P.holdState(state, hero.id);
   const daily = P.isDaily(state, hero.id);
   $('#hero').classList.toggle('daily', daily);
-  $('#hero-kicker').innerHTML = daily ? `Hold of the day <span class="mult">${DAILY_MULT}× coins</span>` : 'Random pick';
+  $('#hero-kicker').innerHTML = daily
+    ? `Hold of the day <span class="mult">${P.dailyAvailable(state, hero.id) ? `${DAILY_MULT}× coins` : `${DAILY_MULT}× used today`}</span>` : 'Random pick';
   $('#back-daily').hidden = daily;
   const lv = hero.levels[hs.level - 1];
   $('#hero-fig').innerHTML = figureSVG(hero.figure(hs.level));
@@ -137,7 +147,7 @@ function renderGrid() {
       </button>`;
     }
     return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''} ${tired ? 'tired' : ''}" data-hold="${h.id}">
-      ${P.isDaily(state, h.id) ? `<span class="card-flag">${DAILY_MULT}× today</span>` : tired ? `<span class="card-flag rest">${over.name} resting</span>` : ''}
+      ${P.isDaily(state, h.id) ? `<span class="card-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : tired ? `<span class="card-flag rest">${over.name} resting</span>` : ''}
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
       ${kind}
@@ -211,7 +221,8 @@ function renderSheetLevel() {
   $('#hs-meta').innerHTML = `
     <span class="tag strong">${targetText(hold, lv.target)}</span>
     <span class="tag">${coinRate(hold, sheetLevel)}</span>
-    ${P.isDaily(state, hold.id) ? `<span class="tag strong">Hold of the day: ${DAILY_MULT}× coins</span>` : ''}
+    ${P.isDaily(state, hold.id) ? `<span class="tag strong">${P.dailyAvailable(state, hold.id) ? `Hold of the day: ${DAILY_MULT}× coins on your first go` : `Hold of the day: ${DAILY_MULT}× used today`}</span>` : ''}
+    ${boostTags()}
     ${hold.camera ? `<span class="tag">${viewHint(hold)}</span>` : '<span class="tag">Honour system</span>'}
     ${best ? `<span class="tag">Best ${amount(hold, best)}</span>` : ''}
     ${!locked && sheetLevel === hs.level && !hs.mastered ? pips(hs) : ''}`;
@@ -275,9 +286,11 @@ async function startSession(hold, level, useCamera, { test = false } = {}) {
   run.source = source;
   run.framer = new AutoFrame({ enabled: state.settings.autoframe });
   run.lastFrameAt = performance.now();
+  run.boost = P.coinBoost(state);
+  run.daily = P.dailyAvailable(state, hold.id);
   run.session = createSession({
     hold, level, camera: useCamera, strictness: state.settings.strictness,
-    daily: P.isDaily(state, hold.id), now: source ? source.now() : clock(),
+    daily: run.daily, boost: run.boost.total, now: source ? source.now() : clock(),
   });
   run.wholeCoins = 0;
   run.wake = await wakeLock();
@@ -334,7 +347,7 @@ function updateHud(v) {
   // One-sided holds show the current side's time against that side's target.
   $('#s-time').textContent = fmt(v.sideHeld);
   $('#s-target').textContent = ` / ${fmt(v.sideTarget)}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${run.test ? ' · Level test' : ''}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.test ? ' · Level test' : ''}`;
   // Whole coins, plus a bar filling towards the next one; a chime and a pop as each lands.
   const whole = Math.floor(v.coins);
   $('#s-coins').textContent = whole.toLocaleString();
@@ -407,7 +420,7 @@ function flowStep(v) {
 function updateFlowHud(v) {
   $('#s-time').textContent = v.count;
   $('#s-target').textContent = ` / ${v.goal}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.daily ? ` · ${DAILY_MULT}× today` : ''}${run.test ? ' · Level test' : ''}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.test ? ' · Level test' : ''}`;
   const whole = Math.floor(v.coins);
   $('#s-coins').textContent = whole.toLocaleString();
   $('#s-coin-next').style.width = `${Math.round((v.coins % 1) * 100)}%`;
@@ -550,8 +563,9 @@ function endSession() {
 let lastRun = null;
 
 function finishSession() {
-  const { session, hold, level, camera, test } = run;
-  const result = { ...session.result, test };
+  const { session, hold, level, camera, test, boost } = run;
+  const result = { ...session.result, test, boostDouble: boost.double };
+  const sumBoost = boost;
   stopRun();
   lastRun = { hold, level, camera, test };
   if (result.held < 3) {
@@ -561,12 +575,12 @@ function finishSession() {
     return;
   }
   const outcome = P.recordSession(state, result);
-  renderSummary(hold, level, result, outcome);
+  renderSummary(hold, level, result, outcome, sumBoost);
 }
 
 // ---------- Summary ----------
 
-function renderSummary(hold, level, r, o) {
+function renderSummary(hold, level, r, o, boost) {
   show('summary');
   const pct = r.unit === 'cycles' ? r.count / r.goal : r.held / r.target;
   $('#sum-kicker').textContent = `${hold.name} · Level ${level}`;
@@ -580,15 +594,17 @@ function renderSummary(hold, level, r, o) {
   countUp($('#sum-coins'), o.coins);
   const notes = [
     ...(r.daily ? [`hold of the day ${DAILY_MULT}×`] : []),
-    ...(o.streakMult > 1 ? [`${o.streak}-day streak +${Math.round((o.streakMult - 1) * 100)}%`] : []),
+    ...(boost.streakMult > 1 ? [`${boost.days}-day streak +${Math.round((boost.streakMult - 1) * 100)}%`] : []),
+    ...(boost.double || o.milestoneDouble ? [`milestone day ${MILESTONE_DAY_MULT}×`] : []),
   ];
   // What to do with the coins: the next unlock, or just the wallet.
   const wallet = o.nextUnlock
     ? (o.wallet >= o.nextUnlock ? `You have ${o.wallet} coins: enough to unlock a new hold!` : `You have ${o.wallet} coins. ${o.nextUnlock - o.wallet} more to unlock a new hold.`)
     : `You have ${o.wallet} coins.`;
   const stepCoins = o.betSteps.reduce((t, st) => t + st.coins, 0);
-  const betLine = stepCoins ? `Plus ${stepCoins} coins from your bonus time bet.<br>`
-    : o.bet?.result === 'won' && !o.bet.def.steps ? `Plus ${o.bet.payout ?? o.bet.def.payout} coins from your bet.<br>` : '';
+  const wonCoins = o.bets.filter(b => b.result === 'won' && !b.def.steps).reduce((t, b) => t + b.payout, 0);
+  const betLine = (stepCoins ? `Plus ${stepCoins} coins from your bonus time bet.<br>` : '')
+    + (wonCoins ? `Plus ${wonCoins} coins from your bet.<br>` : '');
   $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${betLine}${wallet}`;
   // Level test, bet and streak milestone results.
   const extra = [];
@@ -597,14 +613,14 @@ function renderSummary(hold, level, r, o) {
       ? `<div class="banner good">Level test passed! Level ${level} is unlocked.</div>`
       : `<div class="banner bad">Level test not passed: −${o.test.price} coins. You need the full target${r.camera ? ` with ${TEST_FORM}+ form` : ''}.</div>`);
   }
-  if (o.bet) extra.push(o.bet.result === 'won' ? `<div class="banner good">Bet won: ${o.bet.def.name}! +${o.bet.def.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${o.bet.def.name}.</div>`);
-  for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! +${m.coins} coins${m.freeze ? ' and a free streak freeze' : ''}.</div>`);
+  for (const b of o.bets) extra.push(b.result === 'won' ? `<div class="banner good">Bet won: ${b.def.name}! +${b.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${b.def.name}.</div>`);
+  for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! +${m.coins} coins${m.freeze ? ' and a free streak freeze' : ''}, and ${MILESTONE_DAY_MULT}× coins for the rest of today.</div>`);
   $('#sum-extra').innerHTML = extra.join('');
   if (o.test?.passed) setTimeout(() => audio.play('level'), 300);
   // The big moments get the full-screen treatment, once the summary has appeared.
   setTimeout(() => {
     o.betSteps.forEach(celebrateBetStep);
-    if (o.bet) celebrateBet(o.bet);
+    o.bets.forEach(celebrateBet);
     o.milestones.forEach(celebrateMilestone);
   }, 900);
   $('#sum-stats').innerHTML = `
@@ -949,9 +965,42 @@ function celebrateBetStep(st) {
 function celebrateMilestone(m) {
   celebrate({
     win: true, kicker: 'Streak milestone', title: `🔥 ${m.name}!`, coins: m.coins,
-    msg: m.freeze ? 'Bonus coins and a free streak freeze. Keep the fire going.' : 'Bonus coins for showing up, day after day.',
+    msg: `${m.freeze ? 'Bonus coins and a free streak freeze' : 'Bonus coins for showing up, day after day'}, and every hold earns ${MILESTONE_DAY_MULT}× coins for the rest of today.`,
     say: `${m.name}! Plus ${m.coins} coins`,
   });
+}
+
+// ---------- Streak strip: the last week, today, and the days to the next milestone ----------
+
+const SHOW_PAST = 6, SHOW_AHEAD = 7;
+const MARK_ICON = { trained: '✓', rest: 'z', freeze: '❄', repair: '✓', missed: '', open: '' };
+
+function renderStreakStrip() {
+  const today = P.dayKey(), n = P.streak(state), boost = P.coinBoost(state);
+  const doneToday = !!state.days[today];
+  const next = P.nextMilestone(state);
+  // The day the next milestone lands, training every day from now.
+  const toGo = next ? next.days - n - (doneToday ? 0 : 1) : null;
+  const goalDay = next ? P.addDays(today, toGo) : null;
+  const ahead = next ? Math.min(toGo, SHOW_AHEAD) : 3;
+  const days = P.dayMarks(state, P.addDays(today, -SHOW_PAST), P.addDays(today, ahead));
+  const letter = d => new Date(d + 'T12:00').toLocaleDateString(undefined, { weekday: 'narrow' });
+  const dot = ({ day, mark }) => {
+    const goal = day === goalDay;
+    return `<span class="ss-day ${mark} ${day === today ? 'today' : ''} ${goal ? 'goal' : ''}">
+      <i>${goal ? '🎁' : MARK_ICON[mark]}</i><small>${day === today ? 'Today' : letter(day)}</small></span>`;
+  };
+  const dots = days.map(dot).join('');
+  // A milestone further off than the strip shows gets its own dot after a gap.
+  const far = next && toGo > SHOW_AHEAD
+    ? `<span class="ss-gap">···</span><span class="ss-day open goal"><i>🎁</i><small>Day ${next.days}</small></span>` : '';
+  const reward = next ? `+${next.coins} coins${next.freeze ? ', a free freeze' : ''} and ${MILESTONE_DAY_MULT}× coins all day` : '';
+  const when = toGo === 0 ? 'Train today for' : toGo === 1 ? 'Tomorrow:' : `${toGo} days to go:`;
+  $('#streak-strip').innerHTML = `
+    <span class="ss-head"><b>🔥 ${n ? `${n}-day streak` : 'No streak yet'}</b>
+      <span>${boost.streakMult > 1 ? `+${Math.round((boost.streakMult - 1) * 100)}% coins${doneToday ? '' : ' today'}` : ''}${boost.double ? ` · ${MILESTONE_DAY_MULT}× day` : ''}</span></span>
+    <span class="ss-days">${dots}${far}</span>
+    <span class="ss-next">${!doneToday ? `<b>Train today</b> to make it ${n + 1}. ` : ''}${next ? `${next.name} · ${when} ${reward}` : 'Every milestone reached. Keep the fire going.'}</span>`;
 }
 
 // ---------- Home cards: broken streak, active bet ----------
@@ -975,8 +1024,7 @@ function renderHomeCards() {
       <div class="chip-row">${picks}</div>
     </div>`);
   }
-  const bp = P.betProgress(state);
-  if (bp) cards.push(betCard(bp));
+  for (const slot of ['bet', 'weekBet']) { const bp = P.betProgress(state, slot); if (bp) cards.push(betCard(bp)); }
   $('#home-cards').innerHTML = cards.join('');
 }
 
@@ -1060,7 +1108,7 @@ function shopStreak() {
   const b = state.streak.broken;
   return `
   <div class="streak-head"><span class="big-flame">🔥 ${n}</span><span>day streak${next ? `<br><small>${next.days - n} more day${next.days - n === 1 ? '' : 's'} to the ${next.name}: +${next.coins} coins${next.freeze ? ' and a free freeze' : ''}</small>` : ''}</span></div>
-  <p class="shop-intro">Every streak day adds 5% to your coins (up to +50%), and milestones pay out on top. Protecting your streak is cheapest when planned ahead.</p>
+  <p class="shop-intro">Every streak day adds 5% to your coins (up to +50%). Milestones pay out on top, and the day you reach one earns ${MILESTONE_DAY_MULT}× coins. Protecting your streak is cheapest when planned ahead.</p>
   ${b ? `<div class="home-card warn"><p><b>Your ${b.streak}-day streak ended.</b> Repair it: ${REPAIR_PRICE_PER_DAY} coins per missed day.</p>
     <div class="row"><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div></div>` : ''}
   <h3>Rest days <small>${COIN} ${REST_DAY_PRICE} each · up to 2 a week</small></h3>
@@ -1075,21 +1123,26 @@ function shopStreak() {
   <div class="shop-row"><p class="shop-note">Covers a day you miss without planning. Used automatically. You have <b>${state.streak.freezes} of ${FREEZE_MAX}</b>.</p>
     ${state.streak.freezes >= FREEZE_MAX ? '<span class="owned-tag">Full</span>' : buyBtn('buy-freeze', 'freeze', FREEZE_PRICE)}</div>
   <h3>Milestones</h3>
-  <ul class="milestones">${STREAK_MILESTONES.map(m => `<li class="${n >= m.days ? 'done' : ''}"><span>${m.name}</span><span>+${m.coins}${m.freeze ? ' + ❄' : ''}</span></li>`).join('')}</ul>`;
+  <ul class="milestones">${STREAK_MILESTONES.map(m => `<li class="${n >= m.days ? 'done' : ''}"><span>${m.name}</span><span>+${m.coins}${m.freeze ? ' + ❄' : ''} · ${MILESTONE_DAY_MULT}× day</span></li>`).join('')}</ul>`;
 }
 
 function shopBets() {
-  const bp = P.betProgress(state);
   const recent = state.betLog.length ? `<h3>Recent results</h3><ul class="history bets-log">${betLogHTML(5)}</ul>` : '';
-  if (bp) return `<p class="shop-intro">Your coins are on the line. Finish this bet before placing another.</p>${betCard(bp)}${recent}`;
   const todayDone = state.lastBetDay === P.dayKey();
-  return `<p class="shop-intro">Bet on yourself: stake coins, and win more back if you do it in time. One bet a day; only training after you place it counts.</p>
-  ${todayDone ? '<div class="home-card"><p><b>You’ve had today’s bet.</b> The next one opens tomorrow.</p></div>' : ''}
-  <ul class="shop-list">${BETS.filter(b => !b.retired).map(b => {
-    const block = P.betBlocker(state, b.id);
-    return `<li><div><b>${b.name}</b><small>${b.desc} Stake ${b.stake}, win ${b.payout}.</small>${block && !todayDone && !block.startsWith('Needs ' + b.stake) ? `<small class="blocked">${block}</small>` : ''}</div>
-      <button class="btn buy" data-act="bet" data-id="${b.id}" ${block ? 'disabled' : ''}>Bet ${b.stake}</button></li>`;
-  }).join('')}</ul>${recent}`;
+  // Daily bets, then weekly ones; an active bet shows in place of its list.
+  const group = (slot, title, note) => {
+    const bp = P.betProgress(state, slot);
+    if (bp) return `<h3>${title}</h3>${betCard(bp)}`;
+    if (slot === 'bet' && todayDone) return `<h3>${title}</h3><div class="home-card"><p><b>You’ve had today’s bet.</b> The next one opens tomorrow.</p></div>`;
+    return `<h3>${title} <small>${note}</small></h3><ul class="shop-list">${BETS.filter(b => !b.retired && P.betSlot(b) === slot).map(b => {
+      const block = P.betBlocker(state, b.id);
+      return `<li><div><b>${b.name}</b><small>${b.desc} Stake ${b.stake}, win ${b.payout}.</small>${block && !block.startsWith('Needs ' + b.stake) ? `<small class="blocked">${block}</small>` : ''}</div>
+        <button class="btn buy" data-act="bet" data-id="${b.id}" ${block ? 'disabled' : ''}>Bet ${b.stake}</button></li>`;
+    }).join('')}</ul>`;
+  };
+  return `<p class="shop-intro">Bet on yourself: stake coins, and win more back if you do it in time. Only training after you place a bet counts.</p>
+  ${group('bet', 'Daily bets', 'one a day')}
+  ${group('weekBet', 'Weekly bets', 'alongside your daily bets')}${recent}`;
 }
 
 // Every shop and home-card button goes through here.
@@ -1157,6 +1210,7 @@ window.addEventListener('resize', () => drawScenes(true));
 $('#temple-banner').onclick = () => openShop('temple');
 $('#wallet-chip').onclick = () => openShop('temple');
 $('#streak-chip').onclick = () => openShop('streak');
+$('#streak-strip').onclick = () => openShop('streak');
 
 $('#shuffle').onclick = () => { hero = P.pickHold(state, hero.id); renderHero(); };
 $('#back-daily').onclick = () => { hero = P.dailyHold(state); renderHero(); };
@@ -1193,11 +1247,11 @@ document.addEventListener('click', e => {
 
 // On opening: spend freezes or offer a repair, settle an expired bet, then show what happened.
 P.protectStreak(state);
-const settled = P.settleBet(state, P.dayKey(), { notify: false });
+const settled = P.settleBets(state, P.dayKey(), { notify: false });
 show('home');
 renderHome();
 flushNotices();
-if (settled) celebrateBet(settled);
+settled.forEach(celebrateBet);
 animateScenes();
 
 // Start fetching the pose model in the background so the first session starts quickly.

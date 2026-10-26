@@ -22,13 +22,13 @@ const NUMBERS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
 export const createSession = opts => (opts.hold.flow ? new FlowSession(opts) : new Session(opts));
 
 export class FlowSession {
-  constructor({ hold, level, camera, daily = false, now }) {
+  constructor({ hold, level, camera, daily = false, boost = 1, now }) {
     Object.assign(this, { hold, level, camera, daily, last: now });
     const f = hold.flow;
     this.goal = hold.levels[level - 1].target;
     this.minCycle = f.minCycle[level - 1];
     this.dwell = f.dwell[level - 1];
-    this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1);
+    this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1) * boost;
     // The two key positions, and (optionally) what to check on the way between them.
     this.poses = { low: { criteria: f.low, sides: false }, high: { criteria: hold.criteria, sides: false } };
     if (f.lift) this.poses.lift = { criteria: f.lift, sides: false };
