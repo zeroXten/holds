@@ -85,8 +85,11 @@ export const HOLDS = [
     ],
     criteria: level => [
       {
+        // kneeDrop is ~0.71 with thighs 45° below level, 0.5 at 30°, 0.26 at 15°. Each limit
+        // allows a margin past the described depth: knees pushed forward over the toes are
+        // nearer the camera, so they look lower than they are and the stance reads high.
         id: 'depth', label: 'Depth', cue: 'Sink lower', weight: 2, joints: [23, 24, 25, 26],
-        value: b => Math.max(kneeDrop(b.legs.L), kneeDrop(b.legs.R)), max: by(level, [0.7, 0.5, 0.3, 0.15]), soft: 0.3,
+        value: b => Math.max(kneeDrop(b.legs.L), kneeDrop(b.legs.R)), max: by(level, [0.82, 0.62, 0.38, 0.17]), soft: 0.25,
       },
       {
         id: 'even', label: 'Even weight', cue: 'Even out your weight', joints: [23, 24, 25, 26],
@@ -104,7 +107,7 @@ export const HOLDS = [
       ...(level === 4 ? armsAtShoulders({ low: 'Raise your arms to shoulder height', high: 'Lower your arms to shoulder height' }) : []),
     ],
     figure: level => {
-      const thigh = lerp4(level, 50, 92), shin = lerp4(level, 8, 4);
+      const thigh = lerp4(level, 45, 90), shin = lerp4(level, 8, 4);  // thighs 45°, 30°, 15° below level, then level
       return {
         view: 'front', torso: 180,
         legs: { L: [thigh, shin], R: [-thigh, -shin] },
