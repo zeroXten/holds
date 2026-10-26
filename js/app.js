@@ -1288,7 +1288,8 @@ $('#hold-sheet').addEventListener('close', () => {
 $('#settings-btn').onclick = openSettings;
 
 // Welcome: once on first use, and whenever asked for from Settings.
-function openWelcome() { $('#welcome').showModal(); }
+// Opening a dialog focuses its first button, which can scroll it; start at the top.
+function openWelcome() { $('#welcome').showModal(); $('#welcome').scrollTop = 0; }
 $('#welcome').addEventListener('close', () => { if (!state.welcomed) { state.welcomed = true; P.save(state); } });
 $('#how-btn').onclick = () => { $('#settings').close(); openWelcome(); };
 $('#rank-btn').onclick = renderProgress;
