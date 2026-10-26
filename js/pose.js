@@ -101,9 +101,13 @@ export class DemoSource {
     const T = 4.5, B = Math.min(target * 0.4, 25);
     const half = hold.sides ? target / 2 : null;
     const end = T + target + 6 + (half ? 6 : 0) + 4;
+    // A wobble out of position partway through, except in balance and stillness holds,
+    // where the demo shows a calm hold instead. Those end by walking out of view (for
+    // Standing Meditation, standing up is the pose).
+    this.end = end;
     this.keys = [
       [0, 2.5, 0, 0], [2.5, 4.5, 0, 1],
-      [T + B, T + B + 0.8, 1, 0.35], [T + B + 0.8, T + B + 3.5, 0.35, 0.35], [T + B + 3.5, T + B + 4.3, 0.35, 1],
+      ...(hold.still ? [] : [[T + B, T + B + 0.8, 1, 0.35], [T + B + 0.8, T + B + 3.5, 0.35, 0.35], [T + B + 3.5, T + B + 4.3, 0.35, 1]]),
       ...(half ? [[T + half + 4.4, T + half + 5.4, 1, 0], [T + half + 8, T + half + 9.5, 0, 1]] : []),
       [end, end + 1.5, 1, 0],
     ];
@@ -135,7 +139,8 @@ export class DemoSource {
     const [width, height] = this.pose.compact ? [1280, 720] : [720, 1280];
     const dt = this.lastT === null ? 1 / 30 : Math.max(1 / 120, t - this.lastT);
     this.lastT = t;
-    const raw = syntheticLandmarks(spec, { width, height, noise: 0.002 });
+    let raw = syntheticLandmarks(spec, { width, height, noise: 0.002 });
+    if (this.hold.still && t > this.end + 1.5) { const dx = (t - this.end - 1.5) * 0.4; raw = raw.map(p => ({ ...p, x: p.x + dx })); }
     return { landmarks: this.tracker.update(raw, dt, width / height), width, height };
   }
 

@@ -49,6 +49,9 @@ const DEG = Math.PI / 180;
 // How far the hand furthest from the middle of the body is from it, in shoulder widths.
 // "Hands together in front of you" for the camera: about 0.1–0.35 with fingers linked
 // or palms pressed, about 0.65 or more with the arms hanging at your sides.
+// In balance and stillness holds every check but stillness is a gate (see scorePose).
+const gates = list => list.map(c => (c.id === 'still' ? c : { ...c, gate: true }));
+
 // Standing qigong: feet about hip width, legs long (the knees can stay soft).
 const qigongLegs = () => [
   {
@@ -1162,6 +1165,109 @@ export const HOLDS = [
       };
     },
   },
+
+  // ---- Balance and stillness: scored mostly on how little you move ----
+  // `still` holds have a sway meter (body.sway, see SwayMeter): their position checks are
+  // loose, and the score comes mainly from staying steady.
+
+  {
+    id: 'balance', name: 'One-Leg Balance', native: 'Dú Lì', view: 'side', sides: true, camera: true, still: true,
+    areas: { balance: 0.8, legs: 0.2 }, style: 'soft',
+    hint: 'Stand side-on to the phone',
+    video: 'standing on one leg balance training',
+    about: 'Balance as its own practice: standing on one leg, scored on how still you stay rather than the exact shape. Fix your eyes on one spot and let the standing foot grip the floor.',
+    levels: [
+      { name: 'Foot off the floor', target: 30, desc: 'Stand on one leg and lift the other foot just off the floor, hands together at your chest. Stay as still as you can. Then switch legs.' },
+      { name: 'Knee up', target: 45, desc: 'Raise the other knee to hip height. Keep the standing leg long and your gaze steady.' },
+      { name: 'Hands overhead', target: 60, desc: 'Knee up, and reach both hands overhead. A higher centre is harder to keep still.' },
+      { name: 'Eyes closed', target: 45, desc: 'Knee up, hands at your chest, eyes closed. Without your eyes, every wobble shows. (The camera can’t see your eyes, so that part is on your honour.)' },
+    ],
+    criteria: level => gates([
+      {
+        id: 'still', label: 'Steady', cue: 'Find a spot to look at and settle', weight: 3, joints: [11, 12, 23, 24],
+        value: b => b.sway ?? 0, max: by(level, [0.05, 0.045, 0.04, 0.055]), soft: 0.04,
+      },
+      {
+        id: 'lift', label: 'Foot lifted', joints: s => s.other.idx,
+        cue: level === 1 ? 'Lift your foot off the floor' : 'Raise your knee to hip height',
+        value: (b, s) => (s.main.c.y - s.other.c.y) / b.torsoLen, min: level === 1 ? 0.1 : 0.45, soft: 0.15,
+      },
+      {
+        id: 'stand', label: 'Standing leg long', cue: 'Lengthen your standing leg', joints: s => s.main.idx,
+        value: (b, s) => s.main.angle, min: 155, soft: 25,
+      },
+      ...(level === 3 ? [{
+        id: 'reach', label: 'Hands overhead', cue: 'Reach both hands overhead', joints: [13, 14, 15, 16],
+        value: b => (b.nose.y - Math.max(b.arms.L.c.y, b.arms.R.c.y)) / b.torsoLen, min: 0.1, soft: 0.35,
+      }] : []),
+    ]),
+    figure: level => ({
+      view: 'side', torso: 180,
+      legs: { L: level === 1 ? [25, -40] : [90, 0], R: [0, 0] },
+      arms: level === 3 ? { L: [178, 182], R: [176, 180] } : { L: [30, 150], R: [28, 152] },
+    }),
+  },
+
+  {
+    id: 'wuji', name: 'Standing Meditation', native: 'Wújí Zhuāng', view: 'front', sides: false, camera: true, still: true,
+    areas: { stillness: 1 }, style: 'soft',
+    hint: 'Face the phone, whole body in view',
+    video: 'wuji standing meditation qigong',
+    about: 'Wuji, “standing in emptiness”: the stillest posture of all. Stand naturally and do nothing at all, as still as a mountain. Scored almost entirely on how little you move.',
+    levels: [
+      { name: 'One minute', target: 60, desc: 'Feet hip width, knees soft, arms hanging loosely at your sides. Crown up, chin slightly in. Breathe slowly and let everything settle.' },
+      { name: 'Two minutes', target: 120, desc: 'The same, for two minutes. Let your weight sink into your feet; stop correcting and simply stand.' },
+      { name: 'Three minutes', target: 180, desc: 'Three minutes. When thoughts wander, come back to the breath without moving.' },
+      { name: 'Five minutes', target: 300, desc: 'Five minutes, as still as the mountain behind the temple.' },
+    ],
+    criteria: level => gates([
+      {
+        id: 'still', label: 'Still', cue: 'Let everything settle and stay still', weight: 3, joints: [0, 11, 12, 23, 24],
+        value: b => b.sway ?? 0, max: by(level, [0.035, 0.03, 0.027, 0.025]), soft: 0.03,
+      },
+      {
+        id: 'arms', label: 'Arms relaxed', cue: 'Let your arms hang at your sides', joints: [13, 14, 15, 16],
+        value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.hip.y) / b.torsoLen, min: -0.3, soft: 0.25,
+      },
+      upright(8, 'Stand tall, crown up', 12),
+      ...qigongLegs(),
+    ]),
+    figure: () => ({ view: 'front', torso: 180, legs: { L: [3, 0], R: [-3, 0] }, arms: { L: [8, 4], R: [-8, -4] } }),
+  },
+
+  {
+    id: 'zuochan', name: 'Seated Meditation', native: 'Zuò Chán', view: 'front', sides: false, camera: true, still: true,
+    areas: { stillness: 1 }, style: 'soft',
+    hint: 'Sit facing the phone, the phone at about chest height',
+    video: 'zazen seated meditation posture',
+    about: 'Chan (Zen) began at Shaolin: seated meditation is where the monks’ training started. Sit cross-legged on a cushion, or on the front of a chair, and keep still. Scored on stillness and an upright back.',
+    levels: [
+      { name: 'One minute', target: 60, desc: 'Sit cross-legged on a cushion (or on the front edge of a chair, feet flat). Back upright, hands resting in your lap, one palm in the other. Breathe slowly through the nose.' },
+      { name: 'Three minutes', target: 180, desc: 'Three minutes. Count breaths from one to ten, then start again.' },
+      { name: 'Five minutes', target: 300, desc: 'Five minutes. Let the breath count fall away and just sit.' },
+      { name: 'Ten minutes', target: 600, desc: 'Ten minutes of stillness. If your legs go numb, use a chair; stillness matters more than the shape.' },
+    ],
+    criteria: level => gates([
+      {
+        id: 'still', label: 'Still', cue: 'Settle, and let the body be still', weight: 3, joints: [0, 11, 12, 23, 24],
+        value: b => b.sway ?? 0, max: by(level, [0.035, 0.03, 0.027, 0.025]), soft: 0.03,
+      },
+      {
+        id: 'seated', label: 'Seated', cue: 'Sit down: cross-legged or on a chair', joints: [23, 24, 25, 26],
+        value: b => Math.abs(kneesMid(b).y - b.hip.y) / b.torsoLen, max: 0.35, soft: 0.25,
+      },
+      {
+        id: 'lap', label: 'Hands in your lap', cue: 'Rest your hands in your lap', joints: [15, 16],
+        value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.hip.y) / b.torsoLen, min: -0.45, max: 0.3, soft: 0.2,
+      },
+      upright(10, 'Sit tall, back upright', 12),
+    ]),
+    figure: () => ({
+      view: 'front', torso: 180, ground: 'lKnee',
+      legs: { L: [80, -100], R: [-80, 100] },
+      arms: { L: [10, -60], R: [-10, 60] },
+    }),
+  },
 ];
 
 export const holdById = id => HOLDS.find(h => h.id === id);
@@ -1192,14 +1298,18 @@ export const HOLD_GROUPS = [
   { name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow'] },
   { name: 'Core & back', ids: ['plank', 'sideplank', 'birddog', 'hollow', 'bridge', 'yanfei'] },
   { name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
+  { name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
 ];
 
-export const AREAS = { legs: 'Legs', core: 'Core', upper: 'Arms & shoulders', balance: 'Balance', mobility: 'Mobility' };
+export const AREAS = { legs: 'Legs', core: 'Core', upper: 'Arms & shoulders', balance: 'Balance', mobility: 'Mobility', stillness: 'Stillness' };
+// Areas that don't wear out, so they're never flagged as overworked.
+export const RESTFUL_AREAS = ['stillness'];
 export const STYLES = { hard: 'Hard', soft: 'Soft' };
 // For sentences: "a lot of <work> lately. Give <rest> a rest".
 export const AREA_WORDS = {
   legs: ['leg work', 'your legs'], core: ['core work', 'your core'], upper: ['arm and shoulder work', 'your arms and shoulders'],
   balance: ['balance work', 'those muscles'], mobility: ['stretching', 'those muscles'],
+  stillness: ['stillness practice', 'it'],
 };
 // The area a hold works most.
 export const mainArea = hold => Object.entries(hold.areas).sort((x, y) => y[1] - x[1])[0][0];

@@ -1,7 +1,7 @@
 // Progress kept in localStorage: coins, unlocked holds, the hold of the day,
 // levels, streaks, personal bests and badges.
 
-import { HOLDS, AREAS } from './holds.js';
+import { HOLDS, AREAS, RESTFUL_AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
   REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
@@ -521,7 +521,7 @@ export function areaLoad(state, { now = Date.now(), days = null } = {}) {
 export function overworked(state, now = Date.now()) {
   const load = areaLoad(state, { now });
   const total = Object.values(load).reduce((a, b) => a + b, 0);
-  const [area, work] = Object.entries(load).sort((a, b) => b[1] - a[1])[0];
+  const [area, work] = Object.entries(load).filter(([a]) => !RESTFUL_AREAS.includes(a)).sort((a, b) => b[1] - a[1])[0];
   return work >= OVERWORKED && work / total >= OVERWORKED_SHARE ? { area, name: AREAS[area], work } : null;
 }
 

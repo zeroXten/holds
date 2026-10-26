@@ -2,7 +2,7 @@
 // should not. Run: node tests/scoring.test.mjs
 import { HOLDS, HOLD_GROUPS } from '../js/holds.js';
 import { syntheticLandmarks, standing } from '../js/figure.js';
-import { makeBody, scorePose } from '../js/scoring.js';
+import { makeBody, scorePose, SwayMeter } from '../js/scoring.js';
 
 let failures = 0;
 const W = 720, H = 1280;
@@ -13,7 +13,8 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     const r = score(hold, level, hold.figure(level));
     const noisy = score(hold, level, hold.figure(level), 0.004);
     const stand = score(hold, level, standing(hold.view));
-    const ok = r.score >= 90 && noisy.score >= 75 && stand.score < 50;
+    // Standing Meditation's position is simply standing: only its stillness is judged.
+    const ok = r.score >= 90 && noisy.score >= 75 && (stand.score < 50 || hold.id === 'wuji');
     if (!ok) failures++;
     const weak = r.results.filter(x => x.s < 1).map(x => `${x.id}=${x.value.toFixed(2)}`).join(' ');
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${hold.id} L${level}: figure ${r.score} noisy ${noisy.score} standing ${stand.score} ${weak}`);
@@ -49,6 +50,27 @@ for (const [a, b] of [['tray', 'claws'], ['claws', 'tray'], ['wings', 'palms'], 
   const ok = grouped.length === HOLDS.length && HOLDS.every(h => grouped.includes(h.id));
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} hold groups cover every hold once`);
+}
+
+// Sway: tracking jitter on a still body reads well inside the stillest limit; a gentle
+// sway of about 3% of the picture each way doesn't.
+{
+  const wuji = HOLDS.find(h => h.id === 'wuji');
+  const limit = wuji.criteria(4).find(c => c.id === 'still').max;
+  const sway = wobble => {
+    const m = new SwayMeter();
+    let v = 0;
+    for (let i = 0; i < 120; i++) {
+      const dx = wobble * Math.sin(i / 30 * Math.PI);  // one sway every 2s at 30 fps
+      const lm = syntheticLandmarks(wuji.figure(1), { width: W, height: H, noise: 0.002 }).map(p => ({ ...p, x: p.x + dx }));
+      v = m.update(makeBody(lm, W, H), 1 / 30);
+    }
+    return v;
+  };
+  const still = sway(0), wobbly = sway(0.03);
+  const ok = still < limit * 0.5 && wobbly > limit;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} sway: still ${still.toFixed(3)}, swaying ${wobbly.toFixed(3)} (stillest limit ${limit})`);
 }
 
 // A sagging iron bridge (hips dropped ~15°) should fail.

@@ -105,8 +105,39 @@ export function scorePose(hold, level, body) {
     const wsum = results.reduce((t, r) => t + r.weight, 0);
     const mean = results.reduce((t, r) => t + r.s * r.weight, 0) / wsum;
     const min = Math.min(...results.map(r => r.s));
-    const score = Math.round(100 * (0.6 * mean + 0.4 * min));
+    // Gate criteria (the position, in balance and stillness holds) scale the whole score:
+    // stillness counts for nothing if you're not in the position.
+    const gate = Math.min(1, ...results.filter((r, i) => criteria[i].gate).map(r => r.s));
+    const score = Math.round(100 * (0.6 * mean + 0.4 * min) * gate);
     if (!best || score > best.score) best = { score, results, side: side.key };
   }
   return best;
+}
+
+// Sway: how much the body drifts while holding still. Keeps a few seconds of the
+// body's centre, head and hands, and measures how far they wander from their average
+// position (root mean square), in torso lengths. Measuring drift over a window rather
+// than frame-to-frame speed averages out most of the tracking's own jitter.
+const SWAY_POINTS = [[b => mid(b.sh, b.hip), 2], [b => b.nose, 1], [b => mid(b.arms.L.c, b.arms.R.c), 1]];
+
+export class SwayMeter {
+  constructor(window = 3) { this.window = window; this.reset(); }
+
+  reset() { this.samples = []; this.t = 0; }
+
+  update(body, dt) {
+    this.t += dt;
+    this.samples.push({ t: this.t, pts: SWAY_POINTS.map(([at]) => at(body)), scale: body.torsoLen });
+    while (this.t - this.samples[0].t > this.window) this.samples.shift();
+    const n = this.samples.length;
+    if (n < 5) return 0;
+    const scale = this.samples.reduce((t, s) => t + s.scale, 0) / n;
+    let total = 0, weights = 0;
+    SWAY_POINTS.forEach(([, w], k) => {
+      const mx = this.samples.reduce((t, s) => t + s.pts[k].x, 0) / n, my = this.samples.reduce((t, s) => t + s.pts[k].y, 0) / n;
+      const rms = Math.sqrt(this.samples.reduce((t, s) => t + (s.pts[k].x - mx) ** 2 + (s.pts[k].y - my) ** 2, 0) / n);
+      total += rms * w; weights += w;
+    });
+    return total / weights / scale;
+  }
 }

@@ -8,7 +8,7 @@
 // its own target and bonus time; side one switches over once you drop out of
 // position (or tap Switch in honour mode).
 
-import { makeBody, scorePose, visible, viewing } from './scoring.js';
+import { makeBody, scorePose, visible, viewing, SwayMeter } from './scoring.js';
 import { requiredFor } from './holds.js';
 import { COIN_SECONDS, coinRateFor, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { play, say } from './audio.js';
@@ -54,6 +54,8 @@ export class Session {
     this.milestones = new Set();
     this.result = null;
     this.side = null;
+    // Balance and stillness holds measure how much you move (body.sway).
+    this.sway = hold.still ? new SwayMeter() : null;
   }
 
   go(state) { this.state = state; this.stateTime = 0; }
@@ -76,7 +78,9 @@ export class Session {
     const seen = !!lm && visible(lm, this.required, view);
     let results = null;
     if (seen) {
-      const r = scorePose(this.hold, this.level, makeBody(lm, frame.width, frame.height, view));
+      const body = makeBody(lm, frame.width, frame.height, view);
+      if (this.sway) body.sway = this.sway.update(body, dt);
+      const r = scorePose(this.hold, this.level, body);
       const k = 1 - Math.exp(-dt / 0.25);
       this.score += (r.score - this.score) * k;
       results = r.results;
@@ -85,6 +89,7 @@ export class Session {
     } else {
       this.score += (0 - this.score) * (1 - Math.exp(-dt / 0.4));
       this.seenTime = 0;
+      this.sway?.reset();
     }
     this.results = results;
     this.seen = seen;
