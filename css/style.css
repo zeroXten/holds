@@ -445,10 +445,6 @@ body.demo .stage video { display: none; }
 }
 .temple-banner.static { cursor: default; }
 .temple-banner canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
-.banner-label {
-  position: absolute; right: 8px; bottom: 8px; font-size: .75rem; font-weight: 700; letter-spacing: .04em;
-  padding: 4px 10px; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff;
-}
 button.chip { cursor: pointer; }
 .freezes { font-size: .75rem; color: #7fc8ff; font-weight: 700; }
 .freezes:empty { display: none; }
