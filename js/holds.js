@@ -1444,12 +1444,12 @@ export const HOLDS = [
     areas: { stillness: 1 }, style: 'soft',
     hint: 'Sit facing the phone, the phone at about chest height',
     video: 'zazen seated meditation posture',
-    about: 'Chan (Zen) began at Shaolin: seated meditation is where the monks’ training started. Sit cross-legged on a cushion, or on the front of a chair, and keep still. Scored on stillness and an upright back.',
+    about: 'Chan (Zen) began at Shaolin: seated meditation is where the monks’ training started. Sit cross-legged on a cushion, or on the front of a chair, and keep still, from five minutes up to an hour. Scored on stillness and an upright back.',
     levels: [
-      { name: 'One minute', target: 60, desc: 'Sit cross-legged on a cushion (or on the front edge of a chair, feet flat). Back upright, hands resting in your lap, one palm in the other. Breathe slowly through the nose.' },
-      { name: 'Three minutes', target: 180, desc: 'Three minutes. Count breaths from one to ten, then start again.' },
-      { name: 'Five minutes', target: 300, desc: 'Five minutes. Let the breath count fall away and just sit.' },
-      { name: 'Ten minutes', target: 600, desc: 'Ten minutes of stillness. If your legs go numb, use a chair; stillness matters more than the shape.' },
+      { name: 'Five minutes', target: 300, desc: 'Sit cross-legged on a cushion (or on the front edge of a chair, feet flat). Back upright, hands resting in your lap, one palm in the other. Breathe slowly through the nose.' },
+      { name: 'Ten minutes', target: 600, desc: 'Ten minutes. Count breaths from one to ten, then start again.' },
+      { name: 'Half an hour', target: 1800, desc: 'Thirty minutes. Let the breath count fall away and just sit. If your legs go numb, use a chair; stillness matters more than the shape.' },
+      { name: 'One hour', target: 3600, desc: 'A full hour of stillness, as the Chan monks sit.' },
     ],
     criteria: level => gates([
       {
