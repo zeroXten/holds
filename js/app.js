@@ -11,7 +11,6 @@ import * as P from './progress.js';
 import { STRICTNESS } from './session.js';
 import { createSession } from './flow.js';
 import { CameraSource, DemoSource, loadLandmarker } from './pose.js';
-import { RobotScene, RobotDemoSource } from './robot.js';
 import { AutoFrame } from './framing.js';
 import * as audio from './audio.js';
 import { VERSION } from './version.js';
@@ -116,7 +115,7 @@ function renderHome() {
   renderHomeCards();
   drawScenes(true);
   const daily = P.dailyHold(state);
-  if (!hero || !P.isUnlocked(state, hero.id)) hero = daily;
+  if (!hero || !P.isOpen(state, hero.id)) hero = daily;
   renderHero();
   renderGrid();
 }
@@ -151,7 +150,7 @@ function renderGrid() {
     const kind = `<span class="card-kind ${h.style}">${STYLES[h.style]} · ${AREAS[mainArea(h)]}</span>`;
     const hs = P.holdState(state, h.id);
     const best = hs.best[hs.level];
-    if (!P.isUnlocked(state, h.id)) {
+    if (!P.isOpen(state, h.id)) {
       return `<button class="card locked ${state.coins >= price ? 'affordable' : ''}" data-hold="${h.id}">
         ${figureSVG(h.figure(1))}
         <span class="card-name">${h.name}</span>
@@ -193,7 +192,7 @@ function openHold(hold) {
 function renderSheetLevel() {
   const hold = sheetHold, hs = P.holdState(state, hold.id);
   // Locked holds show what they cost instead of the level picker and Start.
-  const locked = !P.isUnlocked(state, hold.id);
+  const locked = !P.isOpen(state, hold.id);
   $('#hs-unlock').hidden = !locked;
   $('#hs-levels').hidden = locked;
   $('#hs-start').hidden = locked;
@@ -207,9 +206,9 @@ function renderSheetLevel() {
     $('#hs-buy').disabled = short > 0;
     sheetLevel = 1;
   }
-  const unlocked = hs.mastered ? 4 : hs.level;
+  const unlocked = hs.mastered || state.testMode ? 4 : hs.level;
   // The level after yours can be taken as a test; the rest stay locked.
-  const testLevel = !locked && !hs.mastered && hs.level < 4 ? hs.level + 1 : null;
+  const testLevel = !locked && !hs.mastered && !state.testMode && hs.level < 4 ? hs.level + 1 : null;
   $('#hs-levels').innerHTML = hold.levels.map((l, i) => {
     const n = i + 1, closed = n > unlocked && n !== testLevel;
     return `<button type="button" role="tab" class="lv ${n === sheetLevel ? 'on' : ''} ${n === testLevel ? 'test' : ''}" data-level="${n}" ${closed ? 'disabled' : ''} aria-selected="${n === sheetLevel}">
@@ -300,8 +299,9 @@ async function startSession(hold, level, useCamera, { test = false } = {}) {
   run.source = source;
   run.framer = new AutoFrame({ enabled: state.settings.autoframe });
   run.lastFrameAt = performance.now();
-  run.boost = P.coinBoost(state);
-  run.daily = P.dailyAvailable(state, hold.id);
+  // Test mode earns nothing: no multipliers, and a zero rate.
+  run.boost = state.testMode ? { days: 0, streakMult: 1, double: false, total: 0 } : P.coinBoost(state);
+  run.daily = !state.testMode && P.dailyAvailable(state, hold.id);
   run.session = createSession({
     hold, level, camera: useCamera, strictness: state.settings.strictness,
     daily: run.daily, boost: run.boost.total, now: source ? source.now() : clock(),
@@ -361,7 +361,7 @@ function updateHud(v) {
   // One-sided holds show the current side's time against that side's target.
   $('#s-time').textContent = fmt(v.sideHeld);
   $('#s-target').textContent = ` / ${fmt(v.sideTarget)}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.test ? ' · Level test' : ''}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.test ? ' · Level test' : ''}${state.testMode ? ' · Test mode' : ''}`;
   // Whole coins, plus a bar filling towards the next one; a chime and a pop as each lands.
   const whole = Math.floor(v.coins);
   $('#s-coins').textContent = whole.toLocaleString();
@@ -432,7 +432,7 @@ function flowStep(v) {
 function updateFlowHud(v) {
   $('#s-time').textContent = v.count;
   $('#s-target').textContent = ` / ${v.goal}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.test ? ' · Level test' : ''}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.test ? ' · Level test' : ''}${state.testMode ? ' · Test mode' : ''}`;
   const whole = Math.floor(v.coins);
   $('#s-coins').textContent = whole.toLocaleString();
   $('#s-coin-next').style.width = `${Math.round((v.coins % 1) * 100)}%`;
@@ -597,11 +597,22 @@ function finishSession() {
     renderHome();
     return;
   }
-  const outcome = P.recordSession(state, result);
+  const outcome = state.testMode ? testOutcome(result) : P.recordSession(state, result);
   renderSummary(hold, level, result, outcome, sumBoost);
 }
 
 // ---------- Summary ----------
+
+// In test mode nothing is recorded: the summary gets a blank outcome instead.
+function testOutcome(r) {
+  const hs = P.holdState(state, r.holdId);
+  return {
+    coins: 0, reached: r.reached ?? r.held >= r.target, pb: false, prevBest: hs.best[r.level] ?? 0, milestoneDouble: 0,
+    qualified: false, qualDays: hs.qualDays.length, levelUp: false, mastered: false, newLevel: r.level, test: null,
+    bets: [], betSteps: [], milestones: [], badges: [], rankUp: false, rank: P.rankFor(state.lifetime),
+    wallet: state.coins, nextUnlock: null, streak: P.streak(state), testMode: true,
+  };
+}
 
 function renderSummary(hold, level, r, o, boost) {
   show('summary');
@@ -631,6 +642,7 @@ function renderSummary(hold, level, r, o, boost) {
   $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${betLine}${wallet}`;
   // Level test, bet and streak milestone results.
   const extra = [];
+  if (o.testMode) extra.push('<div class="banner">Test mode: this session wasn’t recorded and earned nothing.</div>');
   if (o.test) {
     extra.push(o.test.passed
       ? `<div class="banner good">Level test passed! Level ${level} is unlocked.</div>`
@@ -657,7 +669,7 @@ function renderSummary(hold, level, r, o, boost) {
   let lvl = '';
   if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${targetText(hold, hold.levels[o.newLevel - 1].target)}, ${coinRate(hold, o.newLevel)}.</div>`;
   else if (o.mastered) lvl = '<div class="banner">You’ve completed every level of this stance.</div>';
-  else if (level === hs.level && !hs.mastered) {
+  else if (level === hs.level && !hs.mastered && !o.testMode) {
     const need = P.QUALIFY_DAYS - hs.qualDays.length;
     lvl = `<div class="lvl-progress">${pips(hs)}<span>${o.qualified
       ? `Day counted! ${need} more day${need === 1 ? '' : 's'} to unlock level ${level + 1 > 4 ? 'mastery' : level + 1}.`
@@ -779,57 +791,22 @@ $('#install-btn').onclick = async () => {
 };
 
 // Compares this version with the newest one online, so you know you're testing the latest.
-// ---------- Robo Monk (easter egg) ----------
+// ---------- Test mode ----------
 
-// Tap the version number 5 times quickly to meet Robo Monk.
+// Tap the version number 5 times quickly to switch test mode on or off: every hold and
+// level opens for trying out, and nothing is recorded or earned while it's on.
 let versionTaps = [];
 $('#version').addEventListener('click', () => {
   const now = performance.now();
   versionTaps = [...versionTaps.filter(t => now - t < 2000), now];
-  if (versionTaps.length >= 5) { versionTaps = []; $('#settings').close(); openRobot(); }
-});
-
-let robot = null;  // { scene, source, raf }
-
-async function openRobot() {
-  closeRobot();
-  audio.unlock();
-  show('robot');
-  $('#robot-hint').textContent = DEMO ? 'Demo mode' : 'Waking up the robot…';
-  const mine = robot = {};
-  let source;
-  try {
-    // The fast model on a small picture: copying big movements doesn't need the accurate
-    // one, and a full-size camera feed makes every detection (and so every frame) slow.
-    source = DEMO ? new RobotDemoSource() : await CameraSource.open($('#robot-video'), 'lite', { width: 640, height: 480 });
-  } catch (e) {
-    $('#robot-hint').textContent = 'The robot needs the camera to see you.';
-    return;
+  if (versionTaps.length >= 5) {
+    versionTaps = [];
+    P.setTestMode(state, !state.testMode);
+    $('#settings').close();
+    toast(state.testMode ? 'Test mode on: everything open, nothing earned' : 'Test mode off');
+    renderHome();
   }
-  if (robot !== mine) { source.stop(); return; }
-  $('#robot-hint').textContent = 'Stand back so it can see all of you, then move!';
-  setTimeout(() => { $('#robot-hint').textContent = ''; }, 6000);
-  mine.source = source;
-  mine.wake = await wakeLock();
-  mine.scene = new RobotScene({ canvas: $('#robot-canvas'), source, state });
-  const loop = () => {
-    if (robot !== mine) return;
-    mine.scene.frame();
-    mine.raf = requestAnimationFrame(loop);
-  };
-  mine.raf = requestAnimationFrame(loop);
-}
-
-function closeRobot() {
-  if (!robot) return;
-  cancelAnimationFrame(robot.raf);
-  robot.source?.stop();
-  robot.wake?.release?.().catch(() => {});
-  audio.hush();
-  robot = null;
-}
-
-$('#robot-x').onclick = () => { closeRobot(); show('home'); renderHome(); };
+});
 
 async function checkVersion() {
   const el = $('#version-check');
@@ -1034,6 +1011,12 @@ function renderStreakStrip() {
 
 function renderHomeCards() {
   const cards = [];
+  if (state.testMode) {
+    cards.push(`<div class="home-card test-mode">
+      <p><b>Test mode is on.</b> Every hold and level is open to try, and nothing is recorded or earned. Tap the version in Settings 5 times to leave, or:</p>
+      <div class="row"><button class="btn" data-act="test-mode-off">Leave test mode</button></div>
+    </div>`);
+  }
   const b = state.streak.broken;
   if (b) {
     cards.push(`<div class="home-card warn">
@@ -1213,6 +1196,7 @@ document.addEventListener('click', e => {
     'cancel-rest': () => P.cancelRest(state, id) && 'Rest day cancelled, coins refunded',
     repair: () => P.repairStreak(state) && 'Streak repaired!',
     'dismiss-repair': () => { P.dismissRepair(state); return ''; },
+    'test-mode-off': () => { P.setTestMode(state, false); return 'Test mode off'; },
     bet: () => P.placeBet(state, id) && 'Bet placed. Good luck!',
   };
   const msg = actions[b.dataset.act]?.();
@@ -1279,7 +1263,7 @@ $('#hs-levels').onclick = e => { const b = e.target.closest('[data-level]'); if 
 $('#hold-sheet').addEventListener('close', () => {
   if ($('#hold-sheet').returnValue === 'start') {
     const hs = P.holdState(state, sheetHold.id);
-    const test = sheetLevel > hs.level;
+    const test = !state.testMode && sheetLevel > hs.level;  // in test mode every level is simply open
     // Tests always use the camera when the hold supports it.
     startSession(sheetHold, sheetLevel, sheetHold.camera && (test || $('#hs-cam').checked), { test });
   }

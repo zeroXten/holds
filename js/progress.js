@@ -477,6 +477,15 @@ export function rankFor(coins) {
 // ---- Unlocking holds ----
 
 export const isUnlocked = (state, id) => state.unlocked.includes(id);
+// What you can open and train: everything in test mode, otherwise what you've unlocked.
+// (Unlock prices, the hold of the day and badges go by what you've really unlocked.)
+export const isOpen = (state, id) => !!state.testMode || isUnlocked(state, id);
+
+// Test mode: every hold and level open for trying out; sessions aren't recorded or paid.
+export function setTestMode(state, on) {
+  state.testMode = on;
+  save(state);
+}
 export const unlockPrice = state => UNLOCK_PRICES[Math.min(state.purchased.length, UNLOCK_PRICES.length - 1)];
 
 // Spends coins on a hold. Returns the badges earned, or null if it can't be bought.

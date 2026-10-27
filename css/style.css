@@ -509,6 +509,7 @@ button.chip { cursor: pointer; }
 }
 .home-card.warn { border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
 .home-card.bet { border-color: var(--gold); }
+.home-card.test-mode { border: 1.5px dashed var(--accent); }
 .home-card .row { justify-content: flex-end; flex-wrap: wrap; }
 .home-card .btn { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 8px 16px; }
 .home-card small { color: var(--muted); }
@@ -682,18 +683,4 @@ button.chip { cursor: pointer; }
 .segmented input:checked + span { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
 .segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ---------- Robo Monk ---------- */
-.screen.robot { position: fixed; inset: 0; max-width: none; padding: 0; background: #000; z-index: 6; overflow: hidden; }
-#robot-canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
-#robot-video {
-  position: absolute; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); width: 28%; max-width: 160px;
-  aspect-ratio: 3 / 4; object-fit: cover; transform: scaleX(-1); border-radius: 14px; border: 3px solid #fff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, .5);
-}
-body.demo #robot-video { display: none; }
-.robot-x { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 12px; color: #fff; background: rgba(0, 0, 0, .45); }
-.robot-hint {
-  position: absolute; left: 0; right: 0; bottom: max(18px, env(safe-area-inset-bottom)); text-align: center;
-  color: #fff; font-weight: 700; text-shadow: 0 2px 8px rgba(0, 0, 0, .8); padding: 0 30% 0 16px;
-}
 .version #version { cursor: default; user-select: none; -webkit-user-select: none; }

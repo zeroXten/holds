@@ -251,5 +251,14 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('old saves get a monk', P.load().avatar?.character === 'young');
 }
 
+// Test mode opens every hold without unlocking anything for real.
+{
+  const s = fresh(0);
+  P.setTestMode(s, true);
+  check('test mode opens locked holds', P.isOpen(s, 'crane') && !P.isUnlocked(s, 'crane'));
+  P.setTestMode(s, false);
+  check('and closes them again', !P.isOpen(s, 'crane') && P.isOpen(s, 'horse'));
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);

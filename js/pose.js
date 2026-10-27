@@ -11,7 +11,7 @@ const MODELS = {
   full: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
 };
 
-// One landmarker per model, kept once loaded (the robot uses 'lite', holds the chosen one).
+// One landmarker per model, kept once loaded.
 const landmarkers = new Map();
 
 export function loadLandmarker(model = 'full') {
@@ -33,12 +33,12 @@ export function loadLandmarker(model = 'full') {
 }
 
 export class CameraSource {
-  static async open(video, model, { width = 1920, height = 1440 } = {}) {
+  static async open(video, model) {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('This browser has no camera access (it needs HTTPS).');
     // Ask for 4:3, the camera sensor's own shape, at a high resolution. A 16:9 picture
     // (or, on some phones, a low-resolution one) is cropped from the sensor and sees less.
     const [stream, landmarker] = await Promise.all([
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: width }, height: { ideal: height } }, audio: false }),
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false }),
       loadLandmarker(model),
     ]);
     // Zoom out as far as the camera allows (only some phones support this).
