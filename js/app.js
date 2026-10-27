@@ -348,10 +348,30 @@ function renderChecks(v) {
   const num = n => (Math.abs(n) >= 10 ? Math.round(n) : n.toFixed(2));
   const range = r => (r.min !== undefined && r.max !== undefined ? `${num(r.min)}–${num(r.max)}` : r.min !== undefined ? `≥ ${num(r.min)}` : `≤ ${num(r.max)}`);
   const detail = r => (state.settings.showValues ? ` <small>${num(r.value)} (${range(r)})</small>` : '');
-  const html = show ? [...new Map(v.results.map(r => [r.label, r])).values()].map(r =>
-    `<span class="chk ${r.s >= 0.85 ? 'ok' : r.s >= 0.5 ? 'meh' : 'bad'}">${r.s >= 0.85 ? '✓' : '✗'} ${r.label}${detail(r)}</span>`).join('') : '';
+  // One row per check, kept between frames (so they can slide open and closed), in the
+  // hold's own order. A good check is just a tick; one that needs fixing opens with what
+  // to do. With measurements on, every row stays open to show its numbers.
   const el = $('#s-checks');
-  if (el.dataset.html !== html) { el.dataset.html = html; el.innerHTML = html; }
+  const rows = el.rows ??= new Map();
+  const items = show ? [...new Map(v.results.map(r => [r.label, r])).values()] : [];
+  const keep = new Set(items.map(r => r.label));
+  for (const [key, row] of rows) if (!keep.has(key)) { row.remove(); rows.delete(key); }
+  items.forEach((r, i) => {
+    let row = rows.get(r.label);
+    if (!row) {
+      row = document.createElement('div');
+      row.innerHTML = '<i></i><span></span>';
+      rows.set(r.label, row);
+    }
+    const ok = r.s >= 0.85, open = !ok || state.settings.showValues;
+    const cls = `chk ${ok ? 'ok' : r.s >= 0.5 ? 'meh' : 'bad'}${open ? ' open' : ''}`;
+    if (row.className !== cls) row.className = cls;
+    row.firstChild.textContent = ok ? '✓' : '!';
+    const text = `${ok ? r.label : r.cue ?? r.label}${detail(r)}`;
+    if (row.lastChild.dataset.text !== text) { row.lastChild.dataset.text = text; row.lastChild.innerHTML = text; }
+    row.title = r.label;
+    if (el.children[i] !== row) el.insertBefore(row, el.children[i] ?? null);  // the hold's order
+  });
 }
 
 function updateHud(v) {
@@ -490,7 +510,9 @@ function hudInset() {
   }
   const top = $('#s-tbar').getBoundingClientRect().bottom + 8;
   const bottom = window.innerHeight - $('.hud-bottom').getBoundingClientRect().top + 8;
-  return { top, bottom };
+  // Keep the body clear of the column of ticks down the left.
+  const ticks = $('#s-checks').getBoundingClientRect();
+  return { top, bottom, left: ticks.width ? Math.min(ticks.right, 64) + 6 : 0 };
 }
 
 // Position the video element so it shows the auto-framed part of the picture.
