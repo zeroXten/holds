@@ -25,7 +25,7 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   if (r.score < 90) { failures++; console.log(`FAIL ${hold.id}: L4 figure scores ${r.score} at L1`); }
 }
 // Levels must actually get harder: an easier level's pose shouldn't pass the next level.
-for (const id of ['horse', 'bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank', 'hollow', 'squat', 'feet']) {
+for (const id of ['horse', 'bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank', 'hollow', 'squat', 'feet', 'nordic']) {
   const hold = HOLDS.find(h => h.id === id);
   for (let level = 1; level < 4; level++) {
     const r = score(hold, level + 1, hold.figure(level));
@@ -82,6 +82,19 @@ for (const [a, b] of [['tray', 'claws'], ['claws', 'tray'], ['wings', 'palms'], 
   const fok = fidget > easiest * 1.5;  // a ±3 cm fidget, once a second
   if (!fok) failures++;
   console.log(`${fok ? 'ok  ' : 'FAIL'} sway: one hand fidgeting ${fidget.toFixed(3)} (easiest limit ${easiest})`);
+}
+
+// Reverse Nordic: leaning back by bending at the hips (thighs upright, torso tipped back)
+// is the classic cheat, and must fail even though the shoulders are just as far back.
+{
+  const hold = HOLDS.find(h => h.id === 'nordic');
+  const spec = hold.figure(3);
+  const cheat = { ...spec, legs: { L: [0, -90], R: [0, -90] }, torso: 180 + 50, head: 180 + 50 };
+  const r = score(hold, 3, cheat);
+  const line = r.results.find(x => x.id === 'line');
+  const ok = r.score < 50 && line.s < 0.5;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} nordic: bending at the hips scores ${r.score} (hip line ${Math.round(line.value)}°)`);
 }
 
 // A sagging iron bridge (hips dropped ~15°) should fail.

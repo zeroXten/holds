@@ -11,7 +11,7 @@
 // `soft` margin over which the score falls from 1 to 0. For one-sided holds
 // `side.main` is the working leg and `side.other` the second leg.
 
-import { kneeDrop, lean, dist, mid } from './scoring.js';
+import { kneeDrop, lean, dist, mid, angleAt } from './scoring.js';
 import { legReaching, buildJoints } from './figure.js';
 
 const HIPS_SHOULDERS = [11, 12, 23, 24];
@@ -1169,6 +1169,109 @@ export const HOLDS = [
     },
   },
 
+  {
+    id: 'nordic', name: 'Reverse Nordic', native: '', view: 'side', sides: false, camera: true,
+    areas: { legs: 0.8, core: 0.2 }, style: 'hard',
+    hint: 'Phone low, side-on to you',
+    video: 'reverse nordic hold',
+    about: 'Kneeling upright, lean back from the knees in one straight line and hold. It loads the fronts of the thighs and the tendons around the knee, which few other holds reach.',
+    levels: [
+      { name: 'Slight lean', target: 20, desc: 'Kneel on a mat or cushion, knees hip width, shins and the tops of your feet flat behind you. Arms crossed on your chest. Squeeze your glutes and lean back a little from the knees, keeping one straight line from knees to shoulders.' },
+      { name: 'Lean back', target: 30, desc: 'Lean further back, about 25° from upright. Don’t bend at the hips: the line from knees to shoulders stays straight.' },
+      { name: 'Deep lean', target: 30, desc: 'About 35° back. Breathe steadily; your thighs do all the work.' },
+      { name: 'Full lean', target: 40, desc: 'About 45° back, still in one straight line. Come back up slowly, and stop if your knees complain.' },
+    ],
+    criteria: level => {
+      const leg = b => (b.legs.L.c.y > b.legs.R.c.y ? b.legs.L : b.legs.R);  // the leg drawn lower (on the floor)
+      return [
+        {
+          id: 'lean', label: 'Leaning back', weight: 2, joints: [11, 12, 23, 24, 25, 26],
+          cue: { low: 'Lean back further from the knees', high: 'Come up a little' },
+          // Degrees the knee-to-shoulder line tips back from upright: back is the way the feet point.
+          value: b => {
+            const knee = leg(b).b, back = Math.sign(leg(b).c.x - knee.x) || 1;
+            return Math.sign(b.sh.x - knee.x) === back ? lean(b.sh, knee) : -lean(b.sh, knee);
+          },
+          min: by(level, [15, 25, 35, 45]), soft: 10,
+        },
+        {
+          id: 'line', label: 'Straight hips', cue: 'Don’t bend at the hips: one line from knees to shoulders', joints: [11, 12, 23, 24, 25, 26],
+          value: b => angleAt(b.sh, b.hip, leg(b).b), min: 160, soft: 20,
+        },
+        {
+          id: 'kneel', label: 'Kneeling', cue: 'Kneel with your shins flat on the floor', joints: [25, 26, 27, 28],
+          value: b => Math.abs(leg(b).b.y - leg(b).c.y) / b.torsoLen, max: 0.2, soft: 0.2,
+        },
+      ];
+    },
+    figure: level => {
+      // Side-on, facing right: shins flat behind the knees, thighs and torso in one line tipped back.
+      const back = by(level, [18, 28, 38, 48]);
+      return {
+        view: 'side', torso: 180 + back, head: 180 + back,
+        legs: { L: [back, -90], R: [back, -90] },
+        arms: { L: [back + 20, back + 160], R: [back + 18, back + 158] },
+      };
+    },
+  },
+
+  {
+    id: 'bear', name: 'Bear Crawl Hold', native: '', view: 'side', sides: false, camera: true,
+    areas: { core: 0.6, upper: 0.2, legs: 0.2 }, style: 'hard',
+    hint: 'Phone low to the ground, side-on to you',
+    video: 'bear crawl hold',
+    about: 'On hands and toes with your knees hovering just off the floor: a hold for the core, shoulders and thighs together. From the side, hovering knees look just like resting ones, so the camera checks your shape and the hover is on your honour.',
+    levels: [
+      { name: 'Hover', target: 20, desc: 'Start on hands and knees: hands under your shoulders, knees under your hips, toes tucked under. Press into your hands and lift your knees 2–3 cm off the floor. Back flat, knees still bent at 90°. If your knees touch down, that’s a rest, not the hold.' },
+      { name: 'Long hover', target: 40, desc: 'Knees hovering 2–3 cm off the floor for 40 seconds. Keep the back flat as a table; don’t let your hips rise.' },
+      { name: 'Reach', target: 30, desc: 'Knees hovering, reach one arm straight forward, level with your back. Switch arms halfway.' },
+      { name: 'Bear bird dog', target: 30, desc: 'Knees hovering, reach one arm forward and the opposite leg straight back, both level with your back. Switch sides halfway. The supporting knee stays just off the floor.' },
+    ],
+    criteria: level => {
+      const support = b => (lean(b.legs.L.a, b.legs.L.c) < lean(b.legs.R.a, b.legs.R.c) ? b.legs.L : b.legs.R);
+      const reachLeg = b => (support(b) === b.legs.L ? b.legs.R : b.legs.L);
+      const reachArm = b => (lean(b.arms.L.a, b.arms.L.c) > lean(b.arms.R.a, b.arms.R.c) ? b.arms.L : b.arms.R);
+      return [
+        {
+          id: 'flat', label: 'Flat back', cue: 'Keep your back flat as a table', weight: 1.5, joints: HIPS_SHOULDERS,
+          value: b => tilt(b.sh, b.hip), max: 15, soft: 15,
+        },
+        {
+          id: 'knee', label: 'Knees at 90°', cue: { low: 'Knees under your hips', high: 'Bend your knees to 90°' }, joints: [23, 24, 25, 26, 27, 28],
+          value: b => support(b).angle, min: 65, max: 115, soft: 25,
+        },
+        {
+          id: 'thigh', label: 'Knees under hips', cue: 'Bring your knees under your hips', joints: [23, 24, 25, 26],
+          value: b => lean(support(b).a, support(b).b), max: 25, soft: 20,
+        },
+        {
+          id: 'arms', label: 'Arms straight', cue: 'Press into straight arms', joints: [11, 12, 13, 14, 15, 16],
+          value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 150, soft: 30,
+        },
+        ...(level >= 3 ? [{
+          id: 'reach', label: 'Arm forward', cue: 'Reach one arm forward, level with your back', weight: 1.5, joints: [13, 14, 15, 16],
+          value: b => lean(reachArm(b).a, reachArm(b).c), min: 70, soft: 20,
+        }] : []),
+        ...(level === 4 ? [{
+          id: 'leg', label: 'Leg back', cue: 'Reach the opposite leg straight back', weight: 1.5, joints: [23, 24, 25, 26, 27, 28],
+          value: b => lean(reachLeg(b).a, reachLeg(b).c), min: 70, soft: 20,
+        }] : []),
+      ].map(c => (c.id === 'knee' || c.id === 'thigh' || c.id === 'arms') && level >= 3
+        // With a hand or foot lifted, judge the supporting limbs only.
+        ? { ...c, value: c.id === 'arms' ? b => (reachArm(b) === b.arms.L ? b.arms.R : b.arms.L).angle : c.value } : c);
+    },
+    figure: level => {
+      // Side-on, facing right. Hands under shoulders, knees under hips hovering just off the floor, on the toes.
+      const shin = -(90 - Math.asin(3 / 22) / DEG);
+      const arms = level >= 3 ? { R: [0, 0], L: [90, 90] } : { R: [0, 0], L: [2, 2] };
+      return {
+        view: 'side', compact: true, torso: 90 + Math.asin(2 / 30) / DEG,
+        legs: { L: level === 4 ? [-90, -90] : [0, shin], R: [0, shin] },
+        arms,
+      };
+    },
+  },
+
   // ---- Balance and stillness: scored mostly on how little you move ----
   // `still` holds have a sway meter (body.sway, see SwayMeter): their position checks are
   // loose, and the score comes mainly from staying steady.
@@ -1299,9 +1402,9 @@ export function prefersLandscape(hold, level = 1) {
 // How the home screen groups the holds, each group roughly easiest to hardest.
 // Holds that work two areas sit where most of the effort goes.
 export const HOLD_GROUPS = [
-  { name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat'] },
+  { name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic'] },
   { name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow'] },
-  { name: 'Core & back', ids: ['plank', 'sideplank', 'birddog', 'hollow', 'bridge', 'yanfei'] },
+  { name: 'Core & back', ids: ['plank', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei'] },
   { name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
   { name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
 ];
