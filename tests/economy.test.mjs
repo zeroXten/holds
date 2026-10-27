@@ -7,7 +7,7 @@ globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) 
 
 const { HOLDS } = await import('../js/holds.js');
 const { Session } = await import('../js/session.js');
-const { bonusTier, STARTER_HOLDS, UNLOCK_PRICES, DAILY_MULT, TARGET_COINS } = await import('../js/economy.js');
+const { bonusTier, STARTER_HOLDS, UNLOCK_PRICES, DAILY_MULT, coinsAtTarget } = await import('../js/economy.js');
 const P = await import('../js/progress.js');
 
 let failures = 0;
@@ -29,25 +29,28 @@ check('tier 1 at target', bonusTier(30, 30).tier === 1 && bonusTier(30, 30).mult
 check('tier 2 at +50%', bonusTier(45, 30).tier === 2 && bonusTier(45, 30).mult === 2);
 check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult === 3);
 
-// Earning: reaching a target pays TARGET_COINS for its level, whatever the hold (here in
-// honour mode, form factor 0.75): 80% over the target's length, 20% on reaching it.
+// Earning: reaching a target pays the hold's coinsAtTarget for its level, however long the
+// target (here in honour mode, form factor 0.75): 80% over the target's length, 20% on reaching it.
 {
-  const [c1, , , c4] = TARGET_COINS;
-  const r = honour('horse', 1, 30.05);
-  check('30s at target', near(r.coins, c1 * 0.75, 0.1), `${r.coins.toFixed(2)} coins`);
-  const r2 = honour('horse', 1, 60.05);
-  // Base rate 4 coins / 30s. 30–45s at ×1.5 = 3, 45–60s at ×2 = 4 → (4 + 3 + 4 + 1 target) × 0.75
-  check('60s with bonus tiers', near(r2.coins, (4 + 3 + 4 + 1) * 0.75, 0.15), `${r2.coins.toFixed(2)} coins`);
-  const daily = honour('horse', 1, 30.05, { daily: true });
+  const at = (id, level) => coinsAtTarget(HOLDS.find(h => h.id === id), level);
+  const c1 = at('tray', 1);  // Carrying the Tray is rated 1: the plain base, one side, 45s
+  const r = honour('tray', 1, 45.05);
+  check('45s at target', near(r.coins, c1 * 0.75, 0.1), `${r.coins.toFixed(2)} coins`);
+  const t2 = honour('tray', 1, 90.05);  // tray: rated 1, 45s target, one side
+  // Base 4 coins / 45s. 45–67.5s at ×1.5 = 3, 67.5–90s at ×2 = 4 → (4 + 3 + 4 + 1 target) × 0.75
+  check('bonus tiers multiply the base rate', near(t2.coins, (4 + 3 + 4 + 1) * 0.75, 0.15), `${t2.coins.toFixed(2)} coins`);
+  const daily = honour('tray', 1, 45.05, { daily: true });
   check('hold of the day', near(daily.coins, r.coins * DAILY_MULT, 0.3), `${daily.coins.toFixed(2)} vs ${(r.coins * DAILY_MULT).toFixed(2)}`);
   const b45 = honour('horse', 1, 45), side = honour('bow', 1, 40);
   check('bonus as a fraction of the target', near(b45.bonus, 0.5, 0.02), b45.bonus.toFixed(2));
   check('two-sided bonus measured against the whole target', near(side.bonus, 25 / 30, 0.03), side.bonus.toFixed(2));  // 40s on side one of a 15s-per-side hold
-  // A 30s stance, a 60s soft hold and 5 minutes of meditation all pay the same at their targets.
-  const soft = honour('weituo', 1, 60.05), sit = honour('zuochan', 1, 300.05);
-  check('same coins at target whatever the hold', near(soft.coins, r.coins, 0.1) && near(sit.coins, r.coins, 0.1), `horse ${r.coins.toFixed(2)}, wei tuo ${soft.coins.toFixed(2)}, meditation ${sit.coins.toFixed(2)}`);
+  // However long the target, a hold pays its own rating at it: a 30s stance, a 60s soft hold
+  // and 5 minutes of meditation.
+  const horse = honour('horse', 1, 30.05), soft = honour('weituo', 1, 60.05), sit = honour('zuochan', 1, 300.05);
+  check('coins at target follow each hold\'s rating', near(horse.coins, at('horse', 1) * 0.75, 0.1) && near(soft.coins, at('weituo', 1) * 0.75, 0.1) && near(sit.coins, at('zuochan', 1) * 0.75, 0.1),
+    `horse ${horse.coins.toFixed(2)}, wei tuo ${soft.coins.toFixed(2)}, meditation ${sit.coins.toFixed(2)}`);
   const lvl4 = honour('horse', 4, 90.05);
-  check('level 4 pays more at target', near(lvl4.coins, c4 * 0.75, 0.15), `${lvl4.coins.toFixed(2)} coins`);
+  check('level 4 pays more at target', near(lvl4.coins, at('horse', 4) * 0.75, 0.15), `${lvl4.coins.toFixed(2)} coins`);
 }
 
 

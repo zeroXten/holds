@@ -74,7 +74,7 @@ const lerp4 = (level, a, b) => a + (b - a) * (level - 1) / 3;
 export const HOLDS = [
   {
     id: 'horse', name: 'Horse Stance', native: 'Mǎ Bù', view: 'front', sides: false, camera: true,
-    areas: { legs: 1 }, style: 'hard',
+    areas: { legs: 1 }, style: 'hard', coins: 1.1,
     video: 'ma bu horse stance kung fu tutorial',
     about: 'The foundation stance. Builds leg strength, a stable root and patience.',
     levels: [
@@ -240,7 +240,7 @@ export const HOLDS = [
 
   {
     id: 'drop', name: 'Drop Stance', native: 'Pū Bù', view: 'front', sides: true, camera: true,
-    areas: { legs: 0.7, mobility: 0.3 }, style: 'hard',
+    areas: { legs: 0.7, mobility: 0.3 }, style: 'hard', coins: 1.2,
     hint: 'Face the phone',
     video: 'pu bu drop stance kung fu tutorial',
     about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together.',
@@ -279,7 +279,7 @@ export const HOLDS = [
 
   {
     id: 'post', name: 'Standing Post', native: 'Zhàn Zhuāng', view: 'front', sides: false, camera: true,
-    areas: { legs: 0.4, upper: 0.6 }, style: 'soft',
+    areas: { legs: 0.4, upper: 0.6 }, style: 'soft', coins: 0.9,
     video: 'zhan zhuang standing post holding the ball',
     about: '"Holding the ball". A quiet standing meditation that slowly builds deep endurance in the legs and shoulders.',
     levels: [
@@ -319,7 +319,7 @@ export const HOLDS = [
 
   {
     id: 'weituo', name: 'Wei Tuo Presents the Pestle', native: 'Wéi Tuó Xiàn Chǔ', view: 'front', sides: false, camera: true,
-    areas: { upper: 0.8, balance: 0.2 }, style: 'soft',
+    areas: { upper: 0.8, balance: 0.2 }, style: 'soft', coins: 0.8,
     video: 'yi jin jing wei tuo presents the pestle',
     about: 'The first three postures of the Yi Jin Jing, the Shaolin “muscle-tendon changing” classic. Gentle on the legs; the work is in the arms, shoulders and slow breathing.',
     levels: [
@@ -365,7 +365,7 @@ export const HOLDS = [
 
   {
     id: 'stars', name: 'Plucking the Stars', native: 'Zhāi Xīng Huàn Dǒu', view: 'front', sides: true, camera: true,
-    areas: { upper: 0.6, mobility: 0.4 }, style: 'soft',
+    areas: { upper: 0.6, mobility: 0.4 }, style: 'soft', coins: 0.8,
     video: 'yi jin jing plucking stars posture',
     about: 'A Yi Jin Jing posture: one hand reaches up above your head, the other rests behind your back. Opens the shoulders and sides gently.',
     levels: [
@@ -402,7 +402,7 @@ export const HOLDS = [
 
   {
     id: 'feet', name: 'Hands to Feet', native: 'Liǎng Shǒu Pān Zú', view: 'side', sides: false, camera: true,
-    areas: { mobility: 0.7, core: 0.3 }, style: 'soft',
+    areas: { mobility: 0.7, core: 0.3 }, style: 'soft', coins: 0.8,
     video: 'ba duan jin two hands hold the feet',
     about: 'From the Ba Duan Jin (Eight Brocades): a slow forward fold, said to strengthen the kidneys and waist. In plain terms, it stretches the back and hamstrings.',
     levels: [
@@ -435,7 +435,7 @@ export const HOLDS = [
 
   {
     id: 'sky', name: 'Holding Up the Sky', native: 'Liǎng Shǒu Tuō Tiān', view: 'front', sides: false, camera: true,
-    areas: { upper: 0.5, mobility: 0.5 }, style: 'soft',
+    areas: { upper: 0.5, mobility: 0.5 }, style: 'soft', coins: 0.9,
     video: 'ba duan jin two hands hold up the heavens',
     about: 'The first of the Ba Duan Jin (Eight Brocades), a slow, flowing movement rather than a still hold. Stand with your feet hip width apart and your legs long; they stay still throughout. Each cycle: hands at your belly, palms up → lift them up the front → turn the palms over at your chest and push up to the sky → stretch → float your arms down the sides. The camera counts each cycle. It can’t see your fingers: it checks your hands stay near the middle as they rise, are together and straight overhead, stay long as they float down, and come together at your belly.',
     // A flowing hold: levels set a number of slow cycles, a minimum time per cycle,
@@ -506,7 +506,7 @@ export const HOLDS = [
 
   {
     id: 'sideplank', name: 'Side Plank', native: 'Cè Píngbǎn Zhīchēng', view: 'front', sides: true, camera: true,
-    areas: { core: 0.8, upper: 0.2 }, style: 'hard',
+    areas: { core: 0.8, upper: 0.2 }, style: 'hard', coins: 1.1,
     video: 'side plank progression tutorial',
     hint: 'Phone low to the ground, with your front facing it',
     about: 'Not strictly Shaolin, but one of the best holds for the sides of the core and a stable spine.',
@@ -564,7 +564,7 @@ export const HOLDS = [
 
   {
     id: 'birddog', name: 'Bird Dog', native: 'Niǎo Gǒu Shì', view: 'side', sides: true, camera: true,
-    areas: { core: 0.7, balance: 0.3 }, style: 'hard',
+    areas: { core: 0.7, balance: 0.3 }, style: 'hard', coins: 0.9,
     video: 'bird dog exercise how to',
     hint: 'Phone low to the ground, side-on to you',
     about: 'Not strictly Shaolin, but a gentle, highly rated hold for the lower back and a core that resists twisting.',
@@ -621,7 +621,7 @@ export const HOLDS = [
 
   {
     id: 'hollow', name: 'Hollow Hold', native: '', view: 'side', sides: false, camera: true,
-    areas: { core: 1 }, style: 'hard',
+    areas: { core: 1 }, style: 'hard', coins: 1.1,
     video: 'hollow body hold progression',
     hint: 'Phone low to the ground, side-on to you',
     about: 'Borrowed from gymnastics: lower back pressed into the floor, shoulders and legs lifted. Builds the front of the core.',
@@ -669,7 +669,7 @@ export const HOLDS = [
 
   {
     id: 'squat', name: 'Deep Squat', native: 'Shēn Dūn', view: 'side', sides: false, camera: true,
-    areas: { mobility: 0.6, legs: 0.4 }, style: 'hard',
+    areas: { mobility: 0.6, legs: 0.4 }, style: 'hard', coins: 0.9,
     video: 'deep squat hold mobility how to',
     about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier.',
     levels: [
@@ -723,7 +723,7 @@ export const HOLDS = [
 
   {
     id: 'bridge', name: 'Iron Bridge', native: '', view: 'side', sides: false, camera: true,
-    areas: { core: 0.7, legs: 0.3 }, style: 'hard',
+    areas: { core: 0.7, legs: 0.3 }, style: 'hard', coins: 1.3,
     video: 'iron bridge between two chairs bodyweight hold',
     hint: 'Phone low to the ground; lie side-on to it',
     about: 'The body held rigid as an iron plank, built up from a floor bridge to the strongman-style demonstration of lying stiff between two chairs. A demonstration feat rather than a classical stance.',
@@ -777,7 +777,7 @@ export const HOLDS = [
 
   {
     id: 'swallow', name: 'Swallow Balance', native: 'Yàn Shì Píng Héng', view: 'side', sides: true, camera: true,
-    areas: { balance: 0.4, legs: 0.4, core: 0.2 }, style: 'hard',
+    areas: { balance: 0.4, legs: 0.4, core: 0.2 }, style: 'hard', coins: 1.2,
     hint: 'Stand side-on to the phone',
     video: 'yan shi ping heng swallow balance wushu',
     about: 'Balance on one leg with the body tipped forward and the other leg reaching back, like a swallow in flight.',
@@ -822,7 +822,7 @@ export const HOLDS = [
 
   {
     id: 'kick', name: 'Kick Hold', native: 'Dēng Tuǐ', view: 'side', sides: true, camera: true,
-    areas: { legs: 0.5, balance: 0.3, mobility: 0.2 }, style: 'hard',
+    areas: { legs: 0.5, balance: 0.3, mobility: 0.2 }, style: 'hard', coins: 1.2,
     hint: 'Stand side-on to the phone',
     video: 'deng tui heel kick kung fu',
     about: 'Hold a front heel kick out in the air: hip strength, hamstring flexibility and balance.',
@@ -993,7 +993,7 @@ export const HOLDS = [
 
   {
     id: 'claws', name: 'Showing Claws, Spreading Wings', native: 'Chū Zhǎo Liàng Chì', view: 'side', sides: false, camera: true,
-    areas: { upper: 1 }, style: 'soft',
+    areas: { upper: 1 }, style: 'soft', coins: 0.8,
     hint: 'Stand side-on to the phone',
     video: 'yi jin jing show claws spread wings',
     about: 'A Yi Jin Jing posture: the palms push slowly forward from the chest until the arms are straight in front at shoulder height, fingers up and spread. Works the fronts of the shoulders and the arms.',
@@ -1091,7 +1091,7 @@ export const HOLDS = [
 
   {
     id: 'palms', name: 'Pressing Palms', native: 'Hé Zhǎng', view: 'front', sides: false, camera: true,
-    areas: { upper: 1 }, style: 'hard',
+    areas: { upper: 1 }, style: 'hard', coins: 0.9,
     video: 'isometric palm press chest exercise',
     about: 'The palms-together salute turned into a strength hold: press your palms into each other as hard as you can in front of your chest. Works the chest, shoulders and arms with nothing but yourself to push against.',
     levels: [
@@ -1171,7 +1171,7 @@ export const HOLDS = [
 
   {
     id: 'nordic', name: 'Reverse Nordic', native: '', view: 'side', sides: false, camera: true,
-    areas: { legs: 0.8, core: 0.2 }, style: 'hard',
+    areas: { legs: 0.8, core: 0.2 }, style: 'hard', coins: 1.3,
     hint: 'Phone low, side-on to you',
     video: 'reverse nordic hold',
     about: 'Kneeling upright, lean back from the knees in one straight line and hold. It loads the fronts of the thighs and the tendons around the knee, which few other holds reach.',
@@ -1217,7 +1217,7 @@ export const HOLDS = [
 
   {
     id: 'toes', name: 'Rising on the Toes', native: '', view: 'side', sides: false, camera: true,
-    areas: { legs: 0.7, balance: 0.3 }, style: 'hard',
+    areas: { legs: 0.7, balance: 0.3 }, style: 'hard', coins: 0.9,
     hint: 'Stand side-on to the phone, feet in view',
     video: 'calf raise hold isometric',
     about: 'Standing high on the balls of your feet and holding: it strengthens the feet, ankles and calves, the tendons every stance stands on. It comes from the last movement of the Ba Duan Jin, where you rise onto your toes.',
@@ -1262,7 +1262,7 @@ export const HOLDS = [
 
   {
     id: 'fingertips', name: 'Fingertip Plank', native: '', view: 'side', sides: false, camera: true,
-    areas: { upper: 0.6, core: 0.4 }, style: 'hard',
+    areas: { upper: 0.6, core: 0.4 }, style: 'hard', coins: 1.3,
     hint: 'Phone low to the ground, side-on to you',
     video: 'fingertip plank hold',
     about: 'A plank on your fingertips, palms off the floor: Shaolin’s classic way to strengthen the fingers, hands and forearms. The camera checks the plank and that your wrists are lifted off the floor; how many fingers you use is on your honour. Build up slowly, and keep the fingers slightly bent, never bending backwards.',
@@ -1314,7 +1314,7 @@ export const HOLDS = [
 
   {
     id: 'bear', name: 'Bear Crawl Hold', native: '', view: 'side', sides: false, camera: true,
-    areas: { core: 0.6, upper: 0.2, legs: 0.2 }, style: 'hard',
+    areas: { core: 0.6, upper: 0.2, legs: 0.2 }, style: 'hard', coins: 1.1,
     hint: 'Phone low to the ground, side-on to you',
     video: 'bear crawl hold',
     about: 'On hands and toes with your knees hovering just off the floor: a hold for the core, shoulders and thighs together. From the side, hovering knees look just like resting ones, so the camera checks your shape and the hover is on your honour.',
@@ -1375,7 +1375,7 @@ export const HOLDS = [
 
   {
     id: 'balance', name: 'One-Leg Balance', native: 'Dú Lì', view: 'side', sides: true, camera: true, still: true,
-    areas: { balance: 0.8, legs: 0.2 }, style: 'soft',
+    areas: { balance: 0.8, legs: 0.2 }, style: 'soft', coins: 0.9,
     hint: 'Stand side-on to the phone',
     video: 'standing on one leg balance training',
     about: 'Balance as its own practice: standing on one leg, scored on how still you stay rather than the exact shape. Fix your eyes on one spot and let the standing foot grip the floor.',
@@ -1413,7 +1413,7 @@ export const HOLDS = [
 
   {
     id: 'wuji', name: 'Standing Meditation', native: 'Wújí Zhuāng', view: 'front', sides: false, camera: true, still: true,
-    areas: { stillness: 1 }, style: 'soft',
+    areas: { stillness: 1 }, style: 'soft', coins: 0.8,
     hint: 'Face the phone, whole body in view',
     video: 'wuji standing meditation qigong',
     about: 'Wuji, “standing in emptiness”: the stillest posture of all. Stand naturally and do nothing at all, as still as a mountain. Scored almost entirely on how little you move.',
@@ -1441,7 +1441,7 @@ export const HOLDS = [
 
   {
     id: 'zuochan', name: 'Seated Meditation', native: 'Zuò Chán', view: 'front', sides: false, camera: true, still: true,
-    areas: { stillness: 1 }, style: 'soft',
+    areas: { stillness: 1 }, style: 'soft', coins: [1, 1.5, 2.5, 3.5],
     hint: 'Sit facing the phone, the phone at about chest height',
     video: 'zazen seated meditation posture',
     about: 'Chan (Zen) began at Shaolin: seated meditation is where the monks’ training started. Sit cross-legged on a cushion, or on the front of a chair, and keep still, from five minutes up to an hour. Scored on stillness and an upright back.',

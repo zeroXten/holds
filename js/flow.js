@@ -185,7 +185,7 @@ export class FlowSession {
       play('point');
       if (!this.reached && this.count >= this.goal) {
         this.reached = true;
-        this.coins += targetBonusFor(this.level) * this.boost * (this.camera ? formFactor(this.avgForm()) : HONOUR_FORM);
+        this.coins += targetBonusFor(this.hold, this.level) * this.boost * (this.camera ? formFactor(this.avgForm()) : HONOUR_FORM);
         play('target');
         say('Target reached! Bonus coins from here', { priority: true });
       } else {

@@ -198,7 +198,7 @@ export class Session {
     if (!this.sideReached[i] && h >= t) {
       this.sideReached[i] = true;
       this.reached = this.sideReached.every(Boolean);
-      this.coins += (targetBonusFor(this.level) / this.sides) * this.boost * (this.camera ? formFactor(this.avgForm()) : HONOUR_FORM);
+      this.coins += (targetBonusFor(this.hold, this.level) / this.sides) * this.boost * (this.camera ? formFactor(this.avgForm()) : HONOUR_FORM);
       play('target');
       say(this.onFirstSide()
         ? (this.camera ? 'Side one done! Keep going for bonus, then switch sides' : 'Side one done! Keep going for bonus, then tap switch')
