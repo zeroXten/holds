@@ -51,6 +51,9 @@ export function makeBody(landmarks, width, height, { fillHidden = false } = {}) 
     lh: P[LM.lHip], rh: P[LM.rHip], la: P[LM.lAnkle], ra: P[LM.rAnkle],
     legs: { L: limb(P, LM.lHip, LM.lKnee, LM.lAnkle), R: limb(P, LM.rHip, LM.rKnee, LM.rAnkle) },
     arms: { L: limb(P, LM.lShoulder, LM.lElbow, LM.lWrist), R: limb(P, LM.rShoulder, LM.rElbow, LM.rWrist) },
+    // Heel and toe (MediaPipe's heel and foot-index points), and the index finger.
+    feet: { L: { heel: P[29], toe: P[31] }, R: { heel: P[30], toe: P[32] } },
+    tips: { L: P[19], R: P[20] },
   };
   b.sh = mid(b.ls, b.rs);
   b.hip = mid(b.lh, b.rh);

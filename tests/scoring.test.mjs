@@ -20,7 +20,7 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${hold.id} L${level}: figure ${r.score} noisy ${noisy.score} standing ${stand.score} ${weak}`);
   }
   // A deeper level's figure should also pass easier levels (some holds' levels change the position, e.g. knees to straight legs, rather than deepening it).
-  if (['post', 'plank', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky'].includes(hold.id)) continue;
+  if (['post', 'plank', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes'].includes(hold.id)) continue;
   const r = score(hold, 1, hold.figure(4));
   if (r.score < 90) { failures++; console.log(`FAIL ${hold.id}: L4 figure scores ${r.score} at L1`); }
 }
@@ -95,6 +95,16 @@ for (const [a, b] of [['tray', 'claws'], ['claws', 'tray'], ['wings', 'palms'], 
   const ok = r.score < 50 && line.s < 0.5;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} nordic: bending at the hips scores ${r.score} (hip line ${Math.round(line.value)}°)`);
+}
+
+// Fingertip Plank: the same plank on flat palms (wrists on the floor) must fail.
+{
+  const hold = HOLDS.find(h => h.id === 'fingertips');
+  const palms = { ...hold.figure(2), hands: { L: 85, R: 87 } };  // hands flat forward from the wrist
+  const r = score(hold, 2, palms);
+  const ok = r.score < 50;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} fingertips: flat palms score ${r.score}`);
 }
 
 // A sagging iron bridge (hips dropped ~15°) should fail.

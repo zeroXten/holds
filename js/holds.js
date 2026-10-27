@@ -1216,6 +1216,103 @@ export const HOLDS = [
   },
 
   {
+    id: 'toes', name: 'Rising on the Toes', native: '', view: 'side', sides: false, camera: true,
+    areas: { legs: 0.7, balance: 0.3 }, style: 'hard',
+    hint: 'Stand side-on to the phone, feet in view',
+    video: 'calf raise hold isometric',
+    about: 'Standing high on the balls of your feet and holding: it strengthens the feet, ankles and calves, the tendons every stance stands on. It comes from the last movement of the Ba Duan Jin, where you rise onto your toes.',
+    levels: [
+      { name: 'Heels up', target: 30, desc: 'Feet hip width, legs straight. Rise onto the balls of your feet, heels well off the floor, and hold. Weight over the big toes, not rolling out.' },
+      { name: 'High and steady', target: 60, desc: 'Heels as high as they go, for a full minute. Stand tall through the crown of your head.' },
+      { name: 'Arms overhead', target: 45, desc: 'High on your toes with both arms reaching overhead. A higher centre is harder to keep steady.' },
+      { name: 'One foot', target: 30, desc: 'On the toes of one foot, the other foot tucked behind your ankle. Switch feet halfway.' },
+    ],
+    criteria: level => {
+      const raise = f => (f.toe.y - f.heel.y) / (dist(f.heel, f.toe) || 1);  // ~0 flat, ~0.65 high on the toes
+      const stand = b => (b.feet.L.toe.y > b.feet.R.toe.y ? b.feet.L : b.feet.R);
+      const lifted = b => (stand(b) === b.feet.L ? b.feet.R : b.feet.L);
+      const standLeg = b => (b.legs.L.c.y > b.legs.R.c.y ? b.legs.L : b.legs.R);
+      return [
+        {
+          id: 'heels', label: 'Heels high', cue: 'Rise higher onto your toes', weight: 2, joints: [27, 28, 29, 30, 31, 32],
+          value: b => (level === 4 ? raise(stand(b)) : Math.min(raise(b.feet.L), raise(b.feet.R))), min: by(level, [0.3, 0.4, 0.4, 0.3]), soft: 0.2,
+        },
+        {
+          id: 'legs', label: 'Legs straight', cue: 'Straighten your legs', joints: [23, 24, 25, 26, 27, 28],
+          value: b => (level === 4 ? standLeg(b).angle : Math.min(b.legs.L.angle, b.legs.R.angle)), min: 160, soft: 20,
+        },
+        upright(10, 'Stand tall', 12),
+        ...(level === 3 ? [{
+          id: 'reach', label: 'Arms overhead', cue: 'Reach both arms overhead', joints: [13, 14, 15, 16],
+          value: b => (b.nose.y - Math.max(b.arms.L.c.y, b.arms.R.c.y)) / b.torsoLen, min: 0.1, soft: 0.35,
+        }] : []),
+        ...(level === 4 ? [{
+          id: 'lift', label: 'Other foot up', cue: 'Lift the other foot behind your ankle', joints: [27, 28, 31, 32],
+          value: b => (stand(b).toe.y - lifted(b).toe.y) / b.torsoLen, min: 0.1, soft: 0.1,
+        }] : []),
+      ];
+    },
+    figure: level => ({
+      view: 'side', torso: 180,
+      legs: level === 4 ? { L: [0, 0], R: [12, -50] } : { L: [0, 0], R: [-1, -1] },
+      feet: level === 4 ? { L: 40, R: 20 } : { L: 40, R: 40 },
+      arms: level === 3 ? { L: [178, 182], R: [176, 180] } : { L: [6, 3], R: [-6, -3] },
+    }),
+  },
+
+  {
+    id: 'fingertips', name: 'Fingertip Plank', native: '', view: 'side', sides: false, camera: true,
+    areas: { upper: 0.6, core: 0.4 }, style: 'hard',
+    hint: 'Phone low to the ground, side-on to you',
+    video: 'fingertip plank hold',
+    about: 'A plank on your fingertips, palms off the floor: Shaolin’s classic way to strengthen the fingers, hands and forearms. The camera checks the plank and that your wrists are lifted off the floor; how many fingers you use is on your honour. Build up slowly, and keep the fingers slightly bent, never bending backwards.',
+    levels: [
+      { name: 'Kneeling fingertips', target: 20, desc: 'On your knees, hands under your shoulders. Spread your fingers and rise onto the fingertips, palms and wrists off the floor. Shoulders, hips and knees in one straight line.' },
+      { name: 'Fingertip plank', target: 20, desc: 'The same on your toes: a straight plank from shoulders to heels on all ten fingertips.' },
+      { name: 'Long fingertip plank', target: 40, desc: 'Forty seconds on the fingertips. Keep the fingers firm and slightly bent, not collapsing flat.' },
+      { name: 'Three fingers', target: 20, desc: 'Thumb, index and middle finger on each hand only. On your honour: the camera can’t count fingers.' },
+    ],
+    criteria: level => {
+      const end = level === 1 ? kneesMid : b => (b.la.y > b.ra.y ? b.la : b.ra);
+      const wristLift = arm => b => (b.tips[arm].y - b.arms[arm].c.y) / (b.arms[arm].lowerLen || 1);
+      return [
+        {
+          id: 'line', label: 'Straight body', weight: 2, joints: [11, 12, 23, 24, 25, 26, 27, 28],
+          cue: { high: 'Tighten your stomach, lift your hips', low: 'Lower your hips into a straight line' },
+          value: b => hipSag(b, end(b)), min: -0.06, max: 0.04, soft: 0.06,
+        },
+        {
+          id: 'down', label: 'In the plank', cue: 'Get down into the plank', weight: 2, joints: [11, 12, 27, 28],
+          value: b => tilt(b.sh, end(b)), max: by(level, [42, 32, 32, 32]), soft: 20,
+        },
+        {
+          id: 'arms', label: 'Straight arms', cue: 'Straighten your arms', joints: [13, 14],
+          value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 155, soft: 30,
+        },
+        {
+          // A gate: a plank on flat palms is a different hold, however good the plank.
+          id: 'tips', label: 'On fingertips', cue: 'Rise onto your fingertips, palms off the floor', weight: 1.5, gate: true, joints: [15, 16, 19, 20],
+          value: b => Math.min(wristLift('L')(b), wristLift('R')(b)), min: 0.15, soft: 0.12,
+        },
+        ...(level > 1 ? [{
+          id: 'knees', label: 'Straight legs', cue: 'Lock your knees', joints: [25, 26],
+          value: b => Math.min(b.legs.L.angle, b.legs.R.angle), min: 160, soft: 20,
+        }] : []),
+      ];
+    },
+    figure: level => {
+      // Face down, head to the left, on the fingertips: the hands add their length under the wrists.
+      const hands = { L: 0, R: 2 }, rise = 27 + 4;
+      if (level === 1) {
+        const a = Math.asin(rise / 52) / DEG;
+        return { view: 'side', compact: true, torso: -(90 + a), legs: { L: [90 - a, 90], R: [90 - a, 90] }, arms: { L: [0, 0], R: [2, 2] }, hands };
+      }
+      const a = Math.asin(rise / 74) / DEG;
+      return { view: 'side', compact: true, torso: -(90 + a), legs: { L: [90 - a, 90 - a], R: [90 - a, 90 - a] }, arms: { L: [0, 0], R: [2, 2] }, hands };
+    },
+  },
+
+  {
     id: 'bear', name: 'Bear Crawl Hold', native: '', view: 'side', sides: false, camera: true,
     areas: { core: 0.6, upper: 0.2, legs: 0.2 }, style: 'hard',
     hint: 'Phone low to the ground, side-on to you',
@@ -1402,8 +1499,8 @@ export function prefersLandscape(hold, level = 1) {
 // How the home screen groups the holds, each group roughly easiest to hardest.
 // Holds that work two areas sit where most of the effort goes.
 export const HOLD_GROUPS = [
-  { name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic'] },
-  { name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow'] },
+  { name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes'] },
+  { name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow', 'fingertips'] },
   { name: 'Core & back', ids: ['plank', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei'] },
   { name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
   { name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
