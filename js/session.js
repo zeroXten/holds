@@ -10,7 +10,7 @@
 
 import { makeBody, scorePose, visible, viewing, SwayMeter } from './scoring.js';
 import { requiredFor } from './holds.js';
-import { COIN_SECONDS, coinRateFor, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
+import { coinRateFor, targetBonusFor, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { play, say } from './audio.js';
 
 export const STRICTNESS = {
@@ -29,8 +29,10 @@ export class Session {
   constructor({ hold, level, camera, strictness = 'normal', daily = false, boost = 1, now }) {
     Object.assign(this, { hold, level, camera, daily, now0: now, last: now });
     this.target = hold.levels[level - 1].target;
-    // Coins per second before form and bonus-time multipliers.
-    this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1) * boost;
+    // Boosts (hold of the day, streak, milestone day) multiply everything; the rate is
+    // coins per second before form and bonus time.
+    this.boost = (daily ? DAILY_MULT : 1) * boost;
+    this.rate = coinRateFor(hold, level) * this.boost;
     this.thr = STRICTNESS[strictness];
     this.required = requiredFor(hold, level);
     this.state = camera ? 'framing' : 'countdown';
@@ -170,7 +172,7 @@ export class Session {
     this.held += dt;
     const i = this.sideIndex;
     this.sideHeld[i] += dt;
-    this.coins += (dt / COIN_SECONDS) * this.mult * factor * bonusTier(this.sideHeld[i], this.sideTarget).mult;
+    this.coins += dt * this.rate * factor * bonusTier(this.sideHeld[i], this.sideTarget).mult;
     if (factor > 0) { this.formTime += dt; this.formSum += dt * (this.camera ? this.score : 100); }
   }
 
@@ -196,7 +198,7 @@ export class Session {
     if (!this.sideReached[i] && h >= t) {
       this.sideReached[i] = true;
       this.reached = this.sideReached.every(Boolean);
-      this.coins += (TARGET_BONUS / this.sides) * this.mult * (this.avgForm() / 100);
+      this.coins += (targetBonusFor(this.level) / this.sides) * this.boost * (this.camera ? formFactor(this.avgForm()) : HONOUR_FORM);
       play('target');
       say(this.onFirstSide()
         ? (this.camera ? 'Side one done! Keep going for bonus, then switch sides' : 'Side one done! Keep going for bonus, then tap switch')

@@ -1,12 +1,21 @@
 // The coin economy: how fast coins are earned and what things cost.
 // Kept in one place so it's easy to rebalance.
 
-export const COIN_SECONDS = 10;              // seconds of good form per coin, before multipliers
-export const LEVEL_MULT = [1, 1.25, 1.5, 2]; // harder levels earn faster
-export const STYLE_MULT = { hard: 1, soft: 0.5 }; // gentle (soft) holds earn at half the rate of hard ones
-// Coin rate for a hold at a level, before form, bonus time and hold of the day.
-export const coinRateFor = (hold, level) => LEVEL_MULT[level - 1] * (STYLE_MULT[hold.style] ?? 1);
-export const TARGET_BONUS = 2;               // coins for reaching a target (split across sides)
+// Every hold pays the same for reaching its target at a given level, however long the
+// target is: 15 seconds of a hard stance and five minutes of meditation are worth the same.
+// Of those coins, TARGET_SHARE is paid on reaching the target and the rest builds up evenly
+// over the target's length; bonus time past it carries on at that same base rate, times
+// the bonus tier. Everything scales from the base, so form, hold of the day and streaks
+// multiply it all alike.
+export const TARGET_COINS = [5, 7, 10, 14];  // by level, at good form
+export const TARGET_SHARE = 0.2;
+export const LEVEL_MULT = [1, 1.25, 1.5, 2]; // how hard each level is (for body-area load)
+// Seconds a level's target takes (for flowing holds: cycles × the slowest cycle allowed).
+export const targetSeconds = (hold, level) => hold.levels[level - 1].target * (hold.flow ? hold.flow.minCycle[level - 1] : 1);
+// Base coins per second while holding, before form, bonus time and boosts.
+export const coinRateFor = (hold, level) => TARGET_COINS[level - 1] * (1 - TARGET_SHARE) / targetSeconds(hold, level);
+// Coins for reaching the target, before form and boosts.
+export const targetBonusFor = level => TARGET_COINS[level - 1] * TARGET_SHARE;
 export const DAILY_MULT = 3;                 // hold of the day: this many times the coins, on its first session each day
 export const DAILY_MIN_SECONDS = 10;         // ...a session this long uses up the day's multiplier
 export const STREAK_STEP = 0.05;             // +5% coins for each full week of streak...

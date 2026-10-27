@@ -8,7 +8,7 @@
 
 import { makeBody, scorePose, visible, viewing } from './scoring.js';
 import { requiredFor } from './holds.js';
-import { COIN_SECONDS, coinRateFor, TARGET_BONUS, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
+import { coinRateFor, targetBonusFor, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { Session } from './session.js';
 import { play, say } from './audio.js';
 
@@ -28,7 +28,8 @@ export class FlowSession {
     this.goal = hold.levels[level - 1].target;
     this.minCycle = f.minCycle[level - 1];
     this.dwell = f.dwell[level - 1];
-    this.mult = coinRateFor(hold, level) * (daily ? DAILY_MULT : 1) * boost;
+    this.boost = (daily ? DAILY_MULT : 1) * boost;
+    this.rate = coinRateFor(hold, level) * this.boost;  // coins per second of counted cycles
     // The two key positions, and (optionally) what to check on the way between them.
     this.poses = { low: { criteria: f.low, sides: false }, high: { criteria: hold.criteria, sides: false } };
     if (f.lift) this.poses.lift = { criteria: f.lift, sides: false };
@@ -176,14 +177,15 @@ export class FlowSession {
     } else {
       const form = this.camera ? this.topScore : 100;
       const factor = this.camera ? formFactor(form) : HONOUR_FORM;
-      this.coins += (dur / COIN_SECONDS) * this.mult * factor * bonusTier(this.count, this.goal).mult;
+      // A cycle earns for the time it should take (at least the minimum), so dawdling doesn't pay more.
+      this.coins += this.minCycle * this.rate * factor * bonusTier(this.count, this.goal).mult;
       this.count++;
       this.held += dur;
       this.formSum += form;
       play('point');
       if (!this.reached && this.count >= this.goal) {
         this.reached = true;
-        this.coins += TARGET_BONUS * this.mult * (this.avgForm() / 100);
+        this.coins += targetBonusFor(this.level) * this.boost * (this.camera ? formFactor(this.avgForm()) : HONOUR_FORM);
         play('target');
         say('Target reached! Bonus coins from here', { priority: true });
       } else {

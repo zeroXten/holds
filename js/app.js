@@ -1,6 +1,6 @@
 import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
-  coinRateFor, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
+  TARGET_COINS, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FREEZE_PRICE, FREEZE_MAX,
   REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice, MILESTONE_DAY_MULT,
 } from './economy.js';
@@ -47,7 +47,7 @@ const milestoneReward = m => {
 };
 const boostTags = () => boostParts(P.coinBoost(state)).map(t => `<span class="tag strong">${t}</span>`).join('');
 
-const coinRate = (hold, level) => `${coinRateFor(hold, level)}× coins${hold.style === 'soft' ? ' (soft)' : ''}`;
+const coinRate = (hold, level) => `${TARGET_COINS[level - 1]} coins at target`;
 
 const fmt = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const fmtLong = s => s < 60 ? `${Math.round(s)}s`
