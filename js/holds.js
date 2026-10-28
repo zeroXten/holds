@@ -87,11 +87,15 @@ export const HOLDS = [
     ],
     criteria: level => [
       {
-        // kneeDrop is ~0.71 with thighs 45° below level, 0.5 at 30°, 0.26 at 15°. Each limit
-        // allows a margin past the described depth: knees pushed forward over the toes are
-        // nearer the camera, so they look lower than they are and the stance reads high.
+        // kneeDrop is ~0.71 with thighs 45° below level, 0.5 at 30°, 0.26 at 15°, 0 level.
+        // The camera reads a real stance higher than it is, and more so the deeper you go:
+        // knees pushed forward over the toes are nearer the camera (so look lower), and
+        // leaning forward or back tips the pelvis and moves the hip points. So each limit
+        // allows a margin past the described depth, growing with the level (thighs level
+        // can read as ~0.3–0.4).
         id: 'depth', label: 'Depth', cue: 'Sink lower', weight: 2, joints: [23, 24, 25, 26],
-        value: b => Math.max(kneeDrop(b.legs.L), kneeDrop(b.legs.R)), max: by(level, [0.82, 0.62, 0.38, 0.17]), soft: 0.25,
+        // (Standing up straight reads ~1.0, so level 1's margin stops short of it.)
+        value: b => Math.max(kneeDrop(b.legs.L), kneeDrop(b.legs.R)), max: by(level, [0.88, 0.75, 0.58, 0.42]), soft: by(level, [0.12, 0.2, 0.2, 0.2]),
       },
       {
         id: 'even', label: 'Even weight', cue: 'Even out your weight', joints: [23, 24, 25, 26],
