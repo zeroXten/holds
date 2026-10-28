@@ -1,13 +1,14 @@
 // The coin economy: how fast coins are earned and what things cost.
 // Kept in one place so it's easy to rebalance.
 
-// Every hold pays the same for reaching its target at a given level, however long the
+// Every hold pays the same for reaching its target, at any level and however long the
 // target is: 15 seconds of a hard stance and five minutes of meditation are worth the same.
+// Higher levels don't pay faster; they earn points towards your sash (see progress.js).
 // Of those coins, TARGET_SHARE is paid on reaching the target and the rest builds up evenly
 // over the target's length; bonus time past it carries on at that same base rate, times
 // the bonus tier. Everything scales from the base, so form, hold of the day and streaks
 // multiply it all alike.
-export const TARGET_COINS = [5, 7, 10, 14];  // by level, at good form
+export const TARGET_COINS = 5;               // at good form, before the hold's own rating
 export const TARGET_SHARE = 0.2;
 export const LEVEL_MULT = [1, 1.25, 1.5, 2]; // how hard each level is (for body-area load)
 // Seconds a level's target takes (for flowing holds: cycles × the slowest cycle allowed).
@@ -16,7 +17,7 @@ export const targetSeconds = (hold, level) => hold.levels[level - 1].target * (h
 // the gentlest holds up to 1.3 for the hardest), or one per level.
 const holdMult = (hold, level) => (Array.isArray(hold.coins) ? hold.coins[level - 1] : hold.coins ?? 1);
 // Coins for reaching a hold's target at good form, before boosts.
-export const coinsAtTarget = (hold, level) => TARGET_COINS[level - 1] * holdMult(hold, level);
+export const coinsAtTarget = (hold, level) => TARGET_COINS * holdMult(hold, level);
 // Base coins per second while holding, before form, bonus time and boosts.
 export const coinRateFor = (hold, level) => coinsAtTarget(hold, level) * (1 - TARGET_SHARE) / targetSeconds(hold, level);
 // Coins for reaching the target, before form and boosts.
@@ -80,7 +81,9 @@ export const BETS = [
 ];
 
 // ---- Level test-out: try the next level early; it only costs coins if you don't pass ----
-export const TEST_FORM = 80;
+export const TEST_FORM = 85;
+// Coins for reaching a new level of a hold (by the level reached), and for mastering it.
+export const LEVEL_UP_COINS = { 2: 10, 3: 15, 4: 20, mastered: 30 };
 export const testPrice = level => 10 * level;
 
 // ---- The temple: features and themes to buy (drawn in temple.js) ----
@@ -91,11 +94,12 @@ export const TEMPLE_TIERS = [
   { id: 'stone', name: 'Shrine Stone', price: 0, desc: 'A carved stone on bare earth: where every temple begins.' },
   { id: 'shrine', name: 'Wayside Shrine', price: 30, desc: 'A little roofed shrine on a stone base.' },
   { id: 'small', name: 'Small Temple', price: 120, desc: 'One room, red columns and a tiled roof.' },
-  { id: 'hall', name: 'Temple Hall', price: 250, desc: 'The main hall with two sweeping roofs.' },
-  { id: 'grand', name: 'Grand Temple', price: 500, desc: 'A raised hall with three roofs, a balustrade and gold.' },
-  { id: 'monastery', name: 'Mountain Monastery', price: 1500, desc: 'A walled monastery: a red courtyard wall and side halls.' },
-  { id: 'golden', name: 'Golden Temple', price: 3000, desc: 'Gilded roofs on every hall, catching the light.' },
-  { id: 'cloud', name: 'Cloud Temple', price: 6000, desc: 'High above the mist, glowing at the top of the mountain.' },
+  // Bigger stages also need a sash: coins alone can't buy them.
+  { id: 'hall', name: 'Temple Hall', price: 250, sash: 'orange', desc: 'The main hall with two sweeping roofs.' },
+  { id: 'grand', name: 'Grand Temple', price: 500, sash: 'green', desc: 'A raised hall with three roofs, a balustrade and gold.' },
+  { id: 'monastery', name: 'Mountain Monastery', price: 1500, sash: 'blue', desc: 'A walled monastery: a red courtyard wall and side halls.' },
+  { id: 'golden', name: 'Golden Temple', price: 3000, sash: 'brown', desc: 'Gilded roofs on every hall, catching the light.' },
+  { id: 'cloud', name: 'Cloud Temple', price: 6000, sash: 'black', desc: 'High above the mist, glowing at the top of the mountain.' },
 ];
 
 export const TEMPLE_ITEMS = [

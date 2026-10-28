@@ -50,7 +50,7 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   check('coins at target follow each hold\'s rating', near(horse.coins, at('horse', 1) * 0.75, 0.1) && near(soft.coins, at('weituo', 1) * 0.75, 0.1) && near(sit.coins, at('zuochan', 1) * 0.75, 0.1),
     `horse ${horse.coins.toFixed(2)}, wei tuo ${soft.coins.toFixed(2)}, meditation ${sit.coins.toFixed(2)}`);
   const lvl4 = honour('horse', 4, 90.05);
-  check('level 4 pays more at target', near(lvl4.coins, at('horse', 4) * 0.75, 0.15), `${lvl4.coins.toFixed(2)} coins`);
+  check('level 4 pays the same at target', near(lvl4.coins, at('horse', 4) * 0.75, 0.15), `${lvl4.coins.toFixed(2)} coins`);
 }
 
 
@@ -65,12 +65,13 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   check('daily varies by date', days.size === STARTER_HOLDS.length, [...days].join(', '));
 
   // Unlocking: can't afford, then can; price rises.
-  check('cannot unlock when broke', P.unlockHold(s, 'crane') === null && !P.isUnlocked(s, 'crane'));
+  check('cannot unlock when broke', P.unlockHold(s, 'cat') === null && !P.isUnlocked(s, 'cat'));
   s.coins = 60;
-  const badges = P.unlockHold(s, 'crane');
-  check('unlock spends coins', P.isUnlocked(s, 'crane') && s.coins === 60 - UNLOCK_PRICES[0] && badges.some(b => b.id === 'unlock'), `${s.coins} left`);
+  const badges = P.unlockHold(s, 'cat');
+  check('unlock spends coins', P.isUnlocked(s, 'cat') && s.coins === 60 - UNLOCK_PRICES[0] && badges.some(b => b.id === 'unlock'), `${s.coins} left`);
+  check('a sash hold needs its sash, whatever the coins', P.unlockHold(s, 'crane') === null && !P.isUnlocked(s, 'crane'));
   check('next unlock costs more', P.unlockPrice(s) === UNLOCK_PRICES[1]);
-  check('cannot buy twice', P.unlockHold(s, 'crane') === null);
+  check('cannot buy twice', P.unlockHold(s, 'cat') === null);
 
   // Recording a session adds coins to the wallet and to lifetime (rank).
   const before = { coins: s.coins, lifetime: s.lifetime };

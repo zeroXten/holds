@@ -7,6 +7,8 @@
 // `video` is a YouTube search for demonstrations of the stance. Whether the phone is
 // better on its side is worked out from each level's figure (see prefersLandscape).
 //
+// `sash`: the sash needed before the hold can be unlocked (as well as its coins).
+//
 // Criteria: value(body, side) → number, judged against min and/or max with a
 // `soft` margin over which the score falls from 1 to 0. For one-sided holds
 // `side.main` is the working leg and `side.other` the second leg.
@@ -204,7 +206,7 @@ export const HOLDS = [
 
   {
     id: 'crane', name: 'Crane Stance', native: 'Dú Lì Bù', view: 'side', sides: true, camera: true,
-    areas: { balance: 0.6, legs: 0.4 }, style: 'hard',
+    areas: { balance: 0.6, legs: 0.4 }, style: 'hard', sash: 'yellow',
     video: 'du li bu crane stance kung fu',
     about: 'Standing on one leg with the other knee raised: balance, focus and hip strength.',
     levels: [
@@ -240,7 +242,7 @@ export const HOLDS = [
 
   {
     id: 'drop', name: 'Drop Stance', native: 'Pū Bù', view: 'front', sides: true, camera: true,
-    areas: { legs: 0.7, mobility: 0.3 }, style: 'hard', coins: 1.2,
+    areas: { legs: 0.7, mobility: 0.3 }, style: 'hard', coins: 1.2, sash: 'orange',
     hint: 'Face the phone',
     video: 'pu bu drop stance kung fu tutorial',
     about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together.',
@@ -506,7 +508,7 @@ export const HOLDS = [
 
   {
     id: 'sideplank', name: 'Side Plank', native: 'Cè Píngbǎn Zhīchēng', view: 'front', sides: true, camera: true,
-    areas: { core: 0.8, upper: 0.2 }, style: 'hard', coins: 1.1,
+    areas: { core: 0.8, upper: 0.2 }, style: 'hard', coins: 1.1, sash: 'yellow',
     video: 'side plank progression tutorial',
     hint: 'Phone low to the ground, with your front facing it',
     about: 'Not strictly Shaolin, but one of the best holds for the sides of the core and a stable spine.',
@@ -621,7 +623,7 @@ export const HOLDS = [
 
   {
     id: 'hollow', name: 'Hollow Hold', native: '', view: 'side', sides: false, camera: true,
-    areas: { core: 1 }, style: 'hard', coins: 1.1,
+    areas: { core: 1 }, style: 'hard', coins: 1.1, sash: 'yellow',
     video: 'hollow body hold progression',
     hint: 'Phone low to the ground, side-on to you',
     about: 'Borrowed from gymnastics: lower back pressed into the floor, shoulders and legs lifted. Builds the front of the core.',
@@ -723,7 +725,7 @@ export const HOLDS = [
 
   {
     id: 'bridge', name: 'Iron Bridge', native: '', view: 'side', sides: false, camera: true,
-    areas: { core: 0.7, legs: 0.3 }, style: 'hard', coins: 1.3,
+    areas: { core: 0.7, legs: 0.3 }, style: 'hard', coins: 1.3, sash: 'green',
     video: 'iron bridge between two chairs bodyweight hold',
     hint: 'Phone low to the ground; lie side-on to it',
     about: 'The body held rigid as an iron plank, built up from a floor bridge to the strongman-style demonstration of lying stiff between two chairs. A demonstration feat rather than a classical stance.',
@@ -777,7 +779,7 @@ export const HOLDS = [
 
   {
     id: 'swallow', name: 'Swallow Balance', native: 'Yàn Shì Píng Héng', view: 'side', sides: true, camera: true,
-    areas: { balance: 0.4, legs: 0.4, core: 0.2 }, style: 'hard', coins: 1.2,
+    areas: { balance: 0.4, legs: 0.4, core: 0.2 }, style: 'hard', coins: 1.2, sash: 'orange',
     hint: 'Stand side-on to the phone',
     video: 'yan shi ping heng swallow balance wushu',
     about: 'Balance on one leg with the body tipped forward and the other leg reaching back, like a swallow in flight.',
@@ -822,7 +824,7 @@ export const HOLDS = [
 
   {
     id: 'kick', name: 'Kick Hold', native: 'Dēng Tuǐ', view: 'side', sides: true, camera: true,
-    areas: { legs: 0.5, balance: 0.3, mobility: 0.2 }, style: 'hard', coins: 1.2,
+    areas: { legs: 0.5, balance: 0.3, mobility: 0.2 }, style: 'hard', coins: 1.2, sash: 'orange',
     hint: 'Stand side-on to the phone',
     video: 'deng tui heel kick kung fu',
     about: 'Hold a front heel kick out in the air: hip strength, hamstring flexibility and balance.',
@@ -1171,7 +1173,7 @@ export const HOLDS = [
 
   {
     id: 'nordic', name: 'Reverse Nordic', native: '', view: 'side', sides: false, camera: true,
-    areas: { legs: 0.8, core: 0.2 }, style: 'hard', coins: 1.3,
+    areas: { legs: 0.8, core: 0.2 }, style: 'hard', coins: 1.3, sash: 'green',
     hint: 'Phone low, side-on to you',
     video: 'reverse nordic hold',
     about: 'Kneeling upright, lean back from the knees in one straight line and hold. It loads the fronts of the thighs and the tendons around the knee, which few other holds reach.',
@@ -1262,7 +1264,7 @@ export const HOLDS = [
 
   {
     id: 'fingertips', name: 'Fingertip Plank', native: '', view: 'side', sides: false, camera: true,
-    areas: { upper: 0.6, core: 0.4 }, style: 'hard', coins: 1.3,
+    areas: { upper: 0.6, core: 0.4 }, style: 'hard', coins: 1.3, sash: 'blue',
     hint: 'Phone low to the ground, side-on to you',
     video: 'fingertip plank hold',
     about: 'A plank on your fingertips, palms off the floor: Shaolin’s classic way to strengthen the fingers, hands and forearms. The camera checks the plank and that your wrists are lifted off the floor; how many fingers you use is on your honour. Build up slowly, and keep the fingers slightly bent, never bending backwards.',
@@ -1314,7 +1316,7 @@ export const HOLDS = [
 
   {
     id: 'bear', name: 'Bear Crawl Hold', native: '', view: 'side', sides: false, camera: true,
-    areas: { core: 0.6, upper: 0.2, legs: 0.2 }, style: 'hard', coins: 1.1,
+    areas: { core: 0.6, upper: 0.2, legs: 0.2 }, style: 'hard', coins: 1.1, sash: 'yellow',
     hint: 'Phone low to the ground, side-on to you',
     video: 'bear crawl hold',
     about: 'On hands and toes with your knees hovering just off the floor: a hold for the core, shoulders and thighs together. From the side, hovering knees look just like resting ones, so the camera checks your shape and the hover is on your honour.',
@@ -1441,7 +1443,7 @@ export const HOLDS = [
 
   {
     id: 'zuochan', name: 'Seated Meditation', native: 'Zuò Chán', view: 'front', sides: false, camera: true, still: true,
-    areas: { stillness: 1 }, style: 'soft', coins: [1, 1.5, 2.5, 3.5],
+    areas: { stillness: 1 }, style: 'soft', coins: [1, 1.5, 2.5, 3.5], sash: 'orange',
     hint: 'Sit facing the phone, the phone at about chest height',
     video: 'zazen seated meditation posture',
     about: 'Chan (Zen) began at Shaolin: seated meditation is where the monks’ training started. Sit cross-legged on a cushion, or on the front of a chair, and keep still, from five minutes up to an hour. Scored on stillness and an upright back.',

@@ -90,25 +90,27 @@ function flushNotices() {
   P.save(state);
 }
 
-// Days that counted towards the next level (target reached with good form), as dots;
-// with `label`, also in words.
+// Days that counted towards the next level (target reached on camera with good form), as
+// a small bar; with `label`, also in words.
 function pips(hs, { label = false } = {}) {
   if (hs.mastered) return '<span class="pips mastered">Mastered</span>';
-  const next = hs.level < 4 ? `level ${hs.level + 1}` : 'mastery';
-  const words = `${hs.qualDays.length} of ${P.QUALIFY_DAYS} days to ${next}`;
-  return `<span class="pips" title="${words}">${
-    Array.from({ length: P.QUALIFY_DAYS }, (_, i) => `<i class="${i < hs.qualDays.length ? 'on' : ''}"></i>`).join('')}${
+  const next = hs.level < 4 ? `level ${hs.level + 1}` : 'mastery', need = P.qualifyDays(hs.level);
+  const words = `${hs.qualDays.length} of ${need} days to ${next}`;
+  return `<span class="pips" title="${words}"><b class="lvl-bar"><i style="width:${Math.round(100 * hs.qualDays.length / need)}%"></i></b>${
     label ? `<small>${words}</small>` : ''}</span>`;
 }
+
+// What the sash needs to open something: "Needs Green Sash", or '' if you have it.
+const sashNeed = key => (P.hasSash(state, key) ? '' : `Needs ${P.sashByKey(key).name}`);
 
 // ---------- Home ----------
 
 function renderHome() {
-  const r = P.rankFor(state.lifetime);
+  const r = P.sashRank(state);
   renderAvatar($('#avatar-mini'), P.avatarLook(state));
   $('#rank-name').textContent = r.name;
   $('#xp-fill').style.width = `${Math.round(r.progress * 100)}%`;
-  $('#xp-text').textContent = r.next ? `${state.lifetime.toLocaleString()} / ${r.next.coins.toLocaleString()} coins earned` : `${state.lifetime.toLocaleString()} coins earned`;
+  $('#xp-text').textContent = r.next ? `${r.points} / ${r.next.points} mastery points` : `${r.points} mastery points`;
   $('#wallet').textContent = state.coins.toLocaleString();
   document.documentElement.dataset.scene = state.temple.theme;
   renderStreakStrip();
@@ -151,11 +153,12 @@ function renderGrid() {
     const hs = P.holdState(state, h.id);
     const best = hs.best[hs.level];
     if (!P.isOpen(state, h.id)) {
-      return `<button class="card locked ${state.coins >= price ? 'affordable' : ''}" data-hold="${h.id}">
+      const need = sashNeed(h.sash);
+      return `<button class="card locked ${!need && state.coins >= price ? 'affordable' : ''}" data-hold="${h.id}">
         ${figureSVG(h.figure(1))}
         <span class="card-name">${h.name}</span>
         ${kind}
-        <span class="card-sub price">${LOCK} ${COIN} ${price}</span>
+        <span class="card-sub price">${LOCK} ${need || `${COIN} ${price}`}</span>
       </button>`;
     }
     return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''} ${tired ? 'tired' : ''}" data-hold="${h.id}">
@@ -198,12 +201,14 @@ function renderSheetLevel() {
   $('#hs-start').hidden = locked;
   $('#hs-cam-row').hidden = locked || !hold.camera;
   if (locked) {
-    const price = P.unlockPrice(state), short = price - state.coins;
-    $('#hs-unlock-msg').innerHTML = short > 0
-      ? `Unlock this hold for <b>${price} coins</b>. You have ${state.coins}, so ${short} more to go.`
-      : `Unlock this hold for <b>${price} coins</b>. You have ${state.coins}.`;
-    $('#hs-buy').innerHTML = `${COIN} Unlock for ${price}`;
-    $('#hs-buy').disabled = short > 0;
+    const price = P.unlockPrice(state), short = price - state.coins, need = sashNeed(hold.sash);
+    $('#hs-unlock-msg').innerHTML = need
+      ? `This hold opens at the <b>${P.sashByKey(hold.sash).name}</b>: level up your holds to earn it. Then it unlocks for ${price} coins.`
+      : short > 0
+        ? `Unlock this hold for <b>${price} coins</b>. You have ${state.coins}, so ${short} more to go.`
+        : `Unlock this hold for <b>${price} coins</b>. You have ${state.coins}.`;
+    $('#hs-buy').innerHTML = need ? `${LOCK} ${need}` : `${COIN} Unlock for ${price}`;
+    $('#hs-buy').disabled = short > 0 || !!need;
     sheetLevel = 1;
   }
   const unlocked = hs.mastered || state.testMode ? 4 : hs.level;
@@ -218,9 +223,11 @@ function renderSheetLevel() {
   $('#hs-test-msg').hidden = !testing;
   $('#hs-start').textContent = testing ? 'Take the level test' : 'Start';
   if (testing) {
-    const price = testPrice(sheetLevel), short = price > state.coins;
-    $('#hs-test-msg').innerHTML = `<b>Level test:</b> reach the target${hold.camera ? ` with ${TEST_FORM}+ average form (camera on)` : ''} to unlock level ${sheetLevel} now. Passing is free; not passing costs <b>${price} coins</b>.${short ? ` You need ${price} coins to take it.` : ''}`;
-    $('#hs-start').disabled = short;
+    const price = testPrice(sheetLevel), short = price > state.coins, done = P.testedToday(state, hold.id);
+    $('#hs-test-msg').innerHTML = done
+      ? `<b>Level test:</b> you’ve taken today’s test for this hold. The next one opens tomorrow.`
+      : `<b>Level test:</b> reach the target with ${TEST_FORM}+ average form on camera to unlock level ${sheetLevel} now. One test a day. Passing is free; not passing costs <b>${price} coins</b>.${short ? ` You need ${price} coins to take it.` : ''}`;
+    $('#hs-start').disabled = short || done;
     $('#hs-cam-row').hidden = true;
   } else {
     $('#hs-start').disabled = false;
@@ -238,7 +245,7 @@ function renderSheetLevel() {
     ${hold.camera ? `<span class="tag">${viewHint(hold, sheetLevel)}</span>` : '<span class="tag">Honour system</span>'}
     ${best ? `<span class="tag">Best ${amount(hold, best)}</span>` : ''}
     ${!locked && sheetLevel === hs.level && !hs.mastered ? `${pips(hs, { label: true })}
-      <span class="lvl-rule">Reach the target on ${P.QUALIFY_DAYS} different days${hold.camera ? ` (with ${P.QUALIFY_FORM}+ average form on camera)` : ''} to move up a level.</span>` : ''}`;
+      <span class="lvl-rule">Reach the target on ${P.qualifyDays(hs.level)} different days, on camera with ${P.qualifyForm(hs.level)}+ average form, to ${hs.level < 4 ? 'move up a level' : 'master this hold'}. Each level earns a point towards your sash.</span>` : ''}`;
 }
 
 $('#hs-buy').onclick = () => {
@@ -631,7 +638,7 @@ function testOutcome(r) {
   return {
     coins: 0, reached: r.reached ?? r.held >= r.target, pb: false, prevBest: hs.best[r.level] ?? 0, milestoneDouble: 0,
     qualified: false, qualDays: hs.qualDays.length, levelUp: false, mastered: false, newLevel: r.level, test: null,
-    bets: [], betSteps: [], milestones: [], badges: [], rankUp: false, rank: P.rankFor(state.lifetime),
+    bets: [], betSteps: [], milestones: [], badges: [], rankUp: false, rank: P.sashRank(state), levelBonus: 0,
     wallet: state.coins, nextUnlock: null, streak: P.streak(state), testMode: true,
   };
 }
@@ -661,14 +668,15 @@ function renderSummary(hold, level, r, o, boost) {
   const wonCoins = o.bets.filter(b => b.result === 'won' && !b.def.steps).reduce((t, b) => t + b.payout, 0);
   const betLine = (stepCoins ? `Plus ${stepCoins} coins from your bonus time bet.<br>` : '')
     + (wonCoins ? `Plus ${wonCoins} coins from your bet.<br>` : '');
-  $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${betLine}${wallet}`;
+  const levelLine = o.levelBonus ? `Includes ${o.levelBonus} coins for ${o.mastered ? 'mastering this hold' : `reaching level ${o.newLevel}`}.<br>` : '';
+  $('#sum-breakdown').innerHTML = `${notes.length ? `Includes ${notes.join(' and ')}.<br>` : ''}${levelLine}${betLine}${wallet}`;
   // Level test, bet and streak milestone results.
   const extra = [];
   if (o.testMode) extra.push('<div class="banner">Test mode: this session wasn’t recorded and earned nothing.</div>');
   if (o.test) {
     extra.push(o.test.passed
       ? `<div class="banner good">Level test passed! Level ${level} is unlocked.</div>`
-      : `<div class="banner bad">Level test not passed: −${o.test.price} coins. You need the full target${r.camera ? ` with ${TEST_FORM}+ form` : ''}.</div>`);
+      : `<div class="banner bad">Level test not passed: −${o.test.price} coins. You need the full target on camera with ${TEST_FORM}+ form.</div>`);
   }
   for (const b of o.bets) extra.push(b.result === 'won' ? `<div class="banner good">Bet won: ${b.def.name}! +${b.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${b.def.name}.</div>`);
   for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! ${milestoneReward(m)}${m.double ? ' (starting with this hold)' : ''}.</div>`);
@@ -689,14 +697,16 @@ function renderSummary(hold, level, r, o, boost) {
 
   const hs = P.holdState(state, hold.id);
   let lvl = '';
-  if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${targetText(hold, hold.levels[o.newLevel - 1].target)}, ${coinRate(hold, o.newLevel)}.</div>`;
-  else if (o.mastered) lvl = '<div class="banner">You’ve completed every level of this stance.</div>';
+  if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${targetText(hold, hold.levels[o.newLevel - 1].target)}, ${coinRate(hold, o.newLevel)}. That’s a point towards your sash.</div>`;
+  else if (o.mastered) lvl = '<div class="banner">You’ve mastered every level of this hold: another point towards your sash.</div>';
   else if (level === hs.level && !hs.mastered && !o.testMode) {
-    const need = P.QUALIFY_DAYS - hs.qualDays.length;
+    const need = P.qualifyDays(hs.level) - hs.qualDays.length, form = P.qualifyForm(hs.level);
+    const toward = hs.level < 4 ? `level ${hs.level + 1}` : 'mastery';
     lvl = `<div class="lvl-progress">${pips(hs)}<span>${o.qualified
-      ? `Day counted! ${need} more day${need === 1 ? '' : 's'} to unlock level ${level + 1 > 4 ? 'mastery' : level + 1}.`
-      : !o.reached ? `Reach ${r.unit === 'cycles' ? `${r.goal} slow cycles` : fmtLong(r.target)} to count today towards level ${Math.min(level + 1, 4)}.`
-      : r.camera && r.avgForm < P.QUALIFY_FORM ? `Average form ${P.QUALIFY_FORM}+ is needed for the day to count.`
+      ? `Day counted! ${need} more day${need === 1 ? '' : 's'} to ${toward}.`
+      : !r.camera ? 'Honour sessions earn coins but don’t count towards levels: use the camera for that.'
+      : !o.reached ? `Reach ${r.unit === 'cycles' ? `${r.goal} slow cycles` : fmtLong(r.target)} to count today towards ${toward}.`
+      : r.avgForm < form ? `Average form ${form}+ is needed for the day to count.`
       : 'Today already counted. Come back tomorrow.'}</span></div>`;
   }
   $('#sum-level').innerHTML = lvl;
@@ -740,11 +750,11 @@ const medal = () => '<svg viewBox="0 0 24 24" class="medal"><circle cx="12" cy="
 
 function renderProgress() {
   show('progress');
-  const r = P.rankFor(state.lifetime), t = P.totals(state);
+  const r = P.sashRank(state), t = P.totals(state);
   $('#rank-card').innerHTML = `
     <span class="sash big" style="--sash:${r.color};--deg:${r.degree ?? 0}"></span>
     <div><h2>${r.name}</h2><span class="xpbar"><i style="width:${Math.round(r.progress * 100)}%"></i></span>
-    <small>${state.lifetime.toLocaleString()} coins earned${r.next ? ` · ${(r.next.coins - state.lifetime).toLocaleString()} to ${r.next.name}` : ''}</small></div>`;
+    <small>${r.points} mastery points${r.next ? ` · ${r.next.points - r.points} to ${r.next.name}` : ''}. A point for each level you reach on a hold, and one for mastering it.</small></div>`;
   const week = P.areaLoad(state, { days: 7 });
   const top = Math.max(1, ...Object.values(week));
   $('#area-bars').innerHTML = Object.entries(AREAS).map(([a, name]) => `
@@ -1117,7 +1127,7 @@ function shopTemple() {
   };
   return `<p class="shop-intro">Your temple: <b>${now.name}</b> (stage ${tier + 1} of ${TEMPLE_TIERS.length}).</p>
   <ul class="shop-list">${next
-    ? `<li><div><b>Upgrade to ${next.name}</b><small>${next.desc}</small></div>${buyBtn('upgrade-temple', next.id, next.price)}</li>`
+    ? `<li><div><b>Upgrade to ${next.name}</b><small>${next.desc}</small>${sashNeed(next.sash) ? `<small class="blocked">${sashNeed(next.sash)}</small>` : ''}</div>${sashNeed(next.sash) ? '' : buyBtn('upgrade-temple', next.id, next.price)}</li>`
     : `<li class="owned"><div><b>${now.name}</b><small>Your temple is complete.</small></div><span class="owned-tag">Built</span></li>`}</ul>
   <h3>Decorations <small>${owned} of ${TEMPLE_ITEMS.length}</small></h3>
   <ul class="shop-list">${[...TEMPLE_ITEMS].sort((a, b) => a.price - b.price).map(item).join('')}</ul>`;
@@ -1125,7 +1135,7 @@ function shopTemple() {
 
 // Your monk: a big preview, then characters, outfits and accessories to buy and wear.
 function shopMonk() {
-  const a = state.avatar, r = P.rankFor(state.lifetime);
+  const a = state.avatar, r = P.sashRank(state);
   const row = (kind, i) => {
     const owned = P.ownsAvatar(state, i.id);
     const on = kind === 'accessory' ? a.wear[i.slot] === i.id : a[kind] === i.id;

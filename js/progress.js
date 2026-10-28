@@ -4,33 +4,40 @@
 import { HOLDS, AREAS, RESTFUL_AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
-  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
   DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT,
 } from './economy.js';
 
 const KEY = 'holds.v1';
-export const QUALIFY_DAYS = 3;   // days hitting the target (with good form) to level up
-export const QUALIFY_FORM = 70;  // minimum average form for a camera session to count
+// Levelling up a hold: reach its target on this many different days, with this average
+// form or better, on camera (honour sessions earn coins but don't count). By current level;
+// the 4th is for mastering it.
+export const QUALIFY_DAYS = [7, 14, 21, 28];
+export const QUALIFY_FORM = [70, 75, 80, 85];
+export const qualifyDays = level => QUALIFY_DAYS[level - 1];
+export const qualifyForm = level => QUALIFY_FORM[level - 1];
 
-// Ranks go by coins earned over all time (spending doesn't lower your rank).
+// Sashes go by mastery points: one for each level reached beyond the first on any hold,
+// and one more for mastering it (so up to 4 a hold). Skill, not coins.
 export const RANKS = [
-  { coins: 0, name: 'White Sash', color: '#f4efe6' },
-  { coins: 50, name: 'Yellow Sash', color: '#f2c230' },
-  { coins: 150, name: 'Orange Sash', color: '#ee8a2a' },
-  { coins: 300, name: 'Green Sash', color: '#4f9d4a' },
-  { coins: 600, name: 'Blue Sash', color: '#3a73c9' },
-  { coins: 1000, name: 'Purple Sash', color: '#7d4fc0' },
-  { coins: 1600, name: 'Brown Sash', color: '#8a5a32' },
-  { coins: 2400, name: 'Red Sash', color: '#c8322b' },
-  { coins: 3500, name: 'Black Sash', color: '#1d1a17' },
+  { points: 0, key: 'white', name: 'White Sash', color: '#f4efe6' },
+  { points: 2, key: 'yellow', name: 'Yellow Sash', color: '#f2c230' },
+  { points: 5, key: 'orange', name: 'Orange Sash', color: '#ee8a2a' },
+  { points: 9, key: 'green', name: 'Green Sash', color: '#4f9d4a' },
+  { points: 14, key: 'blue', name: 'Blue Sash', color: '#3a73c9' },
+  { points: 20, key: 'purple', name: 'Purple Sash', color: '#7d4fc0' },
+  { points: 28, key: 'brown', name: 'Brown Sash', color: '#8a5a32' },
+  { points: 38, key: 'red', name: 'Red Sash', color: '#c8322b' },
+  { points: 50, key: 'black', name: 'Black Sash', color: '#1d1a17' },
   // Degrees (duan) of the black sash, shown as gold bands.
-  { coins: 6000, name: 'Black Sash · 1st Duan', color: '#1d1a17', degree: 1 },
-  { coins: 10000, name: 'Black Sash · 2nd Duan', color: '#1d1a17', degree: 2 },
-  { coins: 16000, name: 'Black Sash · 3rd Duan', color: '#1d1a17', degree: 3 },
-  { coins: 25000, name: 'Black Sash · 4th Duan', color: '#1d1a17', degree: 4 },
-  { coins: 40000, name: 'Black Sash · 5th Duan', color: '#1d1a17', degree: 5 },
+  { points: 65, key: 'duan1', name: 'Black Sash · 1st Duan', color: '#1d1a17', degree: 1 },
+  { points: 80, key: 'duan2', name: 'Black Sash · 2nd Duan', color: '#1d1a17', degree: 2 },
+  { points: 95, key: 'duan3', name: 'Black Sash · 3rd Duan', color: '#1d1a17', degree: 3 },
+  { points: 110, key: 'duan4', name: 'Black Sash · 4th Duan', color: '#1d1a17', degree: 4 },
+  { points: 125, key: 'duan5', name: 'Black Sash · 5th Duan', color: '#1d1a17', degree: 5 },
 ];
+export const sashByKey = key => RANKS.find(r => r.key === key);
 
 export const BADGES = [
   { id: 'first', name: 'First Stance', desc: 'Finish your first hold' },
@@ -419,7 +426,7 @@ export function toggleAvatarInTemple(state) {
 
 // What the drawing needs: the choices plus the sash for your rank.
 export function avatarLook(state) {
-  const r = rankFor(state.lifetime), a = state.avatar;
+  const r = sashRank(state), a = state.avatar;
   return { character: a.character, outfit: a.outfit, wear: a.wear, sash: r.color, degree: r.degree ?? 0 };
 }
 
@@ -432,7 +439,7 @@ export const nextTier = state => TEMPLE_TIERS[(state.temple.tier ?? 0) + 1] ?? n
 
 export function upgradeTemple(state) {
   const next = nextTier(state);
-  if (!next || state.coins < next.price) return false;
+  if (!next || state.coins < next.price || !hasSash(state, next.sash)) return false;
   state.coins -= next.price;
   state.temple.tier = (state.temple.tier ?? 0) + 1;
   save(state);
@@ -467,16 +474,26 @@ export function useTheme(state, id) {
   return true;
 }
 
-export function rankFor(coins) {
+export function rankFor(points) {
   let i = 0;
-  while (i + 1 < RANKS.length && coins >= RANKS[i + 1].coins) i++;
+  while (i + 1 < RANKS.length && points >= RANKS[i + 1].points) i++;
   const next = RANKS[i + 1];
-  return { ...RANKS[i], index: i, next, progress: next ? (coins - RANKS[i].coins) / (next.coins - RANKS[i].coins) : 1 };
+  return { ...RANKS[i], index: i, next, points, progress: next ? (points - RANKS[i].points) / (next.points - RANKS[i].points) : 1 };
 }
+
+export const masteryPoints = state => HOLDS.reduce((t, h) => {
+  const hs = state.holds[h.id];
+  return hs ? t + (hs.level - 1) + (hs.mastered ? 1 : 0) : t;
+}, 0);
+export const sashRank = state => rankFor(masteryPoints(state));
+// Whether your sash is at least `key` (no key: nothing needed).
+export const hasSash = (state, key) => !key || sashRank(state).index >= RANKS.indexOf(sashByKey(key));
 
 // ---- Unlocking holds ----
 
 export const isUnlocked = (state, id) => state.unlocked.includes(id);
+// A level test for this hold has already been taken today.
+export const testedToday = (state, id, today = dayKey()) => holdState(state, id).lastTest === today;
 // What you can open and train: everything in test mode, otherwise what you've unlocked.
 // (Unlock prices, the hold of the day and badges go by what you've really unlocked.)
 export const isOpen = (state, id) => !!state.testMode || isUnlocked(state, id);
@@ -490,8 +507,8 @@ export const unlockPrice = state => UNLOCK_PRICES[Math.min(state.purchased.lengt
 
 // Spends coins on a hold. Returns the badges earned, or null if it can't be bought.
 export function unlockHold(state, id) {
-  const price = unlockPrice(state);
-  if (isUnlocked(state, id) || state.coins < price) return null;
+  const price = unlockPrice(state), hold = HOLDS.find(h => h.id === id);
+  if (isUnlocked(state, id) || state.coins < price || !hasSash(state, hold?.sash)) return null;
   state.coins -= price;
   state.unlocked.push(id);
   state.purchased.push(id);
@@ -614,7 +631,7 @@ export function recordSession(state, s) {
   protectStreak(state, today);  // in case the day rolled over with the app open
   const hold = HOLDS.find(h => h.id === s.holdId);
   const hs = holdState(state, s.holdId);
-  const before = { rank: rankFor(state.lifetime), streak: streak(state) };
+  const before = { rank: sashRank(state), streak: streak(state) };
   // One-sided holds only count as reached when both sides hit their target.
   const reached = s.reached ?? s.held >= s.target;
 
@@ -635,20 +652,27 @@ export function recordSession(state, s) {
   // Passing is free; not passing costs the test price.
   let levelUp = false, mastered = false, qualified = false, test = null;
   if (s.test) {
-    const passed = reached && (!s.camera || s.avgForm >= TEST_FORM);
+    // One test per hold per day; it needs the camera and strong form.
+    hs.lastTest = today;
+    const passed = reached && s.camera && s.avgForm >= TEST_FORM;
     if (passed) { hs.level = s.level; hs.qualDays = []; levelUp = true; }
     else state.coins = Math.max(0, state.coins - testPrice(s.level));
     test = { passed, price: testPrice(s.level) };
   }
-  const formOk = !s.camera || s.avgForm >= QUALIFY_FORM;
+  // A day counts towards the next level when the target is reached at your level, on
+  // camera, with the level's form.
+  const formOk = s.camera && s.avgForm >= qualifyForm(hs.level);
   if (!s.test && reached && formOk && s.level === hs.level && !hs.mastered && !hs.qualDays.includes(today)) {
     hs.qualDays.push(today);
     qualified = true;
-    if (hs.qualDays.length >= QUALIFY_DAYS) {
+    if (hs.qualDays.length >= qualifyDays(hs.level)) {
       if (hs.level < 4) { hs.level++; levelUp = true; } else { hs.mastered = true; mastered = true; }
       hs.qualDays = [];
     }
   }
+  // A coin bonus for reaching a new level, or for mastering the hold.
+  const levelBonus = mastered ? LEVEL_UP_COINS.mastered : levelUp ? LEVEL_UP_COINS[hs.level] ?? 0 : 0;
+  coins += levelBonus;
   hs.sessions++;
   hs.totalTime += s.held;
   hs.last = today;
@@ -728,7 +752,7 @@ export function recordSession(state, s) {
   return {
     coins, streak: st, reached, pb, prevBest, milestoneDouble,
     qualified, qualDays: hs.qualDays.length, levelUp, mastered, newLevel: hs.level, test, bets, betSteps, milestones,
-    badges: earn, rankUp: rankFor(state.lifetime).index > before.rank.index, rank: rankFor(state.lifetime),
+    levelBonus, badges: earn, rankUp: sashRank(state).index > before.rank.index, rank: sashRank(state),
     wallet: state.coins, nextUnlock: locked.length ? unlockPrice(state) : null,
   };
 }

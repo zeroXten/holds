@@ -4,6 +4,7 @@ const store = new Map();
 globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
 const P = await import('../js/progress.js');
 const E = await import('../js/economy.js');
+const { HOLDS } = await import('../js/holds.js');
 
 let failures = 0;
 const check = (name, ok, detail = '') => { if (!ok) failures++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${detail ? `: ${detail}` : ''}`); };
@@ -156,6 +157,7 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   s.coins = 1000;
   check('upgrades in order', P.upgradeTemple(s) && s.temple.tier === 2 && P.buyTempleItem(s, 'bell'));
   s.coins = 20000;
+  for (const h of HOLDS) s.holds[h.id] = { ...P.holdState(s, h.id), level: 4, mastered: true };  // a full black sash
   while (P.upgradeTemple(s));
   check('last stage', s.temple.tier === E.TEMPLE_TIERS.length - 1 && P.nextTier(s) === null);
   check('buy theme switches to it', P.buyTheme(s, 'night') && s.temple.theme === 'night' && P.useTheme(s, 'dawn') && s.temple.theme === 'dawn');
@@ -243,9 +245,10 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('one per slot', s.avatar.wear.hand === 'staff');
   P.wearAvatarItem(s, 'accessory', 'staff');
   check('take an accessory off', !s.avatar.wear.hand);
-  s.lifetime = 12000;
+  for (const id of ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes', 'tray', 'palms', 'wings', 'claws', 'drawbow', 'fingertips', 'plank', 'sideplank', 'birddog'])
+    s.holds[id] = { ...P.holdState(s, id), level: 4, mastered: true };  // 80 points: 2nd duan
   const look = P.avatarLook(s);
-  check('sash follows your rank', look.sash === '#1d1a17' && look.degree === 2);
+  check('sash follows your rank', look.sash === '#1d1a17' && look.degree === 2, JSON.stringify(look));
   store.clear();
   store.set('holds.v1', JSON.stringify({ version: 2, coins: 0, lifetime: 0, unlocked: [], purchased: [], holds: {}, history: [], days: {}, badges: {}, settings: {} }));
   check('old saves get a monk', P.load().avatar?.character === 'young');
@@ -258,6 +261,37 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('test mode opens locked holds', P.isOpen(s, 'crane') && !P.isUnlocked(s, 'crane'));
   P.setTestMode(s, false);
   check('and closes them again', !P.isOpen(s, 'crane') && P.isOpen(s, 'horse'));
+}
+
+// Sashes come from levels: a point per level beyond the first, one more for mastery.
+{
+  const s = fresh(0);
+  check('a new start is a white sash', P.sashRank(s).key === 'white' && P.masteryPoints(s) === 0);
+  s.holds.horse = { ...P.holdState(s, 'horse'), level: 3 };
+  s.holds.wings = { ...P.holdState(s, 'wings'), level: 4, mastered: true };
+  check('points from levels and mastery', P.masteryPoints(s) === 2 + 4 && P.sashRank(s).key === 'orange', `${P.masteryPoints(s)} points`);
+  check('the sash opens gated holds', P.hasSash(s, 'yellow') && P.hasSash(s, 'orange') && !P.hasSash(s, 'green'));
+}
+
+// Levelling up is slow and camera-only: 7 days at 70+ form for level 2, with a coin bonus.
+{
+  const s = fresh(0);
+  const day = i => P.addDays(P.dayKey(), i - 7);
+  for (let i = 0; i < 6; i++) { s.holds.horse = P.holdState(s, 'horse'); s.holds.horse.qualDays.push(day(i)); }
+  const honour = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 0, avgForm: 0, camera: false, reached: true });
+  check('honour sessions don\'t count towards levels', !honour.qualified && P.holdState(s, 'horse').level === 1);
+  const low = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 0, avgForm: 65, camera: true, reached: true });
+  check('form below the level\'s bar doesn\'t count', !low.qualified);
+  const up = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 0, avgForm: 75, camera: true, reached: true });
+  check('7th day levels up, with a bonus', up.levelUp && P.holdState(s, 'horse').level === 2 && up.levelBonus === E.LEVEL_UP_COINS[2] && up.coins === E.LEVEL_UP_COINS[2], JSON.stringify({ lv: P.holdState(s, 'horse').level, bonus: up.levelBonus }));
+  check('the next level needs 14 days', P.qualifyDays(2) === 14 && P.qualifyForm(2) === 75);
+}
+
+// Temple stages past the small temple need a sash too.
+{
+  const s = fresh(5000);
+  P.upgradeTemple(s); P.upgradeTemple(s);
+  check('temple hall needs an orange sash', s.temple.tier === 2 && !P.upgradeTemple(s), `stage ${s.temple.tier}`);
 }
 
 console.log(failures ? `${failures} failure(s)` : 'all passed');
