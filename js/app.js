@@ -170,8 +170,11 @@ function renderGrid() {
       ${pips(hs)}
     </button>`;
   };
+  // Within each section, in the order they open: no sash needed first, then by the sash
+  // (a stable sort, so holds needing the same sash keep the section's order).
+  const sashOrder = h => (h.sash ? P.RANKS.indexOf(P.sashByKey(h.sash)) : 0);
   $('#grid').innerHTML = HOLD_GROUPS.map(g => `<h3 class="group-title">${g.name}</h3>
-    <div class="grid">${g.ids.map(id => card(holdById(id))).join('')}</div>`).join('');
+    <div class="grid">${g.ids.map(holdById).sort((a, b) => sashOrder(a) - sashOrder(b)).map(card).join('')}</div>`).join('');
 }
 
 // ---------- Hold sheet ----------
