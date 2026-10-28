@@ -188,6 +188,7 @@ p { margin: 0; }
 .pips { display: inline-flex; gap: 4px; align-items: center; }
 .pips i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--gold); }
 .pips i.on { background: var(--gold); }
+.pips em { font-style: normal; font-size: .72rem; font-weight: 800; color: var(--good); margin-left: 4px; white-space: nowrap; }
 .lvl-bar { display: inline-block; width: 44px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; vertical-align: middle; }
 .lvl-bar i { display: block; height: 100%; background: var(--gold); border-radius: inherit; }
 .lvl-progress .lvl-bar { width: 64px; height: 8px; }

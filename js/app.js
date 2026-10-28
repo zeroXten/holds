@@ -95,9 +95,11 @@ function flushNotices() {
 function pips(hs, { label = false } = {}) {
   if (hs.mastered) return '<span class="pips mastered">Mastered</span>';
   const next = hs.level < 4 ? `level ${hs.level + 1}` : 'mastery', need = P.qualifyDays(hs.level);
+  // Whether today has already counted: if not, there's a day to earn today.
+  const today = hs.qualDays.includes(P.dayKey());
   const words = `${hs.qualDays.length} of ${need} days to ${next}`;
-  return `<span class="pips" title="${words}"><b class="lvl-bar"><i style="width:${Math.round(100 * hs.qualDays.length / need)}%"></i></b>${
-    label ? `<small>${words}</small>` : ''}</span>`;
+  return `<span class="pips ${today ? 'today' : ''}" title="${words}${today ? ' · today counted' : ''}"><b class="lvl-bar"><i style="width:${Math.round(100 * hs.qualDays.length / need)}%"></i></b>${
+    today ? '<em>✓ today</em>' : ''}${label ? `<small>${words}${today ? ' · today’s done' : ' · today still to earn'}</small>` : ''}</span>`;
 }
 
 // What the sash needs to open something: "Needs Green Sash", or '' if you have it.
