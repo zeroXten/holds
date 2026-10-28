@@ -48,6 +48,23 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   console.log(`${ok ? 'ok  ' : 'FAIL'} honour rest L1: sides ${r.sides.map(x => x.toFixed(1)).join(' + ')}, reached ${r.reached}`);
 }
 
+// Test mode (manual): out of view for a minute, the session waits instead of ending.
+{
+  const hold = HOLDS.find(h => h.id === 'horse');
+  const { syntheticLandmarks } = await import('../js/figure.js');
+  const s = new Session({ hold, level: 1, camera: true, manual: true, now: 0 });
+  const pose = { landmarks: syntheticLandmarks(hold.figure(1)), width: 720, height: 1280 };
+  let t = 0;
+  const run = (secs, frame) => { for (const end = t + secs; t < end;) { t += 1 / 30; s.tick(t, frame); } };
+  run(10, pose);
+  run(60, null);   // walked away to the computer
+  const waiting = s.state !== 'done';
+  run(5, pose);    // back in position
+  const ok = waiting && s.state === 'holding';
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} manual session waits while you're away: ${s.state}`);
+}
+
 // Giving up on side one early still moves on to side two.
 {
   const hold = HOLDS.find(h => h.id === 'crane');

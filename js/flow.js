@@ -22,8 +22,8 @@ const NUMBERS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
 export const createSession = opts => (opts.hold.flow ? new FlowSession(opts) : new Session(opts));
 
 export class FlowSession {
-  constructor({ hold, level, camera, daily = false, boost = 1, now }) {
-    Object.assign(this, { hold, level, camera, daily, last: now });
+  constructor({ hold, level, camera, daily = false, boost = 1, manual = false, now }) {
+    Object.assign(this, { hold, level, camera, daily, manual, last: now });
     const f = hold.flow;
     this.goal = hold.levels[level - 1].target;
     this.minCycle = f.minCycle[level - 1];
@@ -134,7 +134,7 @@ export class FlowSession {
           this.lowTime = low ? this.lowTime + dt : 0;
           if (this.lowTime > 0.4) this.completeCycle();
         }
-        if (this.idle > (this.reached ? IDLE_AFTER : IDLE)) this.finish(this.reached ? 'complete' : 'stopped');
+        if (!this.manual && this.idle > (this.reached ? IDLE_AFTER : IDLE)) this.finish(this.reached ? 'complete' : 'stopped');
         break;
     }
   }

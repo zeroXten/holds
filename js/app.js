@@ -311,7 +311,7 @@ async function startSession(hold, level, useCamera, { test = false } = {}) {
   run.daily = !state.testMode && P.dailyAvailable(state, hold.id);
   run.session = createSession({
     hold, level, camera: useCamera, strictness: state.settings.strictness,
-    daily: run.daily, boost: run.boost.total, now: source ? source.now() : clock(),
+    daily: run.daily, boost: run.boost.total, manual: !!state.testMode, now: source ? source.now() : clock(),
   });
   run.wholeCoins = 0;
   run.wake = await wakeLock();
@@ -427,8 +427,9 @@ function updateHud(v) {
       else $('#s-cue').textContent = run.camera ? (v.score >= 90 ? 'Great form' : cue) : (v.sideReached ? 'Keep going for bonus coins' : '');
       break;
     case 'broken': {
-      const left = Math.ceil((v.sideReached ? 3.5 : 8) - s.outTime);
-      setStatus('bad', v.seen ? `Back into position · ${left}` : `Can’t see you · ${left}`);
+      // Test mode waits for you (tap Done to finish); otherwise it counts down to the end.
+      const left = s.manual ? '' : ` · ${Math.ceil((v.sideReached ? 3.5 : 8) - s.outTime)}`;
+      setStatus('bad', v.seen ? `Back into position${left}` : `Can’t see you${left}`);
       $('#s-cue').textContent = cue;
       break;
     }

@@ -25,9 +25,10 @@ const GIVE_UP_AFTER = 3.5; // ...once the target has been reached
 const SWITCH_TIMEOUT = 15; // seconds allowed to change sides
 
 export class Session {
-  // `boost`: extra multipliers from outside the hold (streak, milestone day).
-  constructor({ hold, level, camera, strictness = 'normal', daily = false, boost = 1, now }) {
-    Object.assign(this, { hold, level, camera, daily, now0: now, last: now });
+  // `boost`: extra multipliers from outside the hold (streak, milestone day). `manual`: the
+  // session only ends when you tap Done (test mode), however long you're out of position.
+  constructor({ hold, level, camera, strictness = 'normal', daily = false, boost = 1, manual = false, now }) {
+    Object.assign(this, { hold, level, camera, daily, manual, now0: now, last: now });
     this.target = hold.levels[level - 1].target;
     // Boosts (hold of the day, streak, milestone day) multiply everything; the rate is
     // coins per second before form and bonus time.
@@ -129,7 +130,7 @@ export class Session {
       case 'broken':
         this.outTime += dt;
         if (inForm) { this.go('holding'); this.outTime = 0; say('Good', { minGap: 4000 }); }
-        else if (this.outTime > (this.sideReached[this.sideIndex] ? GIVE_UP_AFTER : GIVE_UP)) {
+        else if (!this.manual && this.outTime > (this.sideReached[this.sideIndex] ? GIVE_UP_AFTER : GIVE_UP)) {
           // Giving up on side one still moves on to side two.
           if (this.onFirstSide()) this.startSwitch();
           else this.finish(this.reached ? 'complete' : 'broke');
@@ -139,7 +140,7 @@ export class Session {
       case 'switch':
         this.goodTime = inForm ? this.goodTime + dt : 0;
         if (this.goodTime > 1 && (this.side !== this.sideAtSwitch || this.stateTime > 3)) this.resumeSide();
-        else if (this.stateTime > SWITCH_TIMEOUT) this.finish(this.reached ? 'complete' : 'broke');
+        else if (!this.manual && this.stateTime > SWITCH_TIMEOUT) this.finish(this.reached ? 'complete' : 'broke');
         break;
     }
   }
