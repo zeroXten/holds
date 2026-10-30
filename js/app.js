@@ -1273,13 +1273,14 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let sceneTimer = null;
 
 // Your monk as drawn in the temple, or null when it's hidden.
-// Your monk in the temple: in the pose of your last hold if you've trained today,
-// otherwise sitting in meditation, waiting. Null when it's hidden.
+// Your monk in the temple: in your last hold if you've trained today, in its ideal form
+// (the top level: a master's horse stance has thighs level), otherwise sitting in
+// meditation, waiting. Null when it's hidden.
 function templeMonk() {
   if (!state.avatar.inTemple) return null;
   const last = state.history.at(-1), today = !!state.days[P.dayKey()];
   const hold = today && last ? holdById(last.holdId) : null;
-  const spec = hold ? hold.figure(last.level) : holdById('zuochan').figure(1);
+  const spec = hold ? hold.figure(4) : holdById('zuochan').figure(1);
   return { look: P.avatarLook(state), spec };
 }
 
