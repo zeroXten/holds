@@ -4,7 +4,7 @@
 import { HOLDS, AREAS, RESTFUL_AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
-  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, OLD_THEME_PRICES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
   DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT,
 } from './economy.js';
@@ -69,7 +69,7 @@ const blank = () => ({
   bet: null,      // today's bet
   weekBet: null,  // a weekly bet, running alongside
   betLog: [],  // settled bets, newest first
-  temple: { tier: 0, owned: [], hidden: [], theme: 'dawn', themes: ['dawn'], frame: 'none', frames: ['none'] },  // hidden: owned but put away
+  temple: { tier: 0, owned: [], hidden: [], theme: 'dawn', themes: THEMES.map(t => t.id), frame: 'none', frames: ['none'] },  // hidden: owned but put away
   // Your monk: what's worn, what's owned, and whether it stands in the temple.
   avatar: { character: 'young', outfit: 'saffron', wear: {}, owned: ['young', 'saffron'], inTemple: true },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
@@ -98,8 +98,17 @@ export function load() {
     if (raw) {
       const data = migrate(JSON.parse(raw));
       const fresh = blank();
+      let refunded = false;
       // A running "new personal best" bet (now retired) gets its stake back.
       if (data.bet?.id === 'pb') { data.coins = (data.coins ?? 0) + 10; data.bet = null; data.notices = [...(data.notices ?? []), 'The personal best bet has been retired: your 10-coin stake is back.']; }
+      // The times of day are free now: refund any that were bought, and make them all available.
+      if (data.temple && !data.temple.themesFree) {
+        const refund = (data.temple.themes ?? []).reduce((t, id) => t + (OLD_THEME_PRICES[id] ?? 0), 0);
+        data.temple.themes = [...new Set([...(data.temple.themes ?? []), ...THEMES.map(t => t.id)])];
+        data.temple.themesFree = true;
+        if (refund) { data.coins = (data.coins ?? 0) + refund; data.notices = [...(data.notices ?? []), `Dawn, Day, Dusk and Night are free now: your ${refund} coins for them are back.`]; }
+        refunded = true;
+      }
       // Weekly bets used to share the one bet slot; they have their own now.
       if (data.bet && (BETS.find(b => b.id === data.bet.id)?.days ?? 1) > 1) { data.weekBet = data.bet; data.bet = null; }
       // The Temple Hall used to be a decoration; now it's a stage of the temple.
@@ -109,13 +118,15 @@ export function load() {
       }
       // Starter holds added since this save was made are free too.
       data.unlocked = [...new Set([...(data.unlocked ?? []), ...STARTER_HOLDS])];
-      return {
+      const state = {
         ...fresh, ...data,
         settings: { ...DEFAULT_SETTINGS, ...data.settings },
         streak: { ...fresh.streak, ...data.streak },
         temple: { ...fresh.temple, ...data.temple },
         avatar: { ...fresh.avatar, ...data.avatar },
       };
+      if (refunded) save(state);  // so the refund can't happen twice
+      return state;
     }
   } catch { /* storage unavailable or corrupt: start fresh */ }
   return blank();
@@ -440,11 +451,14 @@ export const shownItems = (state, date = new Date()) => state.temple.owned.filte
 // The seasonal packs on sale today.
 export const activeSeasons = (date = new Date()) => SEASONS.filter(s => inSeason(s, date));
 
+// Seasonal themes are kept with your themes; everything else with your decorations.
+export const ownsSeasonal = (state, item) => (item.theme ? state.temple.themes.includes(item.id) : owns(state, item.id));
+
 export function buySeasonalItem(state, id, date = new Date()) {
   const season = SEASONS.find(s => s.items.some(i => i.id === id)), item = season?.items.find(i => i.id === id);
-  if (!item || !inSeason(season, date) || owns(state, id) || state.coins < item.price) return false;
+  if (!item || !inSeason(season, date) || ownsSeasonal(state, item) || state.coins < item.price) return false;
   state.coins -= item.price;
-  state.temple.owned.push(id);
+  if (item.theme) { state.temple.themes.push(id); state.temple.theme = id; } else state.temple.owned.push(id);
   save(state);
   return true;
 }
@@ -508,8 +522,8 @@ export function useFrame(state, id) {
   return true;
 }
 
-export function useTheme(state, id) {
-  if (!state.temple.themes.includes(id)) return false;
+export function useTheme(state, id, date = new Date()) {
+  if (!state.temple.themes.includes(id) || !inBloom(id, date)) return false;
   state.temple.theme = id;
   save(state);
   return true;

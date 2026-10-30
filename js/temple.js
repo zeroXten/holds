@@ -4,7 +4,7 @@
 
 import { Pix, rgb, mix, bayer } from './pixel.js';
 import { drawPoseSprite } from './avatar.js';
-import { inBloom } from './economy.js';
+import { inBloom, shownTheme } from './economy.js';
 
 // ---- Palettes ----
 
@@ -52,6 +52,16 @@ const THEMES = {
   night: {
     sky: ['#05081c', '#0c1432', '#16224a', '#22305c'], moon: { x: -0.16, y: 30, r: 6, c: '#f4f0d0' },
     far: '#2a3460', mid: '#1e2648', near: '#141a34', tint: ['#0e1638', 0.55], stars: true, lightsOn: true,
+  },
+  spring: {
+    sky: ['#5a86d0', '#8ab0e8', '#cfd6f0', '#f8dce8'], sun: { x: 0.28, y: 18, r: 7, c: '#fff6d8', glow: '#ffffff' },
+    far: '#a8b4d0', mid: '#86ae78', near: '#5e9456', clouds: true,
+    over: { foliage: '#6aac4a', foliageLight: '#9ad064', blossom: '#f6b0cc', blossomLight: '#ffe0ec', blossomDark: '#e07aa4' },
+  },
+  summer: {
+    sky: ['#0e4ec8', '#2a78e0', '#5aaeea', '#a8e0f4'], sun: { x: 0.24, y: 14, r: 9, c: '#fffbd0', glow: '#fff4a0' },
+    far: '#7ea4c4', mid: '#3e8a58', near: '#2e7440', clouds: true,
+    over: { earth: '#c8a46a', earthLight: '#dcbc84', earthDark: '#a07e4a', foliage: '#3a8a3a', foliageLight: '#6ab84a' },
   },
   snow: {
     sky: ['#7a889e', '#9aa6b8', '#c0cad8', '#dfe6ee'], sun: { x: -0.2, y: 20, r: 8, c: '#f0f2f4', glow: '#ffffff', faint: true },
@@ -854,6 +864,7 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, m
 // Draws the scene into a <canvas> whose width/height are in art pixels.
 export function drawTemple(canvas, state, t, theme = state.temple.theme, monk = null, groundRows = 22) {
   const p = new Pix(canvas.width, canvas.height);
+  theme = shownTheme(theme);
   // What's on show: owned, not put away, and (for seasonal decorations) in season.
   const shown = state.temple.owned.filter(id => !(state.temple.hidden ?? []).includes(id) && inBloom(id));
   renderTemple(p, { owned: shown, tier: state.temple.tier ?? 0, theme, t, monk, frame: state.temple.frame, groundRows });

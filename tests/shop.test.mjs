@@ -160,7 +160,7 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   for (const h of HOLDS) s.holds[h.id] = { ...P.holdState(s, h.id), level: 4, mastered: true };  // a full black sash
   while (P.upgradeTemple(s));
   check('last stage', s.temple.tier === E.TEMPLE_TIERS.length - 1 && P.nextTier(s) === null);
-  check('buy theme switches to it', P.buyTheme(s, 'night') && s.temple.theme === 'night' && P.useTheme(s, 'dawn') && s.temple.theme === 'dawn');
+  check('times of day are free', ['dawn', 'day', 'dusk', 'night'].every(id => s.temple.themes.includes(id)) && P.useTheme(s, 'night') && s.temple.theme === 'night');
 }
 
 // An old save that bought the Temple Hall as a decoration gets it as a temple stage.
@@ -321,6 +321,25 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('can\'t buy out of season', !P.buySeasonalItem(s, 'pumpkins', may) && !P.buySeasonalItem(s, 'parasol', oct));
   check('buy in season', P.buySeasonalItem(s, 'pumpkins', oct) && P.owns(s, 'pumpkins') && s.coins === 500 - 80);
   check('shown only in season, every year', P.shownItems(s, oct).includes('pumpkins') && !P.shownItems(s, may).includes('pumpkins') && P.shownItems(s, nextOct).includes('pumpkins'));
+}
+
+// Seasonal themes: bought in season, used in season, Clear Day the rest of the year.
+{
+  const s = fresh(500);
+  const oct = new Date(2026, 9, 30), jan = new Date(2027, 0, 10);
+  check('buy a seasonal theme in season', P.buySeasonalItem(s, 'autumn', oct) && s.temple.theme === 'autumn' && s.temple.themes.includes('autumn') && s.coins === 350);
+  check('out of season it shows as Clear Day', E.shownTheme('autumn', jan) === 'day' && E.shownTheme('autumn', oct) === 'autumn' && E.shownTheme('night', jan) === 'night');
+  check('can\'t switch to it out of season', P.useTheme(s, 'dawn') && !P.useTheme(s, 'autumn', jan));
+}
+
+// Anyone who bought Day, Dusk or Night gets their coins back.
+{
+  store.clear();
+  store.set('holds.v1', JSON.stringify({ version: 2, coins: 10, lifetime: 0, unlocked: [], purchased: [], holds: {}, history: [], days: {}, badges: {}, settings: {},
+    temple: { owned: [], theme: 'night', themes: ['dawn', 'day', 'night', 'snow'] } }));
+  const t = P.load();
+  check('time-of-day themes refunded', t.coins === 10 + 80 + 150 && t.temple.themes.includes('dusk') && t.temple.themes.includes('snow'), `${t.coins} coins`);
+  check('refunded only once', P.load().coins === t.coins, `${P.load().coins} coins on reload`);
 }
 
 console.log(failures ? `${failures} failure(s)` : 'all passed');

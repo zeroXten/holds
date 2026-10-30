@@ -133,22 +133,26 @@ export const SEASONS = [
     { id: 'eggs', name: 'Easter Eggs', price: 60, desc: 'Painted eggs hidden around the courtyard.' },
     { id: 'flowers', name: 'Spring Flowers', price: 80, desc: 'Beds of blossom along the edges.' },
     { id: 'bunny', name: 'Bunny', price: 100, desc: 'A white rabbit hopping about the courtyard.' },
+    { id: 'spring', theme: true, name: 'Cherry Blossom', price: 150, desc: 'Soft pink skies and fresh green hills.' },
   ] },
   { id: 'summer', name: 'Summer', icon: '☀️', from: '06-01', to: '08-31', items: [
     { id: 'parasol', name: 'Parasol & Deckchair', price: 100, desc: 'Even monks need a holiday.' },
     { id: 'kites', name: 'Paper Kites', price: 70, desc: 'Two kites tugging at their strings.' },
     { id: 'fireflies', name: 'Fireflies', price: 60, desc: 'Little lights drifting over the courtyard at dusk.' },
+    { id: 'summer', theme: true, name: 'High Summer', price: 150, desc: 'A deep blue sky, a blazing sun and sun-baked sand.' },
   ] },
   { id: 'autumn', name: 'Autumn', icon: '🎃', from: '09-01', to: '11-30', items: [
     { id: 'pumpkins', name: 'Jack-o’-lanterns', price: 80, desc: 'Grinning pumpkins glowing along the path.' },
     { id: 'bats', name: 'Bats', price: 60, desc: 'A flutter of bats crossing the sky.' },
     { id: 'harvestmoon', name: 'Harvest Moon', price: 120, desc: 'A huge orange moon hanging low over the mountains.' },
     { id: 'leaves', name: 'Falling Leaves', price: 50, desc: 'Red and gold leaves blowing through.' },
+    { id: 'autumn', theme: true, name: 'Golden Autumn', price: 150, desc: 'Golden hills and russet trees.' },
   ] },
   { id: 'winter', name: 'Winter', icon: '🎄', from: '12-01', to: '02-29', items: [
     { id: 'xmastree', name: 'Christmas Tree', price: 120, desc: 'A pine with twinkling lights and a star.' },
     { id: 'snowman', name: 'Snowman', price: 80, desc: 'With a carrot nose and a monk’s sash.' },
     { id: 'newyear', name: 'New Year Lanterns', price: 100, desc: 'Strings of red lanterns for the Lunar New Year.' },
+    { id: 'snow', theme: true, name: 'Snow', price: 150, desc: 'A hush of winter on the temple.' },
   ] },
 ];
 const monthDay = d => `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -157,8 +161,10 @@ export function inSeason(season, date = new Date()) {
   return season.from <= season.to ? k >= season.from && k <= season.to : k >= season.from || k <= season.to;
 }
 export const seasonOfItem = id => SEASONS.find(s => s.items.some(i => i.id === id)) ?? null;
-// Whether an owned decoration is on show at this date (seasonal ones only in season).
+// Whether an owned decoration (or theme) is on show at this date: seasonal ones only in season.
 export const inBloom = (id, date = new Date()) => { const s = seasonOfItem(id); return !s || inSeason(s, date); };
+// The theme the temple shows: a seasonal theme out of season gives way to Clear Day.
+export const shownTheme = (id, date = new Date()) => (inBloom(id, date) ? id : 'day');
 
 // Frames around the temple picture (drawn in temple.js).
 export const FRAMES = [
@@ -169,14 +175,15 @@ export const FRAMES = [
   { id: 'gold', name: 'Gold Filigree', price: 600, desc: 'Gold, with ornaments on every edge.' },
 ];
 
+// The times of day, free for everyone. Seasonal themes are in the seasonal packs.
 export const THEMES = [
   { id: 'dawn', name: 'Dawn', price: 0, desc: 'First light over the mountains.' },
-  { id: 'day', name: 'Clear Day', price: 80, desc: 'Blue skies and green hills.' },
-  { id: 'dusk', name: 'Dusk', price: 100, desc: 'A red sun sinking behind the peaks.' },
-  { id: 'autumn', name: 'Autumn', price: 120, desc: 'Golden hills and falling leaves.' },
-  { id: 'night', name: 'Night', price: 150, desc: 'Moonlight, stars and glowing lanterns.' },
-  { id: 'snow', name: 'Snow', price: 150, desc: 'A hush of winter on the temple.' },
+  { id: 'day', name: 'Clear Day', price: 0, desc: 'Blue skies and green hills.' },
+  { id: 'dusk', name: 'Dusk', price: 0, desc: 'A red sun sinking behind the peaks.' },
+  { id: 'night', name: 'Night', price: 0, desc: 'Moonlight, stars and glowing lanterns.' },
 ];
+// What the time-of-day themes used to cost, to refund anyone who bought them.
+export const OLD_THEME_PRICES = { day: 80, dusk: 100, night: 150 };
 
 // ---- Your monk: a character, an outfit and accessories (drawn in avatar.js) ----
 // The sash always shows your rank. Accessories go in slots, one each: head, neck, hand.

@@ -1,6 +1,6 @@
 import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
-  coinsAtTarget, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
+  coinsAtTarget, shownTheme, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FRAMES, FREEZE_PRICE, FREEZE_MAX,
   REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice, MILESTONE_DAY_MULT,
 } from './economy.js';
@@ -115,7 +115,7 @@ function renderHome() {
   $('#xp-fill').style.width = `${Math.round(r.progress * 100)}%`;
   $('#xp-text').textContent = r.next ? `${r.points} / ${r.next.points} mastery points` : `${r.points} mastery points`;
   $('#wallet').textContent = state.coins.toLocaleString();
-  document.documentElement.dataset.scene = state.temple.theme;
+  document.documentElement.dataset.scene = shownTheme(state.temple.theme);
   renderStreakStrip();
   renderHomeCards();
   drawScenes(true);
@@ -1131,7 +1131,7 @@ function shopTemple() {
     const until = new Date(`2000-${season.to}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
     return `<h3>${season.icon} ${season.name} <small>on sale until ${until}</small></h3>
     <p class="shop-note">Yours to keep: they appear in your temple each ${season.name}.</p>
-    <ul class="shop-list seasonal">${season.items.map(i => {
+    <ul class="shop-list seasonal">${season.items.filter(i => !i.theme).map(i => {
       const built = P.owns(state, i.id), hidden = built && P.isHidden(state, i.id);
       return `<li class="${built ? 'owned' : ''} ${hidden ? 'put-away' : ''}"><div><b>${i.name}</b><small>${built ? (hidden ? 'Put away' : 'In your temple') : i.desc}</small></div>
         ${built ? `<button class="btn buy" data-act="toggle-item" data-id="${i.id}">${hidden ? 'Show' : 'Hide'}</button>` : buyBtn('buy-seasonal', i.id, i.price)}</li>`;
@@ -1177,15 +1177,24 @@ function shopMonk() {
 }
 
 function shopThemes() {
-  return `<p class="shop-intro">Themes change the time of day or season in your temple, and the app's colours.</p>
-  <div class="theme-grid">${THEMES.map(t => {
+  // A theme card: in use, yours to use, or on sale (seasonal ones, this season only).
+  const card = (t, buy) => {
     const have = state.temple.themes.includes(t.id), active = state.temple.theme === t.id;
     return `<div class="theme-card ${active ? 'active' : ''}">
       <canvas data-theme="${t.id}" width="120" height="${SCENE_H}"></canvas>
       <b>${t.name}</b><small>${t.desc}</small>
-      ${active ? '<span class="owned-tag">In use</span>' : have ? `<button class="btn buy" data-act="use-theme" data-id="${t.id}">Use</button>` : buyBtn('buy-theme', t.id, t.price)}
+      ${active ? '<span class="owned-tag">In use</span>' : have ? `<button class="btn buy" data-act="use-theme" data-id="${t.id}">Use</button>` : buy}
     </div>`;
-  }).join('')}</div>
+  };
+  const seasonal = P.activeSeasons().map(season => {
+    const themes = season.items.filter(i => i.theme);
+    return themes.length ? `<h3>${season.icon} ${season.name} <small>this season only</small></h3>
+      <p class="shop-note">Yours to keep: it colours your temple each ${season.name.toLowerCase()}, and gives way to Clear Day the rest of the year.</p>
+      <div class="theme-grid">${themes.map(t => card(t, buyBtn('buy-seasonal', t.id, t.price))).join('')}</div>` : '';
+  }).join('');
+  return `<p class="shop-intro">Themes change the time of day or season in your temple, and the app's colours.</p>
+  <div class="theme-grid">${THEMES.map(t => card(t, '')).join('')}</div>
+  ${seasonal}
   <h3>Frames <small>around your temple picture</small></h3>
   <ul class="shop-list">${FRAMES.map(f => {
     const have = state.temple.frames.includes(f.id), active = state.temple.frame === f.id;
@@ -1266,7 +1275,7 @@ document.addEventListener('click', e => {
   if (msg === false || msg === undefined) return;
   audio.unlock();
   if (msg) { toast(msg); audio.play(/built|unlocked|repaired/.test(msg) ? 'level' : 'point'); }
-  document.documentElement.dataset.scene = state.temple.theme;
+  document.documentElement.dataset.scene = shownTheme(state.temple.theme);
   if (document.body.dataset.screen === 'shop') renderShop(); else renderHome();
 });
 
