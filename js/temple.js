@@ -4,6 +4,7 @@
 
 import { Pix, rgb, mix, bayer } from './pixel.js';
 import { drawPoseSprite } from './avatar.js';
+import { inBloom } from './economy.js';
 
 // ---- Palettes ----
 
@@ -470,6 +471,35 @@ function cranes(p, c, W, t) {
   }
 }
 
+// ---- Halloween ----
+
+function harvestMoon(p, W, G, cx) {
+  const x = Math.round(cx + W * 0.27), y = G - 40;
+  glowAt(p, x, y, 18, rgb('#ff9a3a'));
+  p.disc(x, y, 11, rgb('#f2a03a'));
+  p.disc(x - 2, y - 2, 8, rgb('#f8b85a'));
+  for (const [dx, dy, r] of [[-4, 2, 2], [3, -3, 1.5], [4, 4, 1.2], [-1, -5, 1]]) p.disc(x + dx, y + dy, r, rgb('#d8822a'));
+}
+
+const BAT = [['k...k', 'kk.kk', '.kkk.'], ['.....', '.kkk.', 'kk.kk']];
+function bats(p, W, t) {
+  for (let i = 0; i < 5; i++) {
+    const x = ((t * (9 + i * 2) + i * 37) % (W + 30)) - 15, y = 10 + ((i * 7) % 22) + Math.round(Math.sin(t * 2.2 + i * 1.7) * 3);
+    p.sprite(x, y, BAT[Math.floor(t * 6 + i) % 2], { k: rgb('#1a1020') });
+  }
+}
+
+const PUMPKIN = ['..g..', '.ooo.', 'oyoyo', 'ooooo', '.oyo.'];
+function pumpkins(p, c, W, H, G, lit) {
+  const cx = Math.round(W / 2);
+  for (const [k, side] of [[0.25, -1], [0.25, 1], [0.7, -1], [0.7, 1]]) {
+    const y = Math.round(G + 2 + k * (H - G - 6)), half = Math.round(5 + 11 * ((y - G) / (H - G)));
+    const x = cx + side * (half + 4) - 2;
+    if (lit) glowAt(p, x + 2, y + 2, 6, c.glow);
+    p.sprite(x, y, PUMPKIN, { g: c.foliageDark, o: rgb('#e07a1a'), y: lit ? rgb('#ffe070') : rgb('#7a3a0a') });
+  }
+}
+
 function gate(p, c, W, H, cx, snow) {
   for (const x of [2, W - 6]) {
     p.rect(x, 12, 4, H - 12, c.red);
@@ -656,7 +686,9 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, m
   const lit = !!th.lightsOn, snow = !!th.snowing;
 
   sky(p, c, th, W, G, t);
+  if (has('harvestmoon')) harvestMoon(p, W, G, cx);
   if (has('cranes')) cranes(p, c, W, t);
+  if (has('bats')) bats(p, W, t);
   const far = mountains(p, c, th, W, G, 'far', 3.7);
   if (has('mist')) mist(p, W, G, t);
   // The waterfall runs down the far mountain and disappears behind the nearer ridge.
@@ -676,6 +708,7 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, m
 
   ground(p, c, W, H, G);
   if (has('path')) path(p, c, W, H, G);
+  if (has('pumpkins')) pumpkins(p, c, W, H, G, lit || has('harvestmoon'));
   if (has('posts')) poles(p, c, cx - 46, G, snow);
   if (has('pond')) pond(p, c, cx + 44, G + 12, t);
   if (has('lions')) lions(p, c, cx, G);
@@ -700,7 +733,8 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, m
 // Draws the scene into a <canvas> whose width/height are in art pixels.
 export function drawTemple(canvas, state, t, theme = state.temple.theme, monk = null, groundRows = 22) {
   const p = new Pix(canvas.width, canvas.height);
-  const shown = state.temple.owned.filter(id => !(state.temple.hidden ?? []).includes(id));
+  // What's on show: owned, not put away, and (for seasonal decorations) in season.
+  const shown = state.temple.owned.filter(id => !(state.temple.hidden ?? []).includes(id) && inBloom(id));
   renderTemple(p, { owned: shown, tier: state.temple.tier ?? 0, theme, t, monk, frame: state.temple.frame, groundRows });
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(p.w, p.h);

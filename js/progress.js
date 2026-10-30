@@ -4,7 +4,7 @@
 import { HOLDS, AREAS, RESTFUL_AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
-  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, FRAMES, STREAK_MILESTONES, LEVEL_MULT,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
   DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT,
 } from './economy.js';
@@ -435,7 +435,19 @@ export function avatarLook(state) {
 export const owns = (state, id) => state.temple.owned.includes(id);
 export const isHidden = (state, id) => (state.temple.hidden ?? []).includes(id);
 // What's on show: everything you own that you haven't put away.
-export const shownItems = state => state.temple.owned.filter(id => !isHidden(state, id));
+export const shownItems = (state, date = new Date()) => state.temple.owned.filter(id => !isHidden(state, id) && inBloom(id, date));
+
+// The seasonal packs on sale today.
+export const activeSeasons = (date = new Date()) => SEASONS.filter(s => inSeason(s, date));
+
+export function buySeasonalItem(state, id, date = new Date()) {
+  const season = SEASONS.find(s => s.items.some(i => i.id === id)), item = season?.items.find(i => i.id === id);
+  if (!item || !inSeason(season, date) || owns(state, id) || state.coins < item.price) return false;
+  state.coins -= item.price;
+  state.temple.owned.push(id);
+  save(state);
+  return true;
+}
 
 // Put an owned decoration away, or bring it back out.
 export function toggleTempleItem(state, id) {

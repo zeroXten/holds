@@ -124,6 +124,25 @@ export const TEMPLE_ITEMS = [
   { id: 'yard', name: 'Training Yard', price: 1500, desc: 'A wooden dummy and a rack of staffs for training.' },
 ];
 
+// ---- Seasonal packs ----
+// On sale only during their season (month-day, inclusive; a season may wrap the new
+// year). Once bought they're yours, and appear in the temple during that season each year.
+export const SEASONS = [
+  { id: 'halloween', name: 'Halloween', icon: '🎃', from: '10-15', to: '11-07', items: [
+    { id: 'pumpkins', name: 'Jack-o’-lanterns', price: 80, desc: 'Grinning pumpkins glowing along the path.' },
+    { id: 'bats', name: 'Bats', price: 60, desc: 'A flutter of bats crossing the sky.' },
+    { id: 'harvestmoon', name: 'Harvest Moon', price: 120, desc: 'A huge orange moon hanging low over the mountains.' },
+  ] },
+];
+const monthDay = d => `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export function inSeason(season, date = new Date()) {
+  const k = monthDay(date);
+  return season.from <= season.to ? k >= season.from && k <= season.to : k >= season.from || k <= season.to;
+}
+export const seasonOfItem = id => SEASONS.find(s => s.items.some(i => i.id === id)) ?? null;
+// Whether an owned decoration is on show at this date (seasonal ones only in season).
+export const inBloom = (id, date = new Date()) => { const s = seasonOfItem(id); return !s || inSeason(s, date); };
+
 // Frames around the temple picture (drawn in temple.js).
 export const FRAMES = [
   { id: 'none', name: 'No frame', price: 0, desc: 'The picture as it is.' },

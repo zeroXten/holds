@@ -312,5 +312,15 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('can\'t use a frame you don\'t own', !P.useFrame(s, 'gold'));
 }
 
+// Seasonal packs: on sale only in season; once bought, shown only in season each year.
+{
+  const s = fresh(500);
+  const oct = new Date(2026, 9, 30), may = new Date(2027, 4, 1), nextOct = new Date(2027, 9, 20);
+  check('halloween on sale in late October', P.activeSeasons(oct).some(x => x.id === 'halloween') && !P.activeSeasons(may).length);
+  check('can\'t buy out of season', !P.buySeasonalItem(s, 'pumpkins', may));
+  check('buy in season', P.buySeasonalItem(s, 'pumpkins', oct) && P.owns(s, 'pumpkins') && s.coins === 500 - 80);
+  check('shown only in season, every year', P.shownItems(s, oct).includes('pumpkins') && !P.shownItems(s, may).includes('pumpkins') && P.shownItems(s, nextOct).includes('pumpkins'));
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);

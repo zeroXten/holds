@@ -549,6 +549,7 @@ button.chip { cursor: pointer; }
 .shop-list small.blocked { color: var(--bad); }
 .shop-list li.owned b { color: var(--muted); }
 .shop-list li.put-away { opacity: .7; }
+.shop-list.seasonal { border-color: #e07a1a; }
 .btn.buy { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 6px 14px; white-space: nowrap; }
 .owned-tag { font-size: .78rem; font-weight: 700; color: var(--good); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }

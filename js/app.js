@@ -1125,7 +1125,18 @@ const buyBtn = (act, id, price, label = `${COIN} ${price}`) =>
 
 function shopTemple() {
   const tier = state.temple.tier ?? 0, now = TEMPLE_TIERS[tier], next = P.nextTier(state);
-  const owned = state.temple.owned.length;
+  const owned = TEMPLE_ITEMS.filter(i => P.owns(state, i.id)).length;
+  // Seasonal packs on sale now: buy while the season lasts; they return each year.
+  const seasonal = P.activeSeasons().map(season => {
+    const until = new Date(`2000-${season.to}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return `<h3>${season.icon} ${season.name} <small>on sale until ${until}</small></h3>
+    <p class="shop-note">Yours to keep: they appear in your temple each ${season.name}.</p>
+    <ul class="shop-list seasonal">${season.items.map(i => {
+      const built = P.owns(state, i.id), hidden = built && P.isHidden(state, i.id);
+      return `<li class="${built ? 'owned' : ''} ${hidden ? 'put-away' : ''}"><div><b>${i.name}</b><small>${built ? (hidden ? 'Put away' : 'In your temple') : i.desc}</small></div>
+        ${built ? `<button class="btn buy" data-act="toggle-item" data-id="${i.id}">${hidden ? 'Show' : 'Hide'}</button>` : buyBtn('buy-seasonal', i.id, i.price)}</li>`;
+    }).join('')}</ul>`;
+  }).join('');
   const item = i => {
     const built = P.owns(state, i.id), allowed = P.canBuild(state, i), hidden = built && P.isHidden(state, i.id);
     const note = allowed ? `<small>${i.desc}</small>` : `<small class="blocked">Needs the ${TEMPLE_TIERS[i.needs].name}</small>`;
@@ -1138,6 +1149,7 @@ function shopTemple() {
   <ul class="shop-list">${next
     ? `<li><div><b>Upgrade to ${next.name}</b><small>${next.desc}</small>${sashNeed(next.sash) ? `<small class="blocked">${sashNeed(next.sash)}</small>` : ''}</div>${sashNeed(next.sash) ? '' : buyBtn('upgrade-temple', next.id, next.price)}</li>`
     : `<li class="owned"><div><b>${now.name}</b><small>Your temple is complete.</small></div><span class="owned-tag">Built</span></li>`}</ul>
+  ${seasonal}
   <h3>Decorations <small>${owned} of ${TEMPLE_ITEMS.length}</small></h3>
   <ul class="shop-list">${[...TEMPLE_ITEMS].sort((a, b) => a.price - b.price).map(item).join('')}</ul>`;
 }
@@ -1236,6 +1248,7 @@ document.addEventListener('click', e => {
     'wear-avatar': () => { const [kind, item] = id.split(':'); return P.wearAvatarItem(state, kind, item) && ''; },
     'avatar-temple': () => { P.toggleAvatarInTemple(state); return ''; },
     'toggle-item': () => P.toggleTempleItem(state, id) && '',
+    'buy-seasonal': () => P.buySeasonalItem(state, id) && 'Bought! It’s in your temple.',
     'buy-item': () => P.buyTempleItem(state, id) && `${TEMPLE_ITEMS.find(i => i.id === id).name} built!`,
     'buy-theme': () => P.buyTheme(state, id) && `${THEMES.find(t => t.id === id).name} theme unlocked!`,
     'use-theme': () => P.useTheme(state, id) && '',
