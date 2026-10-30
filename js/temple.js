@@ -3,7 +3,7 @@
 // temple grows through its stages and the courtyard gains each feature you buy. Themes change the time of day or season (and the app's accent colours).
 
 import { Pix, rgb, mix, bayer } from './pixel.js';
-import { drawPoseMonk } from './avatar.js';
+import { drawPoseSprite } from './avatar.js';
 
 // ---- Palettes ----
 
@@ -648,7 +648,7 @@ function frame(p, kind) {
 }
 
 // `groundRows`: how much of the picture is courtyard (taller in the full-screen view).
-// `monk`: { look, spec } to draw your monk in a hold's pose, at the front right of the path.
+// `monk`: { look, holdId } to draw your monk in that hold's pose, in the courtyard.
 export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, monk = null, frame: frameKind = null, groundRows = 22 } = {}) {
   const { th, c } = palette(theme);
   const has = id => owned.includes(id);
@@ -687,7 +687,7 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, m
   if (has('bamboo')) bamboo(p, c, W, H, t, snow);
   if (has('plum')) plumTree(p, c, W, H, G, t);
   // Your monk, in the pose of your last hold, in the open courtyard left of the path.
-  if (monk) drawPoseMonk(p, cx - 32, G + 15, monk.look, monk.spec, t);
+  if (monk) drawPoseSprite(p, cx - 32, G + 15, monk.look, monk.holdId);
   if (has('gate')) {
     gate(p, c, W, H, cx, snow);
     if (has('lanterns')) lanterns(p, c, W, G, cx, true, t, lit);

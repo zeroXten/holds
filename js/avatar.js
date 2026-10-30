@@ -3,7 +3,6 @@
 // into a 13×20 grid so it can have a one-pixel outline all round.
 
 import { Pix, rgb } from './pixel.js';
-import { buildJoints, SEG } from './figure.js';
 
 export const AVATAR_W = 13, AVATAR_H = 20;
 
@@ -102,56 +101,151 @@ export function drawAvatar(p, x0, y0, look) {
   }
 }
 
-// Your monk in a pose: a hold's stick figure (joint angles from holds.js), drawn as a
-// small pixel-art body in your outfit and sash, standing with its feet at (x0, ground).
-// The upper body rises and falls a touch with the breath at time `t`.
-export function drawPoseMonk(p, x0, ground, look, spec, t = 0, scale = 0.3) {
-  const j = buildJoints(spec);
-  const breath = Math.sin(t * 1.25) * 0.45;
-  const UPPER = ['neck', 'head', 'lShoulder', 'rShoulder', 'lElbow', 'rElbow', 'lWrist', 'rWrist', 'lTip', 'rTip'];
-  const at = k => [j[k][0] * scale, j[k][1] * scale + (UPPER.includes(k) ? breath : 0)];
-  // Draw into a small buffer of its own so the whole body can be outlined, then copy it in.
-  const pts = Object.keys(j).map(at), pad = 7;  // room round the edge for the head and hat
-  const minX = Math.floor(Math.min(...pts.map(q => q[0]))) - pad, maxX = Math.ceil(Math.max(...pts.map(q => q[0]))) + pad;
-  const minY = Math.floor(Math.min(...pts.map(q => q[1]))) - pad - 2, maxY = Math.ceil(Math.max(...pts.map(q => q[1]))) + pad;
-  const b = new Pix(maxX - minX + 1, maxY - minY + 1);
-  const P = k => { const [x, y] = at(k); return [x - minX, y - minY]; };
-  const limb = (a, c, r, col) => { const [ax, ay] = P(a), [bx, by] = P(c); b.capsule(ax, ay, bx, by, r, col); };
+// ---- Hand-drawn pose sprites ----
+// Small pixel-art poses in the standing monk's style, for your monk in the temple. Each row
+// is pixels: R robe, D robe shadow, L robe highlight, P trousers, S sash, s skin, w leg
+// wraps, f shoes, '.' empty. The head (with the character's features and hat) is painted
+// on at `head`, the offset of the standing sprite's head (its face fills x 3–7, y 1–5).
+const POSES = {
+  horse: { head: [2, 0], rows: [
+    '', '', '', '', '', '',
+    '.....RRRRR.....',
+    '..LRRRRDRRRRD..',
+    '..LRRRRRDRRRD..',
+    '..sRRRRRRDRRs..',
+    '...SSSSSSSSS...',
+    '..PPPPPPPPPPP..',
+    '.PPPPP...PPPPP.',
+    '.PP.........PP.',
+    '.PP.........PP.',
+    '.ww.........ww.',
+    '.ww.........ww.',
+    'fff.........fff',
+  ] },
+  bow: { head: [3, 0], rows: [
+    '', '', '', '', '', '',
+    '......RRRRR.......',
+    '.....LRRRRD.......',
+    '.....LRRDRD.......',
+    '.....sRRRDs.......',
+    '......SSSS........',
+    '......PPPPPP......',
+    '.....PPP..PPPP....',
+    '....PP.......PPP..',
+    '...PP.........PP..',
+    '..PP..........ww..',
+    '.PP...........ww..',
+    'ff............fff.',
+  ] },
+  crane: { head: [2, 0], rows: [
+    '', '', '', '', '', '',
+    '.....RRRRR....',
+    '.....LRRRRDD..',
+    '.....LRRRRDss.',
+    '.....LRRRRD...',
+    '......SSSS....',
+    '......PPPPPPP.',
+    '......PP...PP.',
+    '......PP...PP.',
+    '......PP...ff.',
+    '......ww......',
+    '......ww......',
+    '.....fff......',
+  ] },
+  plank: { head: [0, 0], rows: [
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '......RRRRRRRS.............',
+    '.....LRRRRRRRRSSPPPPPP.....',
+    '.....sR.......SPPPPPPPPPPww',
+    '.....s..................ff',
+    '.....s....................',
+  ] },
+  sit: { head: [2, 0], rows: [
+    '', '', '', '', '', '',
+    '.....RRRRR.....',
+    '....LRRRDRRD...',
+    '...LRRRRRDRRD..',
+    '...LRRRRRRDRD..',
+    '...SSSSssSSSS..',
+    '.PPPPPPsPPPPPP.',
+    'PPPPPwwwwwPPPPP',
+    '.PPPPPPPPPPPPP.',
+  ] },
+  armsUp: { head: [0, 4], rows: [
+    '....sss....',
+    '...RR.RR...',
+    '..RR...RR..',
+    '..R.....R..',
+    '..R.....R..',
+    '..R.....R..',
+    '..R.....R..',
+    '..R.....R..',
+    '..R.....R..',
+    '..R.....R..',
+    '..LRRRRRD..',
+    '..LRRDRRD..',
+    '..LRRRDRD..',
+    '..SSSSSSS..',
+    '..RRRRRRR..',
+    '...PP.PP...',
+    '...PP.PP...',
+    '...ww.ww...',
+    '...ww.ww...',
+    '..fff.fff..',
+  ] },
+  armsOut: { head: [4, 0], rows: [
+    '', '', '', '', '', '',
+    '.......RRRRR.......',
+    'sRRRRRRRRRRRRRRRRRs',
+    '......LRRDRRD......',
+    '......LRRRDRD......',
+    '......SSSSSSS......',
+    '......RRRRRRR......',
+    '.......PP.PP.......',
+    '.......PP.PP.......',
+    '.......ww.ww.......',
+    '.......ww.ww.......',
+    '......fff.fff......',
+  ] },
+};
+
+// Which pose each hold shows (anything not listed stands).
+export const POSE_OF = {
+  horse: 'horse', drop: 'horse', squat: 'horse', post: 'horse',
+  bow: 'bow', cat: 'bow', rest: 'bow',
+  crane: 'crane', kick: 'crane', swallow: 'crane', balance: 'crane',
+  plank: 'plank', sideplank: 'plank', birddog: 'plank', bear: 'plank', hollow: 'plank', bridge: 'plank', yanfei: 'plank', fingertips: 'plank',
+  zuochan: 'sit', nordic: 'sit',
+  sky: 'armsUp', weituo: 'armsUp', stars: 'armsUp', toes: 'armsUp',
+  wings: 'armsOut', drawbow: 'armsOut', claws: 'armsOut',
+};
+
+// Draws your monk in a hold's pose, feet on `ground`, centred on x.
+export function drawPoseSprite(p, x, ground, look, holdId) {
+  const pose = POSES[POSE_OF[holdId]];
+  if (!pose) return drawAvatar(p, Math.round(x) - 6, ground - AVATAR_H + 1, look);
   const o = OUTFITS[look.outfit] ?? OUTFITS.saffron;
-  const robe = rgb(o.robe), dark = rgb(o.dark), pants = rgb(o.pants), sash = rgb(look.sash ?? '#f4efe6');
-  const limbR = Math.max(0.9, 4.5 * scale), legR = Math.max(0.8, 3.6 * scale), bodyR = Math.max(1.4, 6.5 * scale);
-
-  // Legs (trousers, shoes), body (robe with the sash band), arms (sleeves, hands), head.
-  // Feet: a short flat line forward from the ankle (side-on figures face right; front-on,
-  // the feet point out a little to their own side).
-  const front = spec.view === 'front';
-  for (const s of ['r', 'l']) {
-    limb(s + 'Hip', s + 'Knee', legR, pants);
-    limb(s + 'Knee', s + 'Ankle', legR, pants);
-    const [ax, ay] = P(s + 'Ankle'), dir = front ? (s === 'l' ? 1 : -1) : 1, len = front ? 1.5 : 2.5;
-    b.capsule(ax, ay, ax + dir * len, ay, 0.7, C.shoe);
-  }
-  limb('pelvis', 'neck', bodyR, robe);
-  const [px, py] = P('pelvis'), [nx, ny] = P('neck');
-  const along = f => [px + (nx - px) * f, py + (ny - py) * f];
-  const [s1x, s1y] = along(0.12), [s2x, s2y] = along(0.28);
-  b.capsule(s1x, s1y, s2x, s2y, bodyR, sash);
-  for (const s of ['r', 'l']) {
-    limb(s + 'Shoulder', s + 'Elbow', limbR, robe);
-    limb(s + 'Elbow', s + 'Wrist', limbR, s === 'r' ? dark : robe);
-    const [wx, wy] = P(s + 'Wrist'); b.disc(wx, wy, limbR * 0.9, C.skin);
-  }
-  // The same head as the standing sprite, centred on the figure's head.
-  const [hx, hy] = P('head'), ox = Math.round(hx) - 5, oy = Math.round(hy) - 3;
-  const hset = (x, y, c) => b.set(ox + x, oy + y, c);
-  paintHead(hset, (x, y, w, h, c) => { for (let jj = 0; jj < h; jj++) for (let ii = 0; ii < w; ii++) hset(x + ii, y + jj, c); }, look);
-
-  // Outline, then copy onto the picture.
-  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
-    const v = b.data[y * b.w + x], X = x0 + x + minX, Y = ground + y + minY;
-    if (v) { p.set(X, Y, v); continue; }
-    const n = (dx, dy) => { const xx = x + dx, yy = y + dy; return xx >= 0 && yy >= 0 && xx < b.w && yy < b.h && b.data[yy * b.w + xx]; };
-    if (n(-1, 0) || n(1, 0) || n(0, -1) || n(0, 1)) p.set(X, Y, C.outline);
+  const pal = { R: rgb(o.robe), D: rgb(o.dark), L: rgb(o.light), P: rgb(o.pants), S: rgb(look.sash ?? '#f4efe6'), s: C.skin, w: C.wrap, f: C.shoe };
+  const W = Math.max(...pose.rows.map(r => r.length)) + 4, H = pose.rows.length + 4;
+  const grid = new Array(W * H).fill(0);
+  const set = (gx, gy, c) => { gx += 2; gy += 2; if (gx >= 0 && gy >= 0 && gx < W && gy < H) grid[gy * W + gx] = c; };
+  pose.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) set(x, y, pal[ch]); }));
+  // A gold dot per black sash degree, on the sash's left end.
+  const sashRow = pose.rows.findIndex(r => r.includes('S'));
+  if (sashRow >= 0) for (let i = 0; i < Math.min(5, look.degree ?? 0); i++) set(pose.rows[sashRow].indexOf('S') + i, sashRow, C.gold);
+  const [hx, hy] = pose.head;
+  paintHead((gx, gy, c) => set(hx + gx, hy + gy, c), (gx, gy, w, h, c) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) set(hx + gx + i, hy + gy + j, c); }, look);
+  const x0 = Math.round(x) - Math.floor(W / 2), y0 = ground - H + 3;
+  const filled = (gx, gy) => gx >= 0 && gy >= 0 && gx < W && gy < H && grid[gy * W + gx] && grid[gy * W + gx] !== C.outline;
+  for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W; gx++) {
+    const v = grid[gy * W + gx];
+    if (v) p.set(x0 + gx, y0 + gy, v);
+    else if (filled(gx - 1, gy) || filled(gx + 1, gy) || filled(gx, gy - 1) || filled(gx, gy + 1)) p.set(x0 + gx, y0 + gy, C.outline);
   }
 }
 
