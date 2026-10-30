@@ -1,7 +1,7 @@
 import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
 import {
   coinsAtTarget, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
-  AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FREEZE_PRICE, FREEZE_MAX,
+  AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FRAMES, FREEZE_PRICE, FREEZE_MAX,
   REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice, MILESTONE_DAY_MULT,
 } from './economy.js';
 import { drawTemple, SCENE_H } from './temple.js';
@@ -63,10 +63,11 @@ const viewHint = (hold, level = 1) => `${prefersLandscape(hold, level) ? 'Phone 
 document.body.classList.toggle('demo', DEMO);
 
 function show(id) {
+  if (document.body.dataset.screen === 'temple-view' && id !== 'temple-view') audio.stopAmbient();
   $$('.screen').forEach(s => { s.hidden = s.id !== id; });
   document.body.dataset.screen = id;
   window.scrollTo(0, 0);
-  if (id === 'home' || id === 'shop') requestAnimationFrame(() => drawScenes(true));
+  if (id === 'home' || id === 'shop' || id === 'temple-view') requestAnimationFrame(() => drawScenes(true));
 }
 
 // Toasts queue up, so several notices in a row are each seen.
@@ -1172,7 +1173,13 @@ function shopThemes() {
       <b>${t.name}</b><small>${t.desc}</small>
       ${active ? '<span class="owned-tag">In use</span>' : have ? `<button class="btn buy" data-act="use-theme" data-id="${t.id}">Use</button>` : buyBtn('buy-theme', t.id, t.price)}
     </div>`;
-  }).join('')}</div>`;
+  }).join('')}</div>
+  <h3>Frames <small>around your temple picture</small></h3>
+  <ul class="shop-list">${FRAMES.map(f => {
+    const have = state.temple.frames.includes(f.id), active = state.temple.frame === f.id;
+    return `<li class="${active ? 'owned' : ''}"><div><b>${f.name}</b><small>${f.desc}</small></div>
+      ${active ? '<span class="owned-tag">In use</span>' : have ? `<button class="btn buy" data-act="use-frame" data-id="${f.id}">Use</button>` : buyBtn('buy-frame', f.id, f.price)}</li>`;
+  }).join('')}</ul>`;
 }
 
 function shopStreak() {
@@ -1232,6 +1239,8 @@ document.addEventListener('click', e => {
     'buy-item': () => P.buyTempleItem(state, id) && `${TEMPLE_ITEMS.find(i => i.id === id).name} built!`,
     'buy-theme': () => P.buyTheme(state, id) && `${THEMES.find(t => t.id === id).name} theme unlocked!`,
     'use-theme': () => P.useTheme(state, id) && '',
+    'buy-frame': () => P.buyFrame(state, id) && `${FRAMES.find(f => f.id === id).name} frame bought!`,
+    'use-frame': () => P.useFrame(state, id) && '',
     'buy-freeze': () => P.buyFreeze(state) && 'Streak freeze bought',
     'plan-rest': () => P.planRest(state, id) && 'Rest day planned',
     'cancel-rest': () => P.cancelRest(state, id) && 'Rest day cancelled, coins refunded',
@@ -1264,10 +1273,63 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let sceneTimer = null;
 
 // Your monk as drawn in the temple, or null when it's hidden.
-const templeMonk = () => (state.avatar.inTemple ? P.avatarLook(state) : null);
+// Your monk in the temple: in the pose of your last hold if you've trained today,
+// otherwise sitting in meditation, waiting. Null when it's hidden.
+function templeMonk() {
+  if (!state.avatar.inTemple) return null;
+  const last = state.history.at(-1), today = !!state.days[P.dayKey()];
+  const hold = today && last ? holdById(last.holdId) : null;
+  const spec = hold ? hold.figure(last.level) : holdById('zuochan').figure(1);
+  return { look: P.avatarLook(state), spec };
+}
+
+// The full-screen temple, in whole art pixels. Upright, it's zoomed to about 125 art
+// pixels wide (the far edges of a wide temple crop off) with tall sky and courtyard;
+// on its side, sized to the picture's usual 104 rows of height.
+function drawFullTemple() {
+  const upright = innerHeight > innerWidth;
+  const s = upright ? Math.max(2, Math.round(innerWidth / 125)) : Math.max(2, Math.floor(Math.min(innerWidth / 170, innerHeight / 104)));
+  const cv = $('#temple-full');
+  const w = Math.ceil(innerWidth / s), h = Math.ceil(innerHeight / s);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  drawTemple(cv, state, reduceMotion ? 3.3 : performance.now() / 1000, state.temple.theme, templeMonk(), Math.max(22, Math.round(h * 0.28)));
+}
+
+// What the ambient sound can hear in the temple you've built.
+const ambientScene = () => {
+  const shown = P.shownItems(state);
+  return { water: shown.includes('pond') || shown.includes('waterfall'), wind: shown.includes('bamboo') || shown.includes('mist'), bell: shown.includes('bell') };
+};
+
+function renderSoundButton() {
+  const on = !!state.settings.ambient;
+  $('#tv-sound').textContent = on ? '♪ Sound on' : '♪ Sound off';
+  $('#tv-sound').setAttribute('aria-pressed', on);
+}
+
+function openTempleView() {
+  show('temple-view');
+  renderSoundButton();
+  if (state.settings.ambient) { audio.unlock(); audio.startAmbient(ambientScene()); }
+}
+
+$('#tv-sound').onclick = () => {
+  state.settings.ambient = !state.settings.ambient;
+  P.save(state);
+  renderSoundButton();
+  audio.unlock();
+  if (state.settings.ambient) audio.startAmbient(ambientScene()); else audio.stopAmbient();
+};
+$('#tv-shop').onclick = () => openShop('temple');
+// Quiet when you switch away from the app; back when you return to the temple.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') audio.stopAmbient();
+  else if (document.body.dataset.screen === 'temple-view' && state.settings.ambient) audio.startAmbient(ambientScene());
+});
 
 function drawScenes(resize = false) {
   const screen = document.body.dataset.screen;
+  if (screen === 'temple-view') return drawFullTemple();
   const cv = screen === 'home' ? $('#temple-canvas') : screen === 'shop' && !$('#shop-preview').hidden ? $('#shop-canvas') : null;
   if (!cv) return;
   if (resize || !cv.dataset.sized) {
@@ -1288,7 +1350,7 @@ window.addEventListener('resize', () => drawScenes(true));
 
 // ---------- Wiring ----------
 
-$('#temple-banner').onclick = () => openShop('temple');
+$('#temple-banner').onclick = openTempleView;
 $('#wallet-chip').onclick = () => openShop('temple');
 $('#streak-strip').onclick = () => openShop('streak');
 

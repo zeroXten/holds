@@ -124,6 +124,15 @@ export const TEMPLE_ITEMS = [
   { id: 'yard', name: 'Training Yard', price: 1500, desc: 'A wooden dummy and a rack of staffs for training.' },
 ];
 
+// Frames around the temple picture (drawn in temple.js).
+export const FRAMES = [
+  { id: 'none', name: 'No frame', price: 0, desc: 'The picture as it is.' },
+  { id: 'lacquer', name: 'Red Lacquer', price: 150, desc: 'Glossy red with gold corners.' },
+  { id: 'wood', name: 'Carved Wood', price: 250, desc: 'Dark wood with a grain you can see.' },
+  { id: 'jade', name: 'Jade', price: 400, desc: 'Cool green stone with pale corners.' },
+  { id: 'gold', name: 'Gold Filigree', price: 600, desc: 'Gold, with ornaments on every edge.' },
+];
+
 export const THEMES = [
   { id: 'dawn', name: 'Dawn', price: 0, desc: 'First light over the mountains.' },
   { id: 'day', name: 'Clear Day', price: 80, desc: 'Blue skies and green hills.' },

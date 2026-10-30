@@ -38,7 +38,7 @@
       <span class="rank-text"><strong id="rank-name"></strong><span class="xpbar"><i id="xp-fill"></i></span><small id="xp-text"></small></span>
     </button>
 
-    <button class="temple-banner" id="temple-banner" aria-label="Your temple: open the shop">
+    <button class="temple-banner" id="temple-banner" aria-label="Your temple: open it full screen">
       <canvas id="temple-canvas" width="180" height="104"></canvas>
     </button>
 
@@ -215,6 +215,16 @@
       <p class="credit">Created by <a href="https://www.linkedin.com/in/zeroxten/" target="_blank" rel="noopener">zeroXten</a></p>
     </form>
   </dialog>
+
+  <!-- Your temple, full screen -->
+  <section id="temple-view" class="screen temple-view" hidden>
+    <canvas id="temple-full" width="180" height="104"></canvas>
+    <button class="icon-btn tv-x" data-home aria-label="Back"><svg viewBox="0 0 24 24" class="ico"><path d="M15 4l-8 8 8 8 1.4-1.4L9.8 12l6.6-6.6z"/></svg></button>
+    <div class="tv-btns">
+      <button class="chip" id="tv-sound" aria-pressed="false"></button>
+      <button class="chip" id="tv-shop">Shop</button>
+    </div>
+  </section>
 
   <!-- Welcome: shown on first use, and from Settings -->
   <dialog id="welcome" class="sheet">

@@ -4,7 +4,7 @@
 import { HOLDS, AREAS, RESTFUL_AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
-  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, STREAK_MILESTONES, LEVEL_MULT,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, FRAMES, STREAK_MILESTONES, LEVEL_MULT,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
   DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT,
 } from './economy.js';
@@ -59,7 +59,7 @@ export const BADGES = [
   { id: 'daily', name: 'Daily Devotion', desc: 'Reach the target on the hold of the day' },
 ];
 
-export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full', appearance: 'system' };
+export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full', appearance: 'system', ambient: false };
 
 const blank = () => ({
   version: 2, coins: 0, lifetime: 0, unlocked: [...STARTER_HOLDS], purchased: [], daily: null,
@@ -69,7 +69,7 @@ const blank = () => ({
   bet: null,      // today's bet
   weekBet: null,  // a weekly bet, running alongside
   betLog: [],  // settled bets, newest first
-  temple: { tier: 0, owned: [], hidden: [], theme: 'dawn', themes: ['dawn'] },  // hidden: owned but put away
+  temple: { tier: 0, owned: [], hidden: [], theme: 'dawn', themes: ['dawn'], frame: 'none', frames: ['none'] },  // hidden: owned but put away
   // Your monk: what's worn, what's owned, and whether it stands in the temple.
   avatar: { character: 'young', outfit: 'saffron', wear: {}, owned: ['young', 'saffron'], inTemple: true },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
@@ -475,6 +475,23 @@ export function buyTheme(state, id) {
   state.coins -= theme.price;
   state.temple.themes.push(id);
   state.temple.theme = id;
+  save(state);
+  return true;
+}
+
+export function buyFrame(state, id) {
+  const f = FRAMES.find(x => x.id === id);
+  if (!f || state.temple.frames.includes(id) || state.coins < f.price) return false;
+  state.coins -= f.price;
+  state.temple.frames.push(id);
+  state.temple.frame = id;
+  save(state);
+  return true;
+}
+
+export function useFrame(state, id) {
+  if (!state.temple.frames.includes(id)) return false;
+  state.temple.frame = id;
   save(state);
   return true;
 }

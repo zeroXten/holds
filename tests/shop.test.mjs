@@ -303,5 +303,14 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('can\'t hide what you don\'t own', !P.toggleTempleItem(s, 'pond'));
 }
 
+// Frames: bought once, then switched freely.
+{
+  const s = fresh(500);
+  check('starts with no frame', s.temple.frame === 'none' && P.useFrame(s, 'none'));
+  check('buying a frame puts it on', P.buyFrame(s, 'lacquer') && s.temple.frame === 'lacquer' && s.coins === 500 - 150);
+  check('switch back without paying again', P.useFrame(s, 'none') && P.useFrame(s, 'lacquer') && s.coins === 350);
+  check('can\'t use a frame you don\'t own', !P.useFrame(s, 'gold'));
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);

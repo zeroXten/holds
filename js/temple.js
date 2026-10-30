@@ -3,7 +3,7 @@
 // temple grows through its stages and the courtyard gains each feature you buy. Themes change the time of day or season (and the app's accent colours).
 
 import { Pix, rgb, mix, bayer } from './pixel.js';
-import { drawAvatar, AVATAR_H } from './avatar.js';
+import { drawPoseMonk } from './avatar.js';
 
 // ---- Palettes ----
 
@@ -618,10 +618,41 @@ function trainingYard(p, c, cx, G) {
   p.vline(rx - 1, G + 5, G + 18, c.woodDark); p.vline(rx + 7, G + 5, G + 18, c.woodDark);
 }
 
-export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, avatar = null } = {}) {
+// ---- Frames: pixel-art borders around the picture ----
+
+const FRAME_COLORS = {
+  lacquer: { outer: '#4a100c', main: '#b8352b', inner: '#e5b13a', corner: '#e5b13a' },
+  wood: { outer: '#2e1a10', main: '#7a4a2c', grain: '#9b6a40', inner: '#4a2a18', corner: '#4a2a18' },
+  jade: { outer: '#1c3f2e', main: '#3f8f6a', inner: '#9fd8b4', corner: '#e8f4ea' },
+  gold: { outer: '#3a2610', main: '#e5b13a', inner: '#7a5418', corner: '#fff1a8' },
+};
+
+function frame(p, kind) {
+  const f = FRAME_COLORS[kind];
+  if (!f) return;
+  const c = Object.fromEntries(Object.entries(f).map(([k, v]) => [k, rgb(v)]));
+  const W = p.w, H = p.h;
+  const ring = (i, col) => { p.hline(i, W - 1 - i, i, col); p.hline(i, W - 1 - i, H - 1 - i, col); p.vline(i, i, H - 1 - i, col); p.vline(W - 1 - i, i, H - 1 - i, col); };
+  ring(0, c.outer);
+  ring(1, c.main); ring(2, c.main);
+  if (c.grain) for (let x = 3; x < W - 3; x += 4) { p.set(x, 1, c.grain); p.set(x + 2, H - 2, c.grain); }
+  if (c.grain) for (let y = 3; y < H - 3; y += 4) { p.set(1, y, c.grain); p.set(W - 2, y + 2, c.grain); }
+  ring(3, c.inner);
+  // Corner pieces, and (gold) a small ornament halfway along each edge.
+  for (const [x, y] of [[0, 0], [W - 6, 0], [0, H - 6], [W - 6, H - 6]]) {
+    p.rect(x, y, 6, 6, c.main);
+    p.rect(x + 1, y + 1, 4, 4, c.corner);
+    p.rect(x + 2, y + 2, 2, 2, c.outer);
+  }
+  if (kind === 'gold') for (const [x, y] of [[W / 2 - 2, 0], [W / 2 - 2, H - 4], [0, H / 2 - 2], [W - 4, H / 2 - 2]]) p.rect(x, y, 4, 4, c.corner);
+}
+
+// `groundRows`: how much of the picture is courtyard (taller in the full-screen view).
+// `monk`: { look, spec } to draw your monk in a hold's pose, at the front right of the path.
+export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, monk = null, frame: frameKind = null, groundRows = 22 } = {}) {
   const { th, c } = palette(theme);
   const has = id => owned.includes(id);
-  const W = p.w, H = p.h, G = H - 22, cx = Math.round(W / 2);
+  const W = p.w, H = p.h, G = H - groundRows, cx = Math.round(W / 2);
   const lit = !!th.lightsOn, snow = !!th.snowing;
 
   sky(p, c, th, W, G, t);
@@ -655,21 +686,22 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, a
   if (has('incense')) burner(p, c, cx, G, t);
   if (has('bamboo')) bamboo(p, c, W, H, t, snow);
   if (has('plum')) plumTree(p, c, W, H, G, t);
-  // Your monk stands at the front, just right of the path.
-  if (avatar) drawAvatar(p, cx + 7, H - AVATAR_H, avatar);
+  // Your monk, in the pose of your last hold, in the open courtyard left of the path.
+  if (monk) drawPoseMonk(p, cx - 32, G + 15, monk.look, monk.spec, t);
   if (has('gate')) {
     gate(p, c, W, H, cx, snow);
     if (has('lanterns')) lanterns(p, c, W, G, cx, true, t, lit);
   }
   if (snow) snowfall(p, W, H, t);
+  if (frameKind && frameKind !== 'none') frame(p, frameKind);
   return p;
 }
 
 // Draws the scene into a <canvas> whose width/height are in art pixels.
-export function drawTemple(canvas, state, t, theme = state.temple.theme, avatar = null) {
+export function drawTemple(canvas, state, t, theme = state.temple.theme, monk = null, groundRows = 22) {
   const p = new Pix(canvas.width, canvas.height);
   const shown = state.temple.owned.filter(id => !(state.temple.hidden ?? []).includes(id));
-  renderTemple(p, { owned: shown, tier: state.temple.tier ?? 0, theme, t, avatar });
+  renderTemple(p, { owned: shown, tier: state.temple.tier ?? 0, theme, t, monk, frame: state.temple.frame, groundRows });
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(p.w, p.h);
   new Uint32Array(img.data.buffer).set(p.data);

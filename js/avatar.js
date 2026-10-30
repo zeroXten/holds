@@ -3,6 +3,7 @@
 // into a 13×20 grid so it can have a one-pixel outline all round.
 
 import { Pix, rgb } from './pixel.js';
+import { buildJoints, SEG } from './figure.js';
 
 export const AVATAR_W = 13, AVATAR_H = 20;
 
@@ -92,6 +93,59 @@ export function drawAvatar(p, x0, y0, look) {
     const i = y * AVATAR_W + x;
     if (grid[i]) p.set(x0 + x, y0 + y, grid[i]);
     else if (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1)) p.set(x0 + x, y0 + y, C.outline);
+  }
+}
+
+// Your monk in a pose: a hold's stick figure (joint angles from holds.js), drawn as a
+// small pixel-art body in your outfit and sash, standing with its feet at (x0, ground).
+// The upper body rises and falls a touch with the breath at time `t`.
+export function drawPoseMonk(p, x0, ground, look, spec, t = 0, scale = 0.22) {
+  const j = buildJoints(spec);
+  const breath = Math.sin(t * 1.25) * 0.45;
+  const UPPER = ['neck', 'head', 'lShoulder', 'rShoulder', 'lElbow', 'rElbow', 'lWrist', 'rWrist', 'lTip', 'rTip'];
+  const at = k => [j[k][0] * scale, j[k][1] * scale + (UPPER.includes(k) ? breath : 0)];
+  // Draw into a small buffer of its own so the whole body can be outlined, then copy it in.
+  const pts = Object.keys(j).map(at), pad = 4;
+  const minX = Math.floor(Math.min(...pts.map(q => q[0]))) - pad, maxX = Math.ceil(Math.max(...pts.map(q => q[0]))) + pad;
+  const minY = Math.floor(Math.min(...pts.map(q => q[1]))) - pad - 2, maxY = Math.ceil(Math.max(...pts.map(q => q[1]))) + pad;
+  const b = new Pix(maxX - minX + 1, maxY - minY + 1);
+  const P = k => { const [x, y] = at(k); return [x - minX, y - minY]; };
+  const limb = (a, c, r, col) => { const [ax, ay] = P(a), [bx, by] = P(c); b.capsule(ax, ay, bx, by, r, col); };
+  const o = OUTFITS[look.outfit] ?? OUTFITS.saffron;
+  const robe = rgb(o.robe), dark = rgb(o.dark), pants = rgb(o.pants), sash = rgb(look.sash ?? '#f4efe6');
+  const limbR = Math.max(0.9, 4.5 * scale), bodyR = Math.max(1.4, 6.5 * scale);
+
+  // Legs (trousers, shoes), body (robe with the sash band), arms (sleeves, hands), head.
+  for (const s of ['r', 'l']) {
+    limb(s + 'Hip', s + 'Knee', limbR, pants);
+    limb(s + 'Knee', s + 'Ankle', limbR, pants);
+    const [ax, ay] = P(s + 'Ankle'); b.disc(ax, ay, limbR, C.shoe);
+  }
+  limb('pelvis', 'neck', bodyR, robe);
+  const [px, py] = P('pelvis'), [nx, ny] = P('neck');
+  const along = f => [px + (nx - px) * f, py + (ny - py) * f];
+  const [s1x, s1y] = along(0.12), [s2x, s2y] = along(0.28);
+  b.capsule(s1x, s1y, s2x, s2y, bodyR, sash);
+  for (const s of ['r', 'l']) {
+    limb(s + 'Shoulder', s + 'Elbow', limbR, robe);
+    limb(s + 'Elbow', s + 'Wrist', limbR, s === 'r' ? dark : robe);
+    const [wx, wy] = P(s + 'Wrist'); b.disc(wx, wy, limbR * 0.9, C.skin);
+  }
+  const [hx, hy] = P('head'), hr = Math.max(1.6, SEG.headR * scale);
+  b.disc(hx, hy, hr, C.skin);
+  switch (look.character) {
+    case 'nun': b.ellipse(hx, hy - hr * 0.5, hr, hr * 0.6, C.cap); break;
+    case 'warrior': b.hline(hx - hr, hx + hr, hy - hr * 0.4, C.band); break;
+    case 'elder': b.disc(hx, hy + hr * 0.9, hr * 0.6, C.white); break;
+  }
+  if (look.wear?.head === 'hat') { b.hline(hx - hr - 2, hx + hr + 2, hy - hr + 0.5, C.straw); b.hline(hx - hr * 0.6, hx + hr * 0.6, hy - hr - 0.5, C.strawDark); }
+
+  // Outline, then copy onto the picture.
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    const v = b.data[y * b.w + x], X = x0 + x + minX, Y = ground + y + minY;
+    if (v) { p.set(X, Y, v); continue; }
+    const n = (dx, dy) => { const xx = x + dx, yy = y + dy; return xx >= 0 && yy >= 0 && xx < b.w && yy < b.h && b.data[yy * b.w + xx]; };
+    if (n(-1, 0) || n(1, 0) || n(0, -1) || n(0, 1)) p.set(X, Y, C.outline);
   }
 }
 

@@ -477,6 +477,12 @@ body.demo .stage video { display: none; }
   border-radius: var(--radius); overflow: hidden; background: #000; box-shadow: var(--shadow); cursor: pointer;
 }
 .temple-banner.static { cursor: default; }
+/* Full-screen temple */
+.screen.temple-view { position: fixed; inset: 0; max-width: none; padding: 0; background: #000; z-index: 4; }
+#temple-full { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+.tv-x { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 12px; color: #fff; background: rgba(0, 0, 0, .45); }
+.tv-btns { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; display: flex; gap: 8px; }
+.tv-btns .chip { background: rgba(0, 0, 0, .45); color: #fff; border-color: rgba(255, 255, 255, .25); font-weight: 700; }
 .temple-banner canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
 button.chip { cursor: pointer; }
 .freezes, .ss-head .freezes { color: #7fc8ff; font-weight: 800; }
