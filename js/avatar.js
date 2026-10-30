@@ -105,7 +105,7 @@ export function drawAvatar(p, x0, y0, look) {
 // Your monk in a pose: a hold's stick figure (joint angles from holds.js), drawn as a
 // small pixel-art body in your outfit and sash, standing with its feet at (x0, ground).
 // The upper body rises and falls a touch with the breath at time `t`.
-export function drawPoseMonk(p, x0, ground, look, spec, t = 0, scale = 0.26) {
+export function drawPoseMonk(p, x0, ground, look, spec, t = 0, scale = 0.3) {
   const j = buildJoints(spec);
   const breath = Math.sin(t * 1.25) * 0.45;
   const UPPER = ['neck', 'head', 'lShoulder', 'rShoulder', 'lElbow', 'rElbow', 'lWrist', 'rWrist', 'lTip', 'rTip'];
@@ -119,13 +119,17 @@ export function drawPoseMonk(p, x0, ground, look, spec, t = 0, scale = 0.26) {
   const limb = (a, c, r, col) => { const [ax, ay] = P(a), [bx, by] = P(c); b.capsule(ax, ay, bx, by, r, col); };
   const o = OUTFITS[look.outfit] ?? OUTFITS.saffron;
   const robe = rgb(o.robe), dark = rgb(o.dark), pants = rgb(o.pants), sash = rgb(look.sash ?? '#f4efe6');
-  const limbR = Math.max(0.9, 4.5 * scale), bodyR = Math.max(1.4, 6.5 * scale);
+  const limbR = Math.max(0.9, 4.5 * scale), legR = Math.max(0.8, 3.6 * scale), bodyR = Math.max(1.4, 6.5 * scale);
 
   // Legs (trousers, shoes), body (robe with the sash band), arms (sleeves, hands), head.
+  // Feet: a short flat line forward from the ankle (side-on figures face right; front-on,
+  // the feet point out a little to their own side).
+  const front = spec.view === 'front';
   for (const s of ['r', 'l']) {
-    limb(s + 'Hip', s + 'Knee', limbR, pants);
-    limb(s + 'Knee', s + 'Ankle', limbR, pants);
-    const [ax, ay] = P(s + 'Ankle'); b.disc(ax, ay, limbR, C.shoe);
+    limb(s + 'Hip', s + 'Knee', legR, pants);
+    limb(s + 'Knee', s + 'Ankle', legR, pants);
+    const [ax, ay] = P(s + 'Ankle'), dir = front ? (s === 'l' ? 1 : -1) : 1, len = front ? 1.5 : 2.5;
+    b.capsule(ax, ay, ax + dir * len, ay, 0.7, C.shoe);
   }
   limb('pelvis', 'neck', bodyR, robe);
   const [px, py] = P('pelvis'), [nx, ny] = P('neck');
