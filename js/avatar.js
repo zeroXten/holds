@@ -24,6 +24,34 @@ const OUTFITS = {
   golden: { robe: '#e5b13a', dark: '#a87820', light: '#f6d77a', pants: '#c8922a', trim: '#fff1a8' },
 };
 
+// The head, with the character's features and any hat, in sprite coordinates (the face
+// fills x 3–7, y 1–5). Shared by the standing sprite and the monk in a pose, so your monk
+// has the same face everywhere.
+function paintHead(set, rect, look) {
+  rect(4, 1, 3, 1, C.skin);
+  rect(3, 2, 5, 4, C.skin);
+  for (let y = 2; y < 6; y++) set(7, y, C.skinDark);
+  set(5, 6, C.skinDark);
+  set(4, 3, C.outline); set(6, 3, C.outline);
+  switch (look.character) {
+    case 'nun':
+      rect(3, 1, 5, 2, C.cap); rect(4, 0, 3, 1, C.cap); set(3, 3, C.cap); set(7, 3, C.capDark); set(7, 2, C.capDark);
+      break;
+    case 'warrior':
+      rect(3, 2, 5, 1, C.band); set(8, 3, C.band); set(9, 4, C.band);
+      set(4, 1, C.skinLight);
+      break;
+    case 'elder':
+      set(4, 2, C.white); set(6, 2, C.white);
+      rect(4, 5, 3, 3, C.white); set(5, 8, C.white); set(5, 9, C.white);
+      set(4, 1, C.skinLight);
+      break;
+    default:
+      set(4, 1, C.skinLight); set(3, 2, C.skinLight);
+  }
+  if (look.wear?.head === 'hat') { rect(0, 1, 11, 1, C.straw); rect(2, 0, 7, 1, C.straw); rect(4, -1, 3, 1, C.strawDark); set(0, 1, C.strawDark); set(10, 1, C.strawDark); }
+}
+
 export function drawAvatar(p, x0, y0, look) {
   const grid = new Array(AVATAR_W * AVATAR_H).fill(0);
   // Local coordinates: (0, 0) is the figure's top-left, inside the outline margin.
@@ -57,32 +85,10 @@ export function drawAvatar(p, x0, y0, look) {
   set(6, 11, sash); set(6, 12, sash);
   for (let i = 0; i < Math.min(5, look.degree ?? 0); i++) set(2 + i, 10, C.gold);
 
-  // Head
-  rect(4, 1, 3, 1, C.skin);
-  rect(3, 2, 5, 4, C.skin);
-  for (let y = 2; y < 6; y++) set(7, y, C.skinDark);
-  set(5, 6, C.skinDark);
-  set(4, 3, C.outline); set(6, 3, C.outline);
-  switch (look.character) {
-    case 'nun':
-      rect(3, 1, 5, 2, C.cap); rect(4, 0, 3, 1, C.cap); set(3, 3, C.cap); set(7, 3, C.capDark); set(7, 2, C.capDark);
-      break;
-    case 'warrior':
-      rect(3, 2, 5, 1, C.band); set(8, 3, C.band); set(9, 4, C.band);
-      set(4, 1, C.skinLight);
-      break;
-    case 'elder':
-      set(4, 2, C.white); set(6, 2, C.white);
-      rect(4, 5, 3, 3, C.white); set(5, 8, C.white); set(5, 9, C.white);
-      set(4, 1, C.skinLight);
-      break;
-    default:
-      set(4, 1, C.skinLight); set(3, 2, C.skinLight);
-  }
+  paintHead(set, rect, look);
 
   // Accessories
   if (wear.neck === 'mala') { for (const [x, y] of [[3, 7], [4, 8], [5, 9], [6, 8], [7, 7]]) set(x, y, C.bead); }
-  if (wear.head === 'hat') { rect(0, 1, 11, 1, C.straw); rect(2, 0, 7, 1, C.straw); rect(4, -1, 3, 1, C.strawDark); set(0, 1, C.strawDark); set(10, 1, C.strawDark); }
   if (wear.hand === 'staff') { for (let y = -1; y < 18; y++) set(10, y, y % 6 === 0 ? C.woodLight : C.wood); }
   if (wear.hand === 'fan') { set(10, 9, C.fanRed); set(10, 10, C.white); set(9, 9, C.white); set(10, 8, C.white); set(9, 8, C.fanRed); }
   if (wear.hand === 'gourd') { set(8, 11, C.bead); set(8, 12, C.gourd); rect(8, 13, 2, 2, C.gourd); }
@@ -99,13 +105,13 @@ export function drawAvatar(p, x0, y0, look) {
 // Your monk in a pose: a hold's stick figure (joint angles from holds.js), drawn as a
 // small pixel-art body in your outfit and sash, standing with its feet at (x0, ground).
 // The upper body rises and falls a touch with the breath at time `t`.
-export function drawPoseMonk(p, x0, ground, look, spec, t = 0, scale = 0.22) {
+export function drawPoseMonk(p, x0, ground, look, spec, t = 0, scale = 0.26) {
   const j = buildJoints(spec);
   const breath = Math.sin(t * 1.25) * 0.45;
   const UPPER = ['neck', 'head', 'lShoulder', 'rShoulder', 'lElbow', 'rElbow', 'lWrist', 'rWrist', 'lTip', 'rTip'];
   const at = k => [j[k][0] * scale, j[k][1] * scale + (UPPER.includes(k) ? breath : 0)];
   // Draw into a small buffer of its own so the whole body can be outlined, then copy it in.
-  const pts = Object.keys(j).map(at), pad = 4;
+  const pts = Object.keys(j).map(at), pad = 7;  // room round the edge for the head and hat
   const minX = Math.floor(Math.min(...pts.map(q => q[0]))) - pad, maxX = Math.ceil(Math.max(...pts.map(q => q[0]))) + pad;
   const minY = Math.floor(Math.min(...pts.map(q => q[1]))) - pad - 2, maxY = Math.ceil(Math.max(...pts.map(q => q[1]))) + pad;
   const b = new Pix(maxX - minX + 1, maxY - minY + 1);
@@ -131,14 +137,10 @@ export function drawPoseMonk(p, x0, ground, look, spec, t = 0, scale = 0.22) {
     limb(s + 'Elbow', s + 'Wrist', limbR, s === 'r' ? dark : robe);
     const [wx, wy] = P(s + 'Wrist'); b.disc(wx, wy, limbR * 0.9, C.skin);
   }
-  const [hx, hy] = P('head'), hr = Math.max(1.6, SEG.headR * scale);
-  b.disc(hx, hy, hr, C.skin);
-  switch (look.character) {
-    case 'nun': b.ellipse(hx, hy - hr * 0.5, hr, hr * 0.6, C.cap); break;
-    case 'warrior': b.hline(hx - hr, hx + hr, hy - hr * 0.4, C.band); break;
-    case 'elder': b.disc(hx, hy + hr * 0.9, hr * 0.6, C.white); break;
-  }
-  if (look.wear?.head === 'hat') { b.hline(hx - hr - 2, hx + hr + 2, hy - hr + 0.5, C.straw); b.hline(hx - hr * 0.6, hx + hr * 0.6, hy - hr - 0.5, C.strawDark); }
+  // The same head as the standing sprite, centred on the figure's head.
+  const [hx, hy] = P('head'), ox = Math.round(hx) - 5, oy = Math.round(hy) - 3;
+  const hset = (x, y, c) => b.set(ox + x, oy + y, c);
+  paintHead(hset, (x, y, w, h, c) => { for (let jj = 0; jj < h; jj++) for (let ii = 0; ii < w; ii++) hset(x + ii, y + jj, c); }, look);
 
   // Outline, then copy onto the picture.
   for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
