@@ -316,8 +316,9 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
 {
   const s = fresh(500);
   const oct = new Date(2026, 9, 30), may = new Date(2027, 4, 1), nextOct = new Date(2027, 9, 20);
-  check('halloween on sale in late October', P.activeSeasons(oct).some(x => x.id === 'halloween') && !P.activeSeasons(may).length);
-  check('can\'t buy out of season', !P.buySeasonalItem(s, 'pumpkins', may));
+  check('autumn (with Halloween) on sale in late October', P.activeSeasons(oct).map(x => x.id).join() === 'autumn' && P.activeSeasons(may).map(x => x.id).join() === 'spring');
+  check('winter wraps the new year', P.activeSeasons(new Date(2026, 11, 25)).map(x => x.id).join() === 'winter' && P.activeSeasons(new Date(2027, 1, 10)).map(x => x.id).join() === 'winter');
+  check('can\'t buy out of season', !P.buySeasonalItem(s, 'pumpkins', may) && !P.buySeasonalItem(s, 'parasol', oct));
   check('buy in season', P.buySeasonalItem(s, 'pumpkins', oct) && P.owns(s, 'pumpkins') && s.coins === 500 - 80);
   check('shown only in season, every year', P.shownItems(s, oct).includes('pumpkins') && !P.shownItems(s, may).includes('pumpkins') && P.shownItems(s, nextOct).includes('pumpkins'));
 }

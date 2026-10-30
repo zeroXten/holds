@@ -471,7 +471,118 @@ function cranes(p, c, W, t) {
   }
 }
 
-// ---- Halloween ----
+// ---- Seasonal decorations ----
+
+// Spring
+const EGG = ['.a.', 'aba', 'aaa', '.a.'];
+function eggs(p, cx, G) {
+  const cols = [['#f4a6c8', '#fff4a8'], ['#a8d8f4', '#ffffff'], ['#b8e6a0', '#f4a6c8'], ['#fff4a8', '#a8d8f4'], ['#d8b8f4', '#fff4a8']];
+  [[-60, 8], [-18, 17], [24, 6], [60, 17], [-46, 19]].forEach(([dx, dy], i) => p.sprite(cx + dx, G + dy, EGG, { a: rgb(cols[i][0]), b: rgb(cols[i][1]) }));
+}
+
+function flowers(p, c, W, G) {
+  const petals = [rgb('#f4a6c8'), rgb('#fff4a8'), rgb('#ffffff'), rgb('#e86a8a')];
+  for (let i = 0; i < 26; i++) {
+    const side = i % 2 ? W - 3 - (hash(i * 3.3) * 26) : 2 + hash(i * 3.3) * 26;
+    const x = Math.round(side), y = Math.round(G + 2 + hash(i * 7.1) * 18);
+    p.set(x, y + 1, c.foliageDark);
+    p.set(x, y, petals[i % petals.length]);
+    p.set(x + 1, y, petals[(i + 1) % petals.length]);
+  }
+}
+
+const BUNNY = [['.w.w..', '.w.w..', '.wwwk.', 'wwwww.', '.w.w..'], ['......', '.w.w..', '.wwwk.', 'wwwwww', 'w...w.']];
+function bunny(p, W, G, t) {
+  const x = Math.round(((t * 7) % (W + 20)) - 10), hop = Math.abs(Math.sin(t * 5)) * 3;
+  p.sprite(x, Math.round(G + 9 - hop), BUNNY[hop > 1.5 ? 1 : 0], { w: rgb('#f4f0e8'), k: rgb('#22161a') });
+}
+
+// Summer
+function parasol(p, c, cx, G) {
+  const x = cx - 64, top = G - 13;
+  p.vline(x, top, G + 9, c.woodDark);
+  for (let r = 0; r < 5; r++) {
+    const half = 3 + r * 2;
+    for (let i = -half; i <= half; i++) p.set(x + i, top + r, Math.floor((i + 20) / 3) % 2 ? rgb('#e84a3a') : rgb('#fff4e8'));
+  }
+  // Deckchair: a slanted striped canvas on a wooden frame.
+  const dx = x + 9, dy = G + 9;
+  p.line(dx, dy, dx + 6, dy - 6, c.woodDark); p.line(dx + 2, dy, dx + 7, dy - 3, c.woodDark);
+  for (let k = 0; k < 6; k++) p.set(dx + 1 + k, dy - 1 - k, k % 2 ? rgb('#3a8ad8') : rgb('#fff4e8'));
+  p.hline(dx - 1, dx + 3, dy - 1, rgb('#3a8ad8'));
+}
+
+const KITE = ['..k..', '.kak.', 'kaaak', '.kak.', '..k..'];
+function kites(p, c, W, H, t) {
+  [[0.22, 14, '#e84a3a'], [0.68, 22, '#3a8ad8']].forEach(([fx, y0, col], i) => {
+    const x = Math.round(W * fx + Math.sin(t * 0.9 + i) * 4), y = Math.round(y0 + Math.cos(t * 1.1 + i) * 2);
+    for (let k = 1; k < 30; k++) if (k % 2) p.set(x + 2 + k * 0.6, y + 5 + k * 1.6, rgb('#f4f0e8', 160));  // the string
+    p.sprite(x, y, KITE, { k: c.outline, a: rgb(col) });
+    for (let k = 0; k < 4; k++) p.set(x + 2 - k + Math.round(Math.sin(t * 3 + k)), y + 5 + k * 2, k % 2 ? rgb('#fff4a8') : rgb(col));
+  });
+}
+
+function fireflies(p, W, G, t, dark) {
+  for (let i = 0; i < 12; i++) {
+    if (hash(i + Math.floor(t * 1.5 + i * 0.3)) < 0.35) continue;  // blinking
+    const x = Math.round((hash(i * 9.1) * W + Math.sin(t * 0.7 + i) * 6 + W) % W), y = Math.round(G - 14 + hash(i * 4.4) * 24 + Math.cos(t + i) * 2);
+    if (dark) glowAt(p, x, y, 3, rgb('#d8ff70'));
+    p.set(x, y, rgb(dark ? '#f4ffb0' : '#c8e04a'));
+  }
+}
+
+// Autumn: leaves blowing across.
+function leaves(p, W, H, t) {
+  const cols = ['#c8322b', '#e07a1a', '#e5b13a', '#a8401e'].map(h => rgb(h));
+  for (let i = 0; i < 14; i++) {
+    const x = Math.round((hash(i * 2.7) * W + t * (10 + (i % 4) * 3)) % (W + 10)) - 5, y = Math.round((hash(i * 5.9) * H + t * (5 + (i % 3) * 2)) % H);
+    p.set(x, y, cols[i % 4]); p.set(x + 1, y + (Math.floor(t * 4 + i) % 2), cols[(i + 1) % 4]);
+  }
+}
+
+// Winter
+function xmasTree(p, c, cx, G, t) {
+  const x = cx + 64, base = G + 18;
+  p.rect(x - 1, base - 3, 3, 3, c.bark);
+  for (let r = 0; r < 18; r++) {
+    const half = Math.round(1 + (r % 6) * 0.9 + Math.floor(r / 6) * 1.6), y = base - 4 - (17 - r);
+    p.hline(x - half, x + half, y, r % 6 === 5 ? c.foliageDark : c.foliage);
+  }
+  const lights = ['#ff5a4a', '#ffe070', '#6ac8ff', '#ffffff'].map(h => rgb(h));
+  for (let i = 0; i < 12; i++) {
+    const y = base - 6 - Math.round(hash(i * 3.1) * 14), half = 1 + Math.floor((y - (base - 21)) / 3);
+    if ((i + Math.floor(t * 2)) % 3) p.set(x - half + Math.round(hash(i * 7.7) * half * 2), y, lights[i % 4]);
+  }
+  p.set(x, base - 23, c.gold); p.hline(x - 1, x + 1, base - 22, c.gold); p.set(x, base - 21, c.gold);
+}
+
+function snowman(p, c, cx, G) {
+  const x = cx - 62, base = G + 16, white = rgb('#f6f9fc'), shade = rgb('#c8d4e0');
+  p.disc(x, base - 4, 4.5, white); p.disc(x, base - 11, 3.4, white);
+  p.hline(x - 4, x + 4, base, shade);
+  p.set(x - 1, base - 12, c.outline); p.set(x + 1, base - 12, c.outline);
+  p.hline(x, x + 2, base - 11, rgb('#f07a1a'));
+  p.hline(x - 3, x + 3, base - 8, c.red);  // a monk's sash for a scarf
+  p.set(x, base - 5, c.outline); p.set(x, base - 3, c.outline);
+}
+
+function newYearLanterns(p, c, W, t, lit) {
+  for (const [y0, sag, off] of [[8, 7, 0], [16, 5, 7]]) {
+    const at = x => Math.round(y0 + sag * Math.sin(Math.PI * x / W));
+    for (let x = 0; x < W; x++) if (x % 2) p.set(x, at(x), c.redDark);
+    for (let x = 6 + off; x < W - 4; x += 14) {
+      const y = at(x) + 1, sway = Math.round(Math.sin(t * 1.5 + x) * 0.6);
+      if (lit) glowAt(p, x + 1, y + 3, 5, c.glow);
+      p.hline(x + sway, x + 2 + sway, y, c.gold);
+      p.rect(x - 1 + sway, y + 1, 5, 4, c.lantern);
+      p.vline(x + 1 + sway, y + 2, y + 3, lit ? c.glow : c.lanternLight);
+      p.hline(x + sway, x + 2 + sway, y + 5, c.gold);
+      p.set(x + 1 + sway, y + 6, c.gold);
+    }
+  }
+}
+
+// Autumn's Halloween
 
 function harvestMoon(p, W, G, cx) {
   const x = Math.round(cx + W * 0.27), y = G - 40;
@@ -689,6 +800,8 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, m
   if (has('harvestmoon')) harvestMoon(p, W, G, cx);
   if (has('cranes')) cranes(p, c, W, t);
   if (has('bats')) bats(p, W, t);
+  if (has('kites')) kites(p, c, W, H, t);
+  if (has('newyear')) newYearLanterns(p, c, W, t, lit);
   const far = mountains(p, c, th, W, G, 'far', 3.7);
   if (has('mist')) mist(p, W, G, t);
   // The waterfall runs down the far mountain and disappears behind the nearer ridge.
@@ -709,6 +822,12 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, m
   ground(p, c, W, H, G);
   if (has('path')) path(p, c, W, H, G);
   if (has('pumpkins')) pumpkins(p, c, W, H, G, lit || has('harvestmoon'));
+  if (has('flowers')) flowers(p, c, W, G);
+  if (has('eggs')) eggs(p, cx, G);
+  if (has('parasol')) parasol(p, c, cx, G);
+  if (has('snowman')) snowman(p, c, cx, G);
+  if (has('xmastree')) xmasTree(p, c, cx, G, t);
+  if (has('bunny')) bunny(p, W, G, t);
   if (has('posts')) poles(p, c, cx - 46, G, snow);
   if (has('pond')) pond(p, c, cx + 44, G + 12, t);
   if (has('lions')) lions(p, c, cx, G);
@@ -725,6 +844,8 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, m
     gate(p, c, W, H, cx, snow);
     if (has('lanterns')) lanterns(p, c, W, G, cx, true, t, lit);
   }
+  if (has('fireflies')) fireflies(p, W, G, t, lit || th.tint?.[1] > 0.2);
+  if (has('leaves')) leaves(p, W, H, t);
   if (snow) snowfall(p, W, H, t);
   if (frameKind && frameKind !== 'none') frame(p, frameKind);
   return p;

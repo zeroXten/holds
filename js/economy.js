@@ -127,11 +127,28 @@ export const TEMPLE_ITEMS = [
 // ---- Seasonal packs ----
 // On sale only during their season (month-day, inclusive; a season may wrap the new
 // year). Once bought they're yours, and appear in the temple during that season each year.
+// One pack per season (northern hemisphere), each bringing its holidays with it.
 export const SEASONS = [
-  { id: 'halloween', name: 'Halloween', icon: '🎃', from: '10-15', to: '11-07', items: [
+  { id: 'spring', name: 'Spring', icon: '🌸', from: '03-01', to: '05-31', items: [
+    { id: 'eggs', name: 'Easter Eggs', price: 60, desc: 'Painted eggs hidden around the courtyard.' },
+    { id: 'flowers', name: 'Spring Flowers', price: 80, desc: 'Beds of blossom along the edges.' },
+    { id: 'bunny', name: 'Bunny', price: 100, desc: 'A white rabbit hopping about the courtyard.' },
+  ] },
+  { id: 'summer', name: 'Summer', icon: '☀️', from: '06-01', to: '08-31', items: [
+    { id: 'parasol', name: 'Parasol & Deckchair', price: 100, desc: 'Even monks need a holiday.' },
+    { id: 'kites', name: 'Paper Kites', price: 70, desc: 'Two kites tugging at their strings.' },
+    { id: 'fireflies', name: 'Fireflies', price: 60, desc: 'Little lights drifting over the courtyard at dusk.' },
+  ] },
+  { id: 'autumn', name: 'Autumn', icon: '🎃', from: '09-01', to: '11-30', items: [
     { id: 'pumpkins', name: 'Jack-o’-lanterns', price: 80, desc: 'Grinning pumpkins glowing along the path.' },
     { id: 'bats', name: 'Bats', price: 60, desc: 'A flutter of bats crossing the sky.' },
     { id: 'harvestmoon', name: 'Harvest Moon', price: 120, desc: 'A huge orange moon hanging low over the mountains.' },
+    { id: 'leaves', name: 'Falling Leaves', price: 50, desc: 'Red and gold leaves blowing through.' },
+  ] },
+  { id: 'winter', name: 'Winter', icon: '🎄', from: '12-01', to: '02-29', items: [
+    { id: 'xmastree', name: 'Christmas Tree', price: 120, desc: 'A pine with twinkling lights and a star.' },
+    { id: 'snowman', name: 'Snowman', price: 80, desc: 'With a carrot nose and a monk’s sash.' },
+    { id: 'newyear', name: 'New Year Lanterns', price: 100, desc: 'Strings of red lanterns for the Lunar New Year.' },
   ] },
 ];
 const monthDay = d => `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
