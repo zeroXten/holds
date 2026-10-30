@@ -69,7 +69,7 @@ const blank = () => ({
   bet: null,      // today's bet
   weekBet: null,  // a weekly bet, running alongside
   betLog: [],  // settled bets, newest first
-  temple: { tier: 0, owned: [], theme: 'dawn', themes: ['dawn'] },
+  temple: { tier: 0, owned: [], hidden: [], theme: 'dawn', themes: ['dawn'] },  // hidden: owned but put away
   // Your monk: what's worn, what's owned, and whether it stands in the temple.
   avatar: { character: 'young', outfit: 'saffron', wear: {}, owned: ['young', 'saffron'], inTemple: true },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
@@ -433,6 +433,18 @@ export function avatarLook(state) {
 // ---- The temple ----
 
 export const owns = (state, id) => state.temple.owned.includes(id);
+export const isHidden = (state, id) => (state.temple.hidden ?? []).includes(id);
+// What's on show: everything you own that you haven't put away.
+export const shownItems = state => state.temple.owned.filter(id => !isHidden(state, id));
+
+// Put an owned decoration away, or bring it back out.
+export function toggleTempleItem(state, id) {
+  if (!owns(state, id)) return false;
+  const hidden = state.temple.hidden ?? [];
+  state.temple.hidden = hidden.includes(id) ? hidden.filter(x => x !== id) : [...hidden, id];
+  save(state);
+  return true;
+}
 
 // The next stage of the temple, or null at the last one.
 export const nextTier = state => TEMPLE_TIERS[(state.temple.tier ?? 0) + 1] ?? null;

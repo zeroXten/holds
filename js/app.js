@@ -1126,10 +1126,12 @@ function shopTemple() {
   const tier = state.temple.tier ?? 0, now = TEMPLE_TIERS[tier], next = P.nextTier(state);
   const owned = state.temple.owned.length;
   const item = i => {
-    const built = P.owns(state, i.id), allowed = P.canBuild(state, i);
+    const built = P.owns(state, i.id), allowed = P.canBuild(state, i), hidden = built && P.isHidden(state, i.id);
     const note = allowed ? `<small>${i.desc}</small>` : `<small class="blocked">Needs the ${TEMPLE_TIERS[i.needs].name}</small>`;
-    return `<li class="${built ? 'owned' : ''}"><div><b>${i.name}</b>${note}</div>
-      ${built ? '<span class="owned-tag">Built</span>' : allowed ? buyBtn('buy-item', i.id, i.price) : ''}</li>`;
+    // Owned decorations can be put away and brought back out, to arrange the temple.
+    const toggle = `<button class="btn buy" data-act="toggle-item" data-id="${i.id}">${hidden ? 'Show' : 'Hide'}</button>`;
+    return `<li class="${built ? 'owned' : ''} ${hidden ? 'put-away' : ''}"><div><b>${i.name}</b>${built ? `<small>${hidden ? 'Put away' : 'In your temple'}</small>` : note}</div>
+      ${built ? toggle : allowed ? buyBtn('buy-item', i.id, i.price) : ''}</li>`;
   };
   return `<p class="shop-intro">Your temple: <b>${now.name}</b> (stage ${tier + 1} of ${TEMPLE_TIERS.length}).</p>
   <ul class="shop-list">${next
@@ -1226,6 +1228,7 @@ document.addEventListener('click', e => {
     'buy-avatar': () => { const [kind, item] = id.split(':'); return P.buyAvatarItem(state, kind, item) && `${P.avatarItem(kind, item).name}: yours!`; },
     'wear-avatar': () => { const [kind, item] = id.split(':'); return P.wearAvatarItem(state, kind, item) && ''; },
     'avatar-temple': () => { P.toggleAvatarInTemple(state); return ''; },
+    'toggle-item': () => P.toggleTempleItem(state, id) && '',
     'buy-item': () => P.buyTempleItem(state, id) && `${TEMPLE_ITEMS.find(i => i.id === id).name} built!`,
     'buy-theme': () => P.buyTheme(state, id) && `${THEMES.find(t => t.id === id).name} theme unlocked!`,
     'use-theme': () => P.useTheme(state, id) && '',

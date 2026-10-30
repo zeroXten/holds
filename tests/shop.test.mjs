@@ -294,5 +294,14 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('temple hall needs an orange sash', s.temple.tier === 2 && !P.upgradeTemple(s), `stage ${s.temple.tier}`);
 }
 
+// Owned decorations can be put away and brought back without losing them.
+{
+  const s = fresh(1000);
+  P.buyTempleItem(s, 'path'); P.buyTempleItem(s, 'bamboo');
+  check('put a decoration away', P.toggleTempleItem(s, 'bamboo') && P.shownItems(s).join() === 'path' && P.owns(s, 'bamboo'));
+  check('and bring it back', P.toggleTempleItem(s, 'bamboo') && P.shownItems(s).join() === 'path,bamboo');
+  check('can\'t hide what you don\'t own', !P.toggleTempleItem(s, 'pond'));
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);

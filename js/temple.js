@@ -668,7 +668,8 @@ export function renderTemple(p, { owned = [], tier = 0, theme = 'dawn', t = 0, a
 // Draws the scene into a <canvas> whose width/height are in art pixels.
 export function drawTemple(canvas, state, t, theme = state.temple.theme, avatar = null) {
   const p = new Pix(canvas.width, canvas.height);
-  renderTemple(p, { owned: state.temple.owned, tier: state.temple.tier ?? 0, theme, t, avatar });
+  const shown = state.temple.owned.filter(id => !(state.temple.hidden ?? []).includes(id));
+  renderTemple(p, { owned: shown, tier: state.temple.tier ?? 0, theme, t, avatar });
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(p.w, p.h);
   new Uint32Array(img.data.buffer).set(p.data);
