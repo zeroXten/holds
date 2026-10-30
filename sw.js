@@ -1,6 +1,6 @@
 // Offline support. App files: network first, so updates arrive straight away.
 // MediaPipe library, WASM and model: cache first, since they're versioned and large.
-const VERSION = '2.6.0';  // keep in step with js/version.js
+const VERSION = '2.7.0';  // keep in step with js/version.js
 const APP = `holds-app-${VERSION}`;
 const LIBS = 'holds-libs-v1';
 const SHELL = [

@@ -1316,9 +1316,14 @@ function drawFullTemple() {
 }
 
 // What the ambient sound can hear in the temple you've built.
+// The music's mood follows the theme on show: each season has its own.
+const MOODS = { spring: 'spring', summer: 'summer', autumn: 'spooky', snow: 'winter' };
 const ambientScene = () => {
   const shown = P.shownItems(state);
-  return { water: shown.includes('pond') || shown.includes('waterfall'), wind: shown.includes('bamboo') || shown.includes('mist'), bell: shown.includes('bell') };
+  return {
+    water: shown.includes('pond') || shown.includes('waterfall'), wind: shown.includes('bamboo') || shown.includes('mist'), bell: shown.includes('bell'),
+    mood: MOODS[shownTheme(state.temple.theme)] ?? 'temple',
+  };
 };
 
 function renderSoundButton() {
