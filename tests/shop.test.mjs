@@ -245,6 +245,12 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('one per slot', s.avatar.wear.hand === 'staff');
   P.wearAvatarItem(s, 'accessory', 'staff');
   check('take an accessory off', !s.avatar.wear.hand);
+  check('nothing starred to begin with', s.starred.length === 0);
+  P.toggleStar(s, 'horse'); P.toggleStar(s, 'crane');
+  check('star holds', P.isStarred(s, 'horse') && P.isStarred(s, 'crane') && !P.isStarred(s, 'bow'));
+  P.toggleStar(s, 'horse');
+  check('unstar a hold', !P.isStarred(s, 'horse') && P.isStarred(s, 'crane'));
+  check('stars are saved', P.load().starred.join() === 'crane');
   for (const id of ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes', 'tray', 'palms', 'wings', 'claws', 'drawbow', 'fingertips', 'plank', 'sideplank', 'birddog'])
     s.holds[id] = { ...P.holdState(s, id), level: 4, mastered: true };  // 80 points: 2nd duan
   const look = P.avatarLook(s);

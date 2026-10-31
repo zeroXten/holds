@@ -59,7 +59,7 @@ export const BADGES = [
   { id: 'daily', name: 'Daily Devotion', desc: 'Reach the target on the hold of the day' },
 ];
 
-export const DEFAULT_SETTINGS = { voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full', appearance: 'system', ambient: false };
+export const DEFAULT_SETTINGS = { list: 'all', voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full', appearance: 'system', ambient: false };
 
 const blank = () => ({
   version: 2, coins: 0, lifetime: 0, unlocked: [...STARTER_HOLDS], purchased: [], daily: null,
@@ -73,6 +73,7 @@ const blank = () => ({
   // Your monk: what's worn, what's owned, and whether it stands in the temple.
   avatar: { character: 'young', outfit: 'saffron', wear: {}, owned: ['young', 'saffron'], inTemple: true },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
+  starred: [],  // holds you've starred, to see on their own
 });
 
 // Version 1 had points (about 80 per coin) and every hold open. Convert the
@@ -464,6 +465,13 @@ export function buySeasonalItem(state, id, date = new Date()) {
 }
 
 // Put an owned decoration away, or bring it back out.
+export const isStarred = (state, id) => state.starred.includes(id);
+
+export function toggleStar(state, id) {
+  state.starred = isStarred(state, id) ? state.starred.filter(x => x !== id) : [...state.starred, id];
+  save(state);
+}
+
 export function toggleTempleItem(state, id) {
   if (!owns(state, id)) return false;
   const hidden = state.temple.hidden ?? [];

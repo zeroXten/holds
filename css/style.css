@@ -211,6 +211,13 @@ p { margin: 0; }
 
 /* ---------- Grid ---------- */
 .section-title { font-size: 1.2rem; margin: 26px 0 12px; }
+.list-tabs { display: flex; align-items: baseline; gap: 18px; margin: 26px 0 12px; }
+.list-tabs .section-title { margin: 0; padding: 0; background: none; border: 0; color: var(--muted); font-family: var(--display); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.list-tabs .section-title[aria-selected="true"] { color: var(--ink); text-decoration: underline 2px var(--accent); text-underline-offset: 6px; }
+.list-tabs .ico { width: 18px; height: 18px; color: var(--gold); }
+.empty-note { color: var(--muted); font-size: .92rem; padding: 8px 0 4px; }
+.card-star { position: absolute; top: 8px; left: 8px; z-index: 1; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); }
+.card-star .ico { width: 16px; height: 16px; color: var(--gold); }
 .group-title { font-family: var(--sans); font-size: .82rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 20px 0 10px; }
 .group-title:first-child { margin-top: 0; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
@@ -252,7 +259,10 @@ p { margin: 0; }
 }
 .sheet-inner { padding: 22px 18px max(22px, env(safe-area-inset-bottom)); display: grid; gap: 12px; position: relative; }
 .sheet-x { position: absolute; top: 10px; right: 10px; }
-.sheet h2 { font-size: 1.6rem; padding-right: 44px; }
+.sheet-star { position: absolute; top: 10px; right: 56px; }
+.sheet-star .ico { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
+.sheet-star[aria-pressed="true"] .ico { fill: var(--gold); stroke: var(--gold); }
+.sheet h2 { font-size: 1.6rem; padding-right: 90px; }
 .about { color: var(--muted); }
 .levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .lv {

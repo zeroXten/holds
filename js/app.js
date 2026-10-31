@@ -147,6 +147,9 @@ function renderHero() {
     ${best ? `<span class="tag">Best ${amount(hero, best)}</span>` : ''}`;
 }
 
+const STAR = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg>';
+const star = h => (P.isStarred(state, h.id) ? `<span class="card-star" aria-label="Starred">${STAR}</span>` : '');
+
 function renderGrid() {
   const price = P.unlockPrice(state);
   const over = P.overworked(state);
@@ -157,14 +160,14 @@ function renderGrid() {
     const best = hs.best[hs.level];
     if (!P.isOpen(state, h.id)) {
       const need = sashNeed(h.sash);
-      return `<button class="card locked ${!need && state.coins >= price ? 'affordable' : ''}" data-hold="${h.id}">
+      return `<button class="card locked ${!need && state.coins >= price ? 'affordable' : ''}" data-hold="${h.id}">${star(h)}
         ${figureSVG(h.figure(1))}
         <span class="card-name">${h.name}</span>
         ${kind}
         <span class="card-sub price">${LOCK} ${need || `${COIN} ${price}`}</span>
       </button>`;
     }
-    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''} ${tired ? 'tired' : ''}" data-hold="${h.id}">
+    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''} ${tired ? 'tired' : ''}" data-hold="${h.id}">${star(h)}
       ${P.isDaily(state, h.id) ? `<span class="card-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : tired ? `<span class="card-flag rest">${over.name} resting</span>` : ''}
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
@@ -176,8 +179,18 @@ function renderGrid() {
   // Within each section, in the order they open: no sash needed first, then by the sash
   // (a stable sort, so holds needing the same sash keep the section's order).
   const sashOrder = h => (h.sash ? P.RANKS.indexOf(P.sashByKey(h.sash)) : 0);
+  const ordered = g => g.ids.map(holdById).sort((a, b) => sashOrder(a) - sashOrder(b));
+  const starredOnly = state.settings.list === 'starred';
+  for (const b of $$('#list-tabs [data-list]')) b.setAttribute('aria-selected', b.dataset.list === state.settings.list);
+  if (starredOnly) {
+    const holds = HOLD_GROUPS.flatMap(ordered).filter(h => P.isStarred(state, h.id));
+    $('#grid').innerHTML = holds.length
+      ? `<div class="grid">${holds.map(card).join('')}</div>`
+      : '<p class="empty-note">No starred holds yet. Open a hold and tap the star to keep it here.</p>';
+    return;
+  }
   $('#grid').innerHTML = HOLD_GROUPS.map(g => `<h3 class="group-title">${g.name}</h3>
-    <div class="grid">${g.ids.map(holdById).sort((a, b) => sashOrder(a) - sashOrder(b)).map(card).join('')}</div>`).join('');
+    <div class="grid">${ordered(g).map(card).join('')}</div>`).join('');
 }
 
 // ---------- Hold sheet ----------
@@ -194,8 +207,15 @@ function openHold(hold) {
   $('#hs-areas').innerHTML = areaTags(hold).map((t, i) => `<span class="tag ${i === 0 ? `style-${hold.style}` : ''}">${t}</span>`).join('');
   $('#hs-video').href = videoUrl(hold);
   $('#hs-cam').checked = state.settings.camera;
+  renderStar();
   renderSheetLevel();
   $('#hold-sheet').showModal();
+}
+
+function renderStar() {
+  const on = P.isStarred(state, sheetHold.id);
+  $('#hs-star').setAttribute('aria-pressed', on);
+  $('#hs-star').setAttribute('aria-label', on ? 'Unstar this hold' : 'Star this hold');
 }
 
 function renderSheetLevel() {
@@ -1386,6 +1406,14 @@ $('#hero-start').onclick = () => {
   startSession(hero, hs.level, hero.camera && state.settings.camera);
 };
 $('#hero-fig').onclick = () => openHold(hero);
+$('#hs-star').onclick = () => { P.toggleStar(state, sheetHold.id); renderStar(); renderGrid(); };
+$('#list-tabs').onclick = e => {
+  const b = e.target.closest('[data-list]');
+  if (!b) return;
+  state.settings.list = b.dataset.list;
+  P.save(state);
+  renderGrid();
+};
 $('#grid').onclick = e => { const c = e.target.closest('[data-hold]'); if (c) openHold(holdById(c.dataset.hold)); };
 $('#hs-levels').onclick = e => { const b = e.target.closest('[data-level]'); if (b && !b.disabled) { sheetLevel = +b.dataset.level; renderSheetLevel(); } };
 $('#hold-sheet').addEventListener('close', () => {
