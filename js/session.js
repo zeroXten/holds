@@ -77,7 +77,7 @@ export class Session {
   // --- camera mode ---
   tickCamera(dt, frame) {
     const lm = frame?.landmarks;
-    const view = viewing(this.hold);
+    const view = viewing(this.hold, this.level);
     const seen = !!lm && visible(lm, this.required, view);
     let results = null;
     if (seen) {

@@ -35,11 +35,29 @@ const PAIRS = [[11, 12], [13, 14], [15, 16], [17, 18], [19, 20], [21, 22], [23, 
 const PARTNER = new Map(PAIRS.flatMap(([a, b]) => [[a, b], [b, a]]));
 const SEEN = 0.5;  // visibility at which the camera is confident about a point
 
-// `fillHidden`: for side-on holds where both sides do the same thing, a point hidden
-// behind the body takes its visible partner's position instead of the camera's guess.
-export function makeBody(landmarks, width, height, { fillHidden = false } = {}) {
-  let P = landmarks.map(p => ({ x: p.x * width, y: p.y * height, v: p.visibility ?? 1 }));
-  if (fillHidden) {
+// Which side of the body faces the camera: the side the camera sees more clearly
+// (visibility) and that sits nearer it (z, smaller is nearer).
+const NEAR_Z = 5;  // weight of depth against visibility, z being in image widths
+export function nearSide(P) {
+  let s = 0;
+  for (const [l, r] of PAIRS) {
+    if (!P[l] || !P[r]) continue;
+    s += (P[l].v - P[r].v) + NEAR_Z * (P[r].z - P[l].z);
+  }
+  return s >= 0 ? 'L' : 'R';
+}
+
+// Side-on, the far arm and leg are behind the body, and the camera only guesses where
+// they are, often confidently, so its visibility score can't be trusted to say which
+// points are hidden. `mirror`: for side-on holds where both sides do the same thing, the
+// whole near side stands in for the far side. `fillHidden`: for side-on holds where the
+// sides differ (one foot lifted), a point the camera says is hidden takes its partner's place.
+export function makeBody(landmarks, width, height, { fillHidden = false, mirror = false } = {}) {
+  let P = landmarks.map(p => ({ x: p.x * width, y: p.y * height, z: p.z ?? 0, v: p.visibility ?? 1 }));
+  if (mirror) {
+    const far = nearSide(P) === 'L' ? 0 : 1;  // MediaPipe's left points have odd indices
+    P = P.map((p, i) => (PARTNER.has(i) && i % 2 === far ? { ...P[PARTNER.get(i)] } : p));
+  } else if (fillHidden) {
     P = P.map((p, i) => {
       const q = P[PARTNER.get(i)];
       return q && p.v < SEEN && q.v >= SEEN ? { ...q } : p;
@@ -85,12 +103,14 @@ export function visible(landmarks, indices, { eitherSide = false } = {}) {
   return indices.every(i => ok(i) || (eitherSide && PARTNER.has(i) && ok(PARTNER.get(i))));
 }
 
-// How a hold should read the camera: side-on holds only need the near side, and
-// side-on holds where both sides match fill hidden points from the near side.
-export const viewing = hold => ({
-  eitherSide: hold.view === 'side',
-  fillHidden: hold.view === 'side' && !hold.sides,
-});
+// How a hold should read the camera: side-on holds only need the near side. Where
+// both sides match, the near side stands in for the far one; a hold's `uneven` levels
+// (one foot lifted, one arm reaching) need both, so only hidden points are filled.
+export const viewing = (hold, level = 1) => {
+  const sideOn = hold.view === 'side', even = sideOn && !hold.sides;
+  const mirror = even && !hold.uneven?.includes(level);
+  return { eitherSide: sideOn, mirror, fillHidden: even && !mirror };
+};
 
 // Scores a body against a hold level. For one-sided holds every leg assignment
 // is tried and the best wins, so either leg can lead.

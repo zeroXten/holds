@@ -2,11 +2,11 @@
 // should not. Run: node tests/scoring.test.mjs
 import { HOLDS, HOLD_GROUPS } from '../js/holds.js';
 import { syntheticLandmarks, standing } from '../js/figure.js';
-import { makeBody, scorePose, SwayMeter } from '../js/scoring.js';
+import { makeBody, scorePose, SwayMeter, viewing } from '../js/scoring.js';
 
 let failures = 0;
 const W = 720, H = 1280;
-const score = (hold, level, spec, noise = 0) => scorePose(hold, level, makeBody(syntheticLandmarks(spec, { width: W, height: H, noise }), W, H));
+const score = (hold, level, spec, noise = 0) => scorePose(hold, level, makeBody(syntheticLandmarks(spec, { width: W, height: H, noise }), W, H, viewing(hold, level)));
 
 for (const hold of HOLDS.filter(h => h.camera)) {
   for (let level = 1; level <= 4; level++) {
@@ -20,7 +20,8 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${hold.id} L${level}: figure ${r.score} noisy ${noisy.score} standing ${stand.score} ${weak}`);
   }
   // A deeper level's figure should also pass easier levels (some holds' levels change the position, e.g. knees to straight legs, rather than deepening it).
-  if (['post', 'plank', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes'].includes(hold.id)) continue;
+  // (Bear Crawl's last level reaches one arm and leg, which its even levels don't expect.)
+  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes'].includes(hold.id)) continue;
   const r = score(hold, 1, hold.figure(4));
   if (r.score < 90) { failures++; console.log(`FAIL ${hold.id}: L4 figure scores ${r.score} at L1`); }
 }
@@ -45,6 +46,31 @@ for (const [a, b] of [['tray', 'claws'], ['claws', 'tray'], ['wings', 'palms'], 
   const ok = r.score < 50;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${a} pose as ${b} scores ${r.score}`);
+}
+
+// The two planks look alike from the side; each one's pose must fail the other.
+// (Below 55, the lowest score that starts a hold.)
+for (const [a, b] of [['plank', 'forearm'], ['forearm', 'plank']]) {
+  const ha = HOLDS.find(h => h.id === a), hb = HOLDS.find(h => h.id === b);
+  const r = score(hb, 2, ha.figure(2));
+  const ok = r.score < 55;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${a} pose as ${b} scores ${r.score}`);
+}
+
+// Side-on, the camera guesses the hidden far arm, often confidently. For holds where both
+// sides match, the near side stands in for it, so a wrong guess doesn't spoil the score.
+{
+  const hold = HOLDS.find(h => h.id === 'plank');
+  const lm = syntheticLandmarks(hold.figure(2), { width: W, height: H });
+  // The near side (left) sits closer to the camera; the far elbow and wrist are guessed bent.
+  lm.forEach((p, i) => { if (i >= 11) p.z = i % 2 ? -0.05 : 0.05; });
+  lm[14] = { ...lm[14], x: lm[14].x + 0.07 };
+  const near = scorePose(hold, 2, makeBody(lm, W, H, viewing(hold, 2))).score;
+  const raw = scorePose(hold, 2, makeBody(lm, W, H)).score;
+  const ok = near >= 90 && raw < 75;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} plank with the far arm guessed wrong: ${near} (was ${raw})`);
 }
 
 // Every hold appears in exactly one home screen group.

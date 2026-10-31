@@ -219,7 +219,7 @@ export const POSE_OF = {
   horse: 'horse', drop: 'horse', squat: 'horse', post: 'horse',
   bow: 'bow', cat: 'bow', rest: 'bow',
   crane: 'crane', kick: 'crane', swallow: 'crane', balance: 'crane',
-  plank: 'plank', sideplank: 'plank', birddog: 'plank', bear: 'plank', hollow: 'plank', bridge: 'plank', yanfei: 'plank', fingertips: 'plank',
+  plank: 'plank', forearm: 'plank', sideplank: 'plank', birddog: 'plank', bear: 'plank', hollow: 'plank', bridge: 'plank', yanfei: 'plank', fingertips: 'plank',
   zuochan: 'sit', nordic: 'sit',
   sky: 'armsUp', weituo: 'armsUp', stars: 'armsUp', toes: 'armsUp',
   wings: 'armsOut', drawbow: 'armsOut', claws: 'armsOut',

@@ -58,7 +58,7 @@ const targetText = (hold, t) => hold.flow ? `${t} slow cycles` : hold.sides ? `$
 // A best or a target in the hold's own unit: seconds, or cycles for flowing holds.
 const amount = (hold, n) => (hold.flow ? `${n} cycle${n === 1 ? '' : 's'}` : fmtLong(n));
 const videoUrl = hold => `https://www.youtube.com/results?search_query=${encodeURIComponent(hold.video)}`;
-const viewHint = (hold, level = 1) => `${prefersLandscape(hold, level) ? 'Phone on its side (landscape). ' : ''}${hold.hint ?? (hold.view === 'front' ? 'Face the camera' : 'Stand side-on to the camera')}`;
+const viewHint = (hold, level = 1) => `${prefersLandscape(hold, level) ? 'Phone on its side (landscape). ' : ''}${hold.hint ?? (hold.view === 'front' ? 'Face the camera' : 'Stand side-on to the camera')}${hold.view === 'side' ? '. If it loses you, turn a little towards the phone' : ''}`;
 
 document.body.classList.toggle('demo', DEMO);
 

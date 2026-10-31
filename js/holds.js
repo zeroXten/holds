@@ -421,7 +421,7 @@ export const HOLDS = [
       {
         id: 'reach', label: 'Reach', cue: 'Fold a little further, reaching down your legs', weight: 2, joints: [15, 16, 25, 26],
         value: b => (mid(b.arms.L.c, b.arms.R.c).y - kneesMid(b).y) / ((b.legs.L.lowerLen + b.legs.R.lowerLen) / 2),
-        min: by(level, [-0.25, 0.35, 0.7, 0.95]), soft: 0.3,
+        min: by(level, [-0.25, 0.35, 0.7, 1]), soft: 0.3,
       },
       {
         id: 'fold', label: 'Hinged forward', cue: 'Fold forward from your hips', joints: HIPS_SHOULDERS,
@@ -864,7 +864,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'plank', name: 'Fist Plank', native: '', view: 'side', sides: false, camera: true,
+    id: 'plank', name: 'Fist Plank', native: '', view: 'side', sides: false, camera: true, uneven: [3],
     areas: { core: 0.6, upper: 0.4 }, style: 'hard',
     video: 'knuckle plank fist plank',
     hint: 'Phone low to the ground, side-on to you',
@@ -916,6 +916,72 @@ export const HOLDS = [
       const rise = level === 4 ? 14 * Math.cos(35 * DEG) + 13 * Math.cos(55 * DEG) : 27;
       const a = Math.asin(rise / 74) / DEG;
       const leg = 90 - a;
+      return {
+        view: 'side', compact: true, torso: -(90 + a),
+        legs: { L: [leg, leg], R: level === 3 ? [leg + 22, leg + 22] : [leg, leg] },
+        arms,
+      };
+    },
+  },
+
+  {
+    id: 'forearm', name: 'Forearm Plank', native: '', view: 'side', sides: false, camera: true, uneven: [3],
+    areas: { core: 0.85, upper: 0.15 }, style: 'hard',
+    video: 'forearm plank form tutorial',
+    hint: 'Phone low to the ground, side-on to you',
+    about: 'Not strictly Shaolin. With your weight on the forearms, the shoulders and wrists do little and the stomach does nearly all the work, so it trains the core for longer than the Fist Plank can.',
+    levels: [
+      { name: 'Kneeling forearm plank', target: 45, desc: 'On your forearms and knees, elbows under your shoulders, forearms flat and pointing forward. Hold shoulders, hips and knees in one straight line.' },
+      { name: 'Forearm plank', target: 60, desc: 'On forearms and toes, elbows under your shoulders. One straight line from shoulders to heels; don’t let the hips sag or lift.' },
+      { name: 'One-leg forearm plank', target: 60, desc: 'Forearm plank with one foot lifted off the floor, hips level. Switch feet halfway.' },
+      { name: 'Long-lever plank', target: 45, desc: 'Walk your elbows forward a hand’s width past your shoulders, body still straight. The longer lever makes the stomach work much harder.' },
+    ],
+    criteria: level => {
+      // Measure to the supporting foot, so a lifted foot (level 3) doesn't bend the line.
+      const end = level === 1 ? kneesMid : b => (b.la.y > b.ra.y ? b.la : b.ra);
+      const upperArm = b => Math.max(lean(b.arms.L.a, b.arms.L.b), lean(b.arms.R.a, b.arms.R.b));
+      return [
+        {
+          id: 'line', label: 'Straight body', weight: 2, joints: [11, 12, 23, 24, 25, 26, 27, 28],
+          cue: { high: 'Tighten your stomach, lift your hips', low: 'Lower your hips into a straight line' },
+          value: b => hipSag(b, end(b)), min: -0.06, max: 0.04, soft: 0.06,
+        },
+        {
+          id: 'down', label: 'In the plank', cue: 'Get down into the plank', weight: 2, joints: [11, 12, 27, 28],
+          value: b => tilt(b.sh, end(b)), max: by(level, [28, 22, 22, 22]), soft: 20,
+        },
+        {
+          id: 'arms', label: 'On your forearms', joints: [13, 14, 15, 16],
+          cue: { low: 'Forearms forward, flat on the floor', high: 'Down onto your forearms' },
+          value: b => (b.arms.L.angle + b.arms.R.angle) / 2, min: 65, max: 120, soft: 25,
+        },
+        level === 4 ? {
+          id: 'elbows', label: 'Elbows forward', cue: 'Walk your elbows forward of your shoulders', joints: [11, 12, 13, 14],
+          value: upperArm, min: 15, soft: 12,
+        } : {
+          id: 'elbows', label: 'Elbows under shoulders', cue: 'Elbows under your shoulders', joints: [11, 12, 13, 14],
+          value: upperArm, max: 22, soft: 20,
+        },
+        ...(level > 1 ? [{
+          id: 'knees', label: 'Straight legs', cue: 'Lock your knees', joints: [25, 26],
+          value: b => Math.min(b.legs.L.angle, b.legs.R.angle), min: 160, soft: 20,
+        }] : []),
+        ...(level === 3 ? [{
+          id: 'foot', label: 'Foot lifted', cue: 'Lift one foot off the floor', joints: [27, 28],
+          value: b => Math.abs(b.la.y - b.ra.y) / b.torsoLen, min: 0.2, soft: 0.15,
+        }] : []),
+      ];
+    },
+    figure: level => {
+      // Face down, head to the left, forearms flat and pointing forward. Shoulder height is the upper arm.
+      const upper = level === 4 ? -25 : 0;
+      const arms = { L: [upper, -90], R: [upper + 2, -88] };
+      const rise = 14 * Math.cos(upper * DEG);
+      if (level === 1) {
+        const a = Math.asin(rise / 52) / DEG;
+        return { view: 'side', compact: true, torso: -(90 + a), legs: { L: [90 - a, 90], R: [90 - a, 90] }, arms };
+      }
+      const a = Math.asin(rise / 74) / DEG, leg = 90 - a;
       return {
         view: 'side', compact: true, torso: -(90 + a),
         legs: { L: [leg, leg], R: level === 3 ? [leg + 22, leg + 22] : [leg, leg] },
@@ -1222,7 +1288,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'toes', name: 'Rising on the Toes', native: '', view: 'side', sides: false, camera: true,
+    id: 'toes', name: 'Rising on the Toes', native: '', view: 'side', sides: false, camera: true, uneven: [4],
     areas: { legs: 0.7, balance: 0.3 }, style: 'hard', coins: 0.9,
     hint: 'Stand side-on to the phone, feet in view',
     video: 'calf raise hold isometric',
@@ -1319,7 +1385,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'bear', name: 'Bear Crawl Hold', native: '', view: 'side', sides: false, camera: true,
+    id: 'bear', name: 'Bear Crawl Hold', native: '', view: 'side', sides: false, camera: true, uneven: [3, 4],
     areas: { core: 0.6, upper: 0.2, legs: 0.2 }, style: 'hard', coins: 1.1, sash: 'yellow',
     hint: 'Phone low to the ground, side-on to you',
     video: 'bear crawl hold',
@@ -1507,7 +1573,7 @@ export function prefersLandscape(hold, level = 1) {
 export const HOLD_GROUPS = [
   { name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes'] },
   { name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow', 'fingertips'] },
-  { name: 'Core & back', ids: ['plank', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei'] },
+  { name: 'Core & back', ids: ['plank', 'forearm', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei'] },
   { name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
   { name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
 ];

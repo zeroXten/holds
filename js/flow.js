@@ -78,7 +78,7 @@ export class FlowSession {
 
   tickCamera(dt, frame) {
     const lm = frame?.landmarks;
-    const view = viewing(this.hold);
+    const view = viewing(this.hold, this.level);
     const seen = !!lm && visible(lm, this.required, view);
     this.seen = seen;
     const k = 1 - Math.exp(-dt / 0.2);
