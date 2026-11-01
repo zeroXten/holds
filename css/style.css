@@ -268,7 +268,8 @@ p { margin: 0; }
 .sheet-star { position: absolute; top: 10px; right: 56px; }
 .sheet-star .ico { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
 .sheet-star[aria-pressed="true"] .ico { fill: var(--gold); stroke: var(--gold); }
-.sheet h2 { font-size: 1.6rem; padding-right: 90px; }
+.sheet h2 { font-size: 1.6rem; padding-right: 44px; }
+#hs-name { padding-right: 90px; }
 .about { color: var(--muted); }
 .levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .lv-star { display: grid; place-items: center; }
