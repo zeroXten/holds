@@ -300,10 +300,23 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   const lowForm = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 70, camera: true, reached: true });
   check('the test needs the new level\'s form', !lowForm.test.passed);
   P.holdState(s, 'horse').lastTest = day(0);
+  s.coins = 100;
   const before = s.coins;
   const up = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 75, camera: true, reached: true });
   check('passing the test levels up, with a bonus', up.test.passed && up.levelUp && P.holdState(s, 'horse').level === 2 && up.levelBonus === E.LEVEL_UP_COINS[2] && s.coins - before === E.LEVEL_UP_COINS[2], JSON.stringify({ lv: P.holdState(s, 'horse').level, bonus: up.levelBonus }));
   check('and starts the next count', P.holdState(s, 'horse').qualDays.length === 0 && !P.readyForTest(P.holdState(s, 'horse')));
+  // Mastery: after level 4's days, a hard test (3× level 4's target at 90+ form).
+  const h = P.holdState(s, 'horse');
+  Object.assign(h, { level: 4, qualDays: Array.from({ length: 28 }, (_, i) => day(i - 30)), lastTest: null });
+  s.coins = 500;
+  const t4 = E.masteryTarget(HOLDS.find(x => x.id === 'horse'));
+  const lvl4 = P.recordSession(s, { holdId: 'horse', level: 4, held: 91, target: 90, coins: 0, avgForm: 95, camera: true, reached: true });
+  check('level 4\'s days don\'t master it alone', !lvl4.mastered && P.readyForTest(h) && t4 === 270);
+  const m1 = P.recordSession(s, { holdId: 'horse', level: 4, test: true, mastery: true, held: 271, target: t4, coins: 0, avgForm: 88, camera: true, reached: true });
+  check('mastery needs 90+ form, and a miss costs 200', !m1.test.passed && !h.mastered && s.coins === 300, `${s.coins}`);
+  h.lastTest = day(0);
+  const m2 = P.recordSession(s, { holdId: 'horse', level: 4, test: true, mastery: true, held: 271, target: t4, coins: 0, avgForm: 92, camera: true, reached: true });
+  check('passing the mastery test masters the hold', m2.test.passed && m2.mastered && h.mastered && m2.levelBonus === E.LEVEL_UP_COINS.mastered);
   check('the next level needs 14 days', P.qualifyDays(2) === 14 && P.qualifyForm(2) === 75);
 }
 

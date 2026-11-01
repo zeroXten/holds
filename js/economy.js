@@ -82,9 +82,14 @@ export const BETS = [
 
 // ---- Levels ----
 // Coins for reaching a new level of a hold (by the level reached), and for mastering it.
-export const LEVEL_UP_COINS = { 2: 10, 3: 15, 4: 20, mastered: 30 };
-// A level test is free to pass; not passing costs this (by the level tested).
+export const LEVEL_UP_COINS = { 2: 10, 3: 15, 4: 20, mastered: 100 };
+// A level test is free to pass; not passing costs this (by the level tested, the
+// mastery test counting as level 5).
 export const testPrice = level => 50 * (level - 1);
+// The mastery test: level 4's position held for this many times its target (or a
+// hold's own `masteryTarget`), on camera with 90+ form.
+export const MASTERY_MULT = 3;
+export const masteryTarget = hold => hold.masteryTarget ?? hold.levels[3].target * MASTERY_MULT;
 
 // ---- The temple: features and themes to buy (drawn in temple.js) ----
 // The temple itself grows in stages, from a carved stone to a grand temple; each

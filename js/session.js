@@ -27,9 +27,10 @@ const SWITCH_TIMEOUT = 15; // seconds allowed to change sides
 export class Session {
   // `boost`: extra multipliers from outside the hold (streak, milestone day). `manual`: the
   // session only ends when you tap Done (test mode), however long you're out of position.
-  constructor({ hold, level, camera, strictness = 'normal', daily = false, boost = 1, manual = false, now }) {
+  // `target`: in place of the level's (the mastery test).
+  constructor({ hold, level, camera, strictness = 'normal', daily = false, boost = 1, manual = false, target, now }) {
     Object.assign(this, { hold, level, camera, daily, manual, now0: now, last: now });
-    this.target = hold.levels[level - 1].target;
+    this.target = target ?? hold.levels[level - 1].target;
     // Boosts (hold of the day, streak, milestone day) multiply everything; the rate is
     // coins per second before form and bonus time.
     this.boost = (daily ? DAILY_MULT : 1) * boost;

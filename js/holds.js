@@ -1513,6 +1513,7 @@ export const HOLDS = [
 
   {
     id: 'zuochan', name: 'Seated Meditation', native: 'Zuò Chán', view: 'front', sides: false, camera: true, still: true,
+    masteryTarget: 7200,  // two hours: three would be more than a sitting
     areas: { stillness: 1 }, style: 'soft', coins: [1, 1.5, 2.5, 3.5], sash: 'orange',
     hint: 'Sit facing the phone, the phone at about chest height',
     video: 'zazen seated meditation posture',

@@ -22,10 +22,10 @@ const NUMBERS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
 export const createSession = opts => (opts.hold.flow ? new FlowSession(opts) : new Session(opts));
 
 export class FlowSession {
-  constructor({ hold, level, camera, daily = false, boost = 1, manual = false, now }) {
+  constructor({ hold, level, camera, daily = false, boost = 1, manual = false, target, now }) {
     Object.assign(this, { hold, level, camera, daily, manual, last: now });
     const f = hold.flow;
-    this.goal = hold.levels[level - 1].target;
+    this.goal = target ?? hold.levels[level - 1].target;
     this.minCycle = f.minCycle[level - 1];
     this.dwell = f.dwell[level - 1];
     this.boost = (daily ? DAILY_MULT : 1) * boost;

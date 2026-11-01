@@ -265,7 +265,10 @@ p { margin: 0; }
 .sheet-star[aria-pressed="true"] .ico { fill: var(--gold); stroke: var(--gold); }
 .sheet h2 { font-size: 1.6rem; padding-right: 90px; }
 .about { color: var(--muted); }
-.levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.lv-star { display: grid; place-items: center; }
+.lv-star .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.lv-star.won .ico { fill: var(--gold); stroke: var(--gold); }
 .lv {
   border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px;
   min-height: 44px; font-weight: 700; display: grid; place-items: center;
