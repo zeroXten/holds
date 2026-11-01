@@ -136,14 +136,11 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('running personal best bet refunded', t.bet === null && t.coins === 50 && t.notices.some(n => n.includes('retired')));
 }
 
-// Level test-out: pass to jump a level for free; fail and pay.
+// No level test until its days are in.
 {
   const s = fresh(100);
-  const o = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 85, camera: true, reached: true });
-  check('test passed', o.test.passed && P.holdState(s, 'horse').level === 2 && s.coins === 100 + o.coins);
-  const before = s.coins;
-  const f = P.recordSession(s, { holdId: 'horse', level: 3, test: true, held: 20, target: 60, coins: 0, avgForm: 85, camera: true, reached: false });
-  check('test failed costs coins', !f.test.passed && P.holdState(s, 'horse').level === 2 && s.coins === before - E.testPrice(3) + f.coins);
+  const o = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 90, camera: true, reached: true });
+  check('no early level test', !o.test && !o.levelUp && P.holdState(s, 'horse').level === 1);
 }
 
 // Temple: buy items and themes once.
@@ -279,7 +276,8 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('the sash opens gated holds', P.hasSash(s, 'yellow') && P.hasSash(s, 'orange') && !P.hasSash(s, 'green'));
 }
 
-// Levelling up is slow and camera-only: 7 days at 70+ form for level 2, with a coin bonus.
+// Levelling up is slow and camera-only: 7 days at 70+ form open the level 2 test; passing it
+// (the level 2 target at 75+ form) moves you up, with a coin bonus.
 {
   const s = fresh(0);
   const day = i => P.addDays(P.dayKey(), i - 7);
@@ -288,8 +286,20 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('honour sessions don\'t count towards levels', !honour.qualified && P.holdState(s, 'horse').level === 1);
   const low = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 0, avgForm: 65, camera: true, reached: true });
   check('form below the level\'s bar doesn\'t count', !low.qualified);
-  const up = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 0, avgForm: 75, camera: true, reached: true });
-  check('7th day levels up, with a bonus', up.levelUp && P.holdState(s, 'horse').level === 2 && up.levelBonus === E.LEVEL_UP_COINS[2] && up.coins === E.LEVEL_UP_COINS[2], JSON.stringify({ lv: P.holdState(s, 'horse').level, bonus: up.levelBonus }));
+  const full = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 0, avgForm: 75, camera: true, reached: true });
+  check('7th day opens the level test, not the level', full.qualified && !full.levelUp && P.holdState(s, 'horse').level === 1 && P.readyForTest(P.holdState(s, 'horse')));
+  const fail = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 20, target: 45, coins: 0, avgForm: 80, camera: true, reached: false });
+  check('a failed test costs nothing', !fail.test.passed && P.holdState(s, 'horse').level === 1 && s.coins === fail.coins && P.readyForTest(P.holdState(s, 'horse')));
+  const again = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 80, camera: true, reached: true });
+  check('one test try a day', !again.test && P.holdState(s, 'horse').level === 1);
+  P.holdState(s, 'horse').lastTest = day(0);  // as if the failed try was yesterday
+  const lowForm = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 70, camera: true, reached: true });
+  check('the test needs the new level\'s form', !lowForm.test.passed);
+  P.holdState(s, 'horse').lastTest = day(0);
+  const before = s.coins;
+  const up = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 75, camera: true, reached: true });
+  check('passing the test levels up, with a bonus', up.test.passed && up.levelUp && P.holdState(s, 'horse').level === 2 && up.levelBonus === E.LEVEL_UP_COINS[2] && s.coins - before === E.LEVEL_UP_COINS[2], JSON.stringify({ lv: P.holdState(s, 'horse').level, bonus: up.levelBonus }));
+  check('and starts the next count', P.holdState(s, 'horse').qualDays.length === 0 && !P.readyForTest(P.holdState(s, 'horse')));
   check('the next level needs 14 days', P.qualifyDays(2) === 14 && P.qualifyForm(2) === 75);
 }
 

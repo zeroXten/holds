@@ -2,7 +2,7 @@ import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, AREA_WOR
 import {
   coinsAtTarget, shownTheme, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FRAMES, FREEZE_PRICE, FREEZE_MAX,
-  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, TEST_FORM, testPrice, MILESTONE_DAY_MULT,
+  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, MILESTONE_DAY_MULT,
 } from './economy.js';
 import { drawTemple, SCENE_H } from './temple.js';
 import { renderAvatar } from './avatar.js';
@@ -91,11 +91,12 @@ function flushNotices() {
   P.save(state);
 }
 
-// Days that counted towards the next level (target reached on camera with good form), as
-// a small bar; with `label`, also in words.
+// Days that counted towards the next level's test (target reached on camera with good
+// form), as a small bar; with `label`, also in words.
 function pips(hs, { label = false } = {}) {
   if (hs.mastered) return '<span class="pips mastered">Mastered</span>';
-  const next = hs.level < 4 ? `level ${hs.level + 1}` : 'mastery', need = P.qualifyDays(hs.level);
+  if (P.readyForTest(hs)) return `<span class="pips ready"><b class="lvl-bar"><i style="width:100%"></i></b><em>Test ready</em>${label ? `<small>All ${P.qualifyDays(hs.level)} days in · level ${hs.level + 1} test open</small>` : ''}</span>`;
+  const next = hs.level < 4 ? `the level ${hs.level + 1} test` : 'mastery', need = P.qualifyDays(hs.level);
   // Whether today has already counted: if not, there's a day to earn today.
   const today = hs.qualDays.includes(P.dayKey());
   const words = `${hs.qualDays.length} of ${need} days to ${next}`;
@@ -200,7 +201,8 @@ let sheetHold = null, sheetLevel = 1;
 function openHold(hold) {
   sheetHold = hold;
   const hs = P.holdState(state, hold.id);
-  sheetLevel = hs.level;
+  // With a level test waiting (and not yet tried today), the sheet opens on it.
+  sheetLevel = P.readyForTest(hs) && !P.testedToday(state, hold.id) && !state.testMode ? hs.level + 1 : hs.level;
   $('#hs-name').textContent = hold.name;
   $('#hs-native').textContent = hold.native;
   $('#hs-about').textContent = hold.about;
@@ -238,22 +240,22 @@ function renderSheetLevel() {
     sheetLevel = 1;
   }
   const unlocked = hs.mastered || state.testMode ? 4 : hs.level;
-  // The level after yours can be taken as a test; the rest stay locked.
-  const testLevel = !locked && !hs.mastered && !state.testMode && hs.level < 4 ? hs.level + 1 : null;
+  // Once its days are in, the level after yours opens as a test; the rest stay locked.
+  const testLevel = !locked && !state.testMode && P.readyForTest(hs) ? hs.level + 1 : null;
   $('#hs-levels').innerHTML = hold.levels.map((l, i) => {
     const n = i + 1, closed = n > unlocked && n !== testLevel;
     return `<button type="button" role="tab" class="lv ${n === sheetLevel ? 'on' : ''} ${n === testLevel ? 'test' : ''}" data-level="${n}" ${closed ? 'disabled' : ''} aria-selected="${n === sheetLevel}">
-      ${n > unlocked ? LOCK : n}</button>`;
+      ${closed ? LOCK : n}</button>`;
   }).join('');
   const testing = sheetLevel === testLevel;
   $('#hs-test-msg').hidden = !testing;
   $('#hs-start').textContent = testing ? 'Take the level test' : 'Start';
   if (testing) {
-    const price = testPrice(sheetLevel), short = price > state.coins, done = P.testedToday(state, hold.id);
+    const done = P.testedToday(state, hold.id);
     $('#hs-test-msg').innerHTML = done
-      ? `<b>Level test:</b> you’ve taken today’s test for this hold. The next one opens tomorrow.`
-      : `<b>Level test:</b> reach the target with ${TEST_FORM}+ average form on camera to unlock level ${sheetLevel} now. One test a day. Passing is free; not passing costs <b>${price} coins</b>.${short ? ` You need ${price} coins to take it.` : ''}`;
-    $('#hs-start').disabled = short || done;
+      ? `<b>Level test:</b> you’ve had today’s try for this hold. You can take it again tomorrow.`
+      : `<b>Level test:</b> hold the full target on camera with ${P.qualifyForm(sheetLevel)}+ average form to move up to level ${sheetLevel}. One try a day; if you don’t pass, nothing is lost.`;
+    $('#hs-start').disabled = done;
     $('#hs-cam-row').hidden = true;
   } else {
     $('#hs-start').disabled = false;
@@ -271,7 +273,9 @@ function renderSheetLevel() {
     ${hold.camera ? `<span class="tag">${viewHint(hold, sheetLevel)}</span>` : '<span class="tag">Honour system</span>'}
     ${best ? `<span class="tag">Best ${amount(hold, best)}</span>` : ''}
     ${!locked && sheetLevel === hs.level && !hs.mastered ? `${pips(hs, { label: true })}
-      <span class="lvl-rule">Reach the target on ${P.qualifyDays(hs.level)} different days, on camera with ${P.qualifyForm(hs.level)}+ average form, to ${hs.level < 4 ? 'move up a level' : 'master this hold'}. Each level earns a point towards your sash.</span>` : ''}`;
+      <span class="lvl-rule">${P.readyForTest(hs)
+        ? `Your level ${hs.level + 1} test is open: tap level ${hs.level + 1} above to take it.`
+        : `Reach the target on ${P.qualifyDays(hs.level)} different days, on camera with ${P.qualifyForm(hs.level)}+ average form, ${hs.level < 4 ? 'to earn the test for the next level' : 'to master this hold'}. Each level earns a point towards your sash.`}</span>` : ''}`;
 }
 
 $('#hs-buy').onclick = () => {
@@ -703,7 +707,7 @@ function renderSummary(hold, level, r, o, boost) {
   if (o.test) {
     extra.push(o.test.passed
       ? `<div class="banner good">Level test passed! Level ${level} is unlocked.</div>`
-      : `<div class="banner bad">Level test not passed: −${o.test.price} coins. You need the full target on camera with ${TEST_FORM}+ form.</div>`);
+      : `<div class="banner bad">Level test not passed. It needs the full target on camera with ${o.test.form}+ average form. Try again tomorrow; nothing is lost.</div>`);
   }
   for (const b of o.bets) extra.push(b.result === 'won' ? `<div class="banner good">Bet won: ${b.def.name}! +${b.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${b.def.name}.</div>`);
   for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! ${milestoneReward(m)}${m.double ? ' (starting with this hold)' : ''}.</div>`);
@@ -728,8 +732,10 @@ function renderSummary(hold, level, r, o, boost) {
   else if (o.mastered) lvl = '<div class="banner">You’ve mastered every level of this hold: another point towards your sash.</div>';
   else if (level === hs.level && !hs.mastered && !o.testMode) {
     const need = P.qualifyDays(hs.level) - hs.qualDays.length, form = P.qualifyForm(hs.level);
-    const toward = hs.level < 4 ? `level ${hs.level + 1}` : 'mastery';
-    lvl = `<div class="lvl-progress">${pips(hs)}<span>${o.qualified
+    const toward = hs.level < 4 ? `the level ${hs.level + 1} test` : 'mastery';
+    lvl = `<div class="lvl-progress">${pips(hs)}<span>${P.readyForTest(hs)
+      ? `${o.qualified ? `That’s all ${P.qualifyDays(hs.level)} days! ` : ''}Your level ${hs.level + 1} test is open: take it from the hold’s page${P.testedToday(state, hold.id) ? ' tomorrow' : ''}.`
+      : o.qualified
       ? `Day counted! ${need} more day${need === 1 ? '' : 's'} to ${toward}.`
       : !r.camera ? 'Honour sessions earn coins but don’t count towards levels: use the camera for that.'
       : !o.reached ? `Reach ${r.unit === 'cycles' ? `${r.goal} slow cycles` : fmtLong(r.target)} to count today towards ${toward}.`
@@ -1435,12 +1441,13 @@ $('#how-btn').onclick = () => { $('#settings').close(); openWelcome(); };
 $('#rank-btn').onclick = renderProgress;
 $('#progress-btn').onclick = renderProgress;
 $('#end-btn').onclick = () => endSession();
-$('#s-retry').onclick = () => { const { hold, level } = run ?? lastRun; startSession(hold, level, true); };
-$('#s-honour').onclick = () => { const { hold, level } = run ?? lastRun; startSession(hold, level, false); };
+$('#s-retry').onclick = () => { const { hold, level, test } = run ?? lastRun; startSession(hold, level, true, { test }); };
+// A test needs the camera, so without it you train at your own level.
+$('#s-honour').onclick = () => { const { hold, level, test } = run ?? lastRun; startSession(hold, test ? P.holdState(state, hold.id).level : level, false); };
 $('#sum-again').onclick = () => {
   const { hold, level, camera, test } = lastRun;
-  // After a passed test the level is yours, so "go again" is an ordinary session.
-  startSession(hold, level, camera, { test: test && level > P.holdState(state, hold.id).level });
+  // One test try a day: after it, "go again" is an ordinary session at your level.
+  startSession(hold, test ? P.holdState(state, hold.id).level : level, camera);
 };
 document.addEventListener('click', e => {
   if (e.target.closest('[data-home]')) { stopRun(); show('home'); renderHome(); }

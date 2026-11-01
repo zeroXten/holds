@@ -4,7 +4,7 @@
 import { HOLDS, AREAS, RESTFUL_AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
-  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, TEST_FORM, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, OLD_THEME_PRICES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, LEVEL_UP_COINS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, OLD_THEME_PRICES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
   DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT,
 } from './economy.js';
@@ -555,6 +555,8 @@ export const hasSash = (state, key) => !key || sashRank(state).index >= RANKS.in
 // ---- Unlocking holds ----
 
 export const isUnlocked = (state, id) => state.unlocked.includes(id);
+// All the days for the next level are in, so its test is open.
+export const readyForTest = hs => !hs.mastered && hs.level < 4 && hs.qualDays.length >= qualifyDays(hs.level);
 // A level test for this hold has already been taken today.
 export const testedToday = (state, id, today = dayKey()) => holdState(state, id).lastTest === today;
 // What you can open and train: everything in test mode, otherwise what you've unlocked.
@@ -711,27 +713,24 @@ export function recordSession(state, s) {
   const pb = measure > prevBest && (s.unit === 'cycles' ? measure >= 1 : measure >= 5);
   if (pb) hs.best[s.level] = measure;
 
-  // Level test-out: pass the next level's target with good form to unlock it now.
-  // Passing is free; not passing costs the test price.
+  // Levelling up: reach the target at your level on enough days (on camera, with the
+  // level's form), then pass the next level's test: its full target on camera with
+  // that level's form. One test a day; not passing costs nothing. Mastery (after
+  // level 4's days) needs no test.
   let levelUp = false, mastered = false, qualified = false, test = null;
-  if (s.test) {
-    // One test per hold per day; it needs the camera and strong form.
+  if (s.test && readyForTest(hs) && s.level === hs.level + 1 && hs.lastTest !== today) {
     hs.lastTest = today;
-    const passed = reached && s.camera && s.avgForm >= TEST_FORM;
+    const passed = reached && s.camera && s.avgForm >= qualifyForm(s.level);
     if (passed) { hs.level = s.level; hs.qualDays = []; levelUp = true; }
-    else state.coins = Math.max(0, state.coins - testPrice(s.level));
-    test = { passed, price: testPrice(s.level) };
+    test = { passed, form: qualifyForm(s.level) };
   }
   // A day counts towards the next level when the target is reached at your level, on
   // camera, with the level's form.
   const formOk = s.camera && s.avgForm >= qualifyForm(hs.level);
-  if (!s.test && reached && formOk && s.level === hs.level && !hs.mastered && !hs.qualDays.includes(today)) {
+  if (!s.test && reached && formOk && s.level === hs.level && !hs.mastered && !readyForTest(hs) && !hs.qualDays.includes(today)) {
     hs.qualDays.push(today);
     qualified = true;
-    if (hs.qualDays.length >= qualifyDays(hs.level)) {
-      if (hs.level < 4) { hs.level++; levelUp = true; } else { hs.mastered = true; mastered = true; }
-      hs.qualDays = [];
-    }
+    if (hs.level === 4 && hs.qualDays.length >= qualifyDays(4)) { hs.mastered = true; mastered = true; hs.qualDays = []; }
   }
   // A coin bonus for reaching a new level, or for mastering the hold.
   const levelBonus = mastered ? LEVEL_UP_COINS.mastered : levelUp ? LEVEL_UP_COINS[hs.level] ?? 0 : 0;

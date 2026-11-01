@@ -199,6 +199,7 @@ p { margin: 0; }
 .lvl-progress .lvl-bar { width: 64px; height: 8px; }
 .lvl-rule { flex-basis: 100%; font-size: .8rem; color: var(--muted); }
 .pips small { margin-left: 4px; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.pips.ready em { color: var(--gold); }
 .pips.mastered { font-size: .75rem; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .08em; }
 
 /* ---------- Figures ---------- */

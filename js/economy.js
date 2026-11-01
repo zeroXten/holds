@@ -80,11 +80,9 @@ export const BETS = [
   { id: 'streak7', name: 'Unbroken week', desc: 'Train every day for 7 days. Planned rest days count; freezes don’t.', stake: 40, payout: 140, days: 7 },
 ];
 
-// ---- Level test-out: try the next level early; it only costs coins if you don't pass ----
-export const TEST_FORM = 85;
+// ---- Levels ----
 // Coins for reaching a new level of a hold (by the level reached), and for mastering it.
 export const LEVEL_UP_COINS = { 2: 10, 3: 15, 4: 20, mastered: 30 };
-export const testPrice = level => 10 * level;
 
 // ---- The temple: features and themes to buy (drawn in temple.js) ----
 // The temple itself grows in stages, from a carved stone to a grand temple; each
