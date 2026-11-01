@@ -4,7 +4,7 @@
 import { HOLDS, AREAS, RESTFUL_AREAS } from './holds.js';
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
-  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, LEVEL_UP_COINS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, OLD_THEME_PRICES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
+  REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, OLD_THEME_PRICES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
   DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT,
 } from './economy.js';
@@ -715,14 +715,16 @@ export function recordSession(state, s) {
 
   // Levelling up: reach the target at your level on enough days (on camera, with the
   // level's form), then pass the next level's test: its full target on camera with
-  // that level's form. One test a day; not passing costs nothing. Mastery (after
+  // that level's form. One test a day; passing is free, not passing costs the test
+  // price (you need the coins to take it). Mastery (after
   // level 4's days) needs no test.
   let levelUp = false, mastered = false, qualified = false, test = null;
-  if (s.test && readyForTest(hs) && s.level === hs.level + 1 && hs.lastTest !== today) {
+  if (s.test && readyForTest(hs) && s.level === hs.level + 1 && hs.lastTest !== today && state.coins >= testPrice(s.level)) {
     hs.lastTest = today;
     const passed = reached && s.camera && s.avgForm >= qualifyForm(s.level);
     if (passed) { hs.level = s.level; hs.qualDays = []; levelUp = true; }
-    test = { passed, form: qualifyForm(s.level) };
+    else state.coins -= testPrice(s.level);
+    test = { passed, form: qualifyForm(s.level), price: testPrice(s.level) };
   }
   // A day counts towards the next level when the target is reached at your level, on
   // camera, with the level's form.

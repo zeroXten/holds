@@ -288,8 +288,12 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   check('form below the level\'s bar doesn\'t count', !low.qualified);
   const full = P.recordSession(s, { holdId: 'horse', level: 1, held: 31, target: 30, coins: 0, avgForm: 75, camera: true, reached: true });
   check('7th day opens the level test, not the level', full.qualified && !full.levelUp && P.holdState(s, 'horse').level === 1 && P.readyForTest(P.holdState(s, 'horse')));
+  s.coins = E.testPrice(2) - 1;
+  const broke = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 80, camera: true, reached: true });
+  check('no test without the coins to pay for it', !broke.test && P.holdState(s, 'horse').level === 1 && !P.testedToday(s, 'horse'));
+  s.coins = 100;
   const fail = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 20, target: 45, coins: 0, avgForm: 80, camera: true, reached: false });
-  check('a failed test costs nothing', !fail.test.passed && P.holdState(s, 'horse').level === 1 && s.coins === fail.coins && P.readyForTest(P.holdState(s, 'horse')));
+  check('a failed test costs coins and keeps the days', !fail.test.passed && P.holdState(s, 'horse').level === 1 && s.coins === 100 - E.testPrice(2) && P.readyForTest(P.holdState(s, 'horse')), `${s.coins} coins`);
   const again = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 80, camera: true, reached: true });
   check('one test try a day', !again.test && P.holdState(s, 'horse').level === 1);
   P.holdState(s, 'horse').lastTest = day(0);  // as if the failed try was yesterday

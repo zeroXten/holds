@@ -2,7 +2,7 @@ import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, AREA_WOR
 import {
   coinsAtTarget, shownTheme, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FRAMES, FREEZE_PRICE, FREEZE_MAX,
-  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, MILESTONE_DAY_MULT,
+  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, MILESTONE_DAY_MULT, testPrice,
 } from './economy.js';
 import { drawTemple, SCENE_H } from './temple.js';
 import { renderAvatar } from './avatar.js';
@@ -251,11 +251,11 @@ function renderSheetLevel() {
   $('#hs-test-msg').hidden = !testing;
   $('#hs-start').textContent = testing ? 'Take the level test' : 'Start';
   if (testing) {
-    const done = P.testedToday(state, hold.id);
+    const done = P.testedToday(state, hold.id), price = testPrice(sheetLevel), short = state.coins < price;
     $('#hs-test-msg').innerHTML = done
       ? `<b>Level test:</b> you’ve had today’s try for this hold. You can take it again tomorrow.`
-      : `<b>Level test:</b> hold the full target on camera with ${P.qualifyForm(sheetLevel)}+ average form to move up to level ${sheetLevel}. One try a day; if you don’t pass, nothing is lost.`;
-    $('#hs-start').disabled = done;
+      : `<b>Level test:</b> hold the full target on camera with ${P.qualifyForm(sheetLevel)}+ average form to move up to level ${sheetLevel}. One try a day. Passing is free; not passing costs <b>${price} coins</b>.${short ? ` You need ${price} coins to take it.` : ''}`;
+    $('#hs-start').disabled = done || short;
     $('#hs-cam-row').hidden = true;
   } else {
     $('#hs-start').disabled = false;
@@ -707,7 +707,7 @@ function renderSummary(hold, level, r, o, boost) {
   if (o.test) {
     extra.push(o.test.passed
       ? `<div class="banner good">Level test passed! Level ${level} is unlocked.</div>`
-      : `<div class="banner bad">Level test not passed. It needs the full target on camera with ${o.test.form}+ average form. Try again tomorrow; nothing is lost.</div>`);
+      : `<div class="banner bad">Level test not passed: −${o.test.price} coins. It needs the full target on camera with ${o.test.form}+ average form. Your days are kept: try again tomorrow.</div>`);
   }
   for (const b of o.bets) extra.push(b.result === 'won' ? `<div class="banner good">Bet won: ${b.def.name}! +${b.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${b.def.name}.</div>`);
   for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! ${milestoneReward(m)}${m.double ? ' (starting with this hold)' : ''}.</div>`);
