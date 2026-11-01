@@ -84,7 +84,7 @@ export const BETS = [
 // Coins for reaching a new level of a hold (by the level reached), and for mastering it.
 export const LEVEL_UP_COINS = { 2: 10, 3: 15, 4: 20, mastered: 30 };
 // A level test is free to pass; not passing costs this (by the level tested).
-export const testPrice = level => 10 * level;
+export const testPrice = level => 50 * (level - 1);
 
 // ---- The temple: features and themes to buy (drawn in temple.js) ----
 // The temple itself grows in stages, from a carved stone to a grand temple; each
