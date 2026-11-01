@@ -22,7 +22,7 @@ export const coinsAtTarget = (hold, level) => TARGET_COINS * holdMult(hold, leve
 export const coinRateFor = (hold, level) => coinsAtTarget(hold, level) * (1 - TARGET_SHARE) / targetSeconds(hold, level);
 // Coins for reaching the target, before form and boosts.
 export const targetBonusFor = (hold, level) => coinsAtTarget(hold, level) * TARGET_SHARE;
-export const DAILY_MULT = 3;                 // hold of the day: this many times the coins, on its first session each day
+export const DAILY_MULT = 2;                 // hold of the day: this many times the coins, on its first session each day
 export const DAILY_MIN_SECONDS = 10;         // ...a session this long uses up the day's multiplier
 export const STREAK_STEP = 0.05;             // +5% coins for each full week of streak...
 export const STREAK_MAX_WEEKS = 10;          // ...up to +50% (from day 71)
