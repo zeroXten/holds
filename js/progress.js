@@ -59,7 +59,7 @@ export const BADGES = [
   { id: 'daily', name: 'Daily Devotion', desc: 'Reach the target on the hold of the day' },
 ];
 
-export const DEFAULT_SETTINGS = { list: 'all', voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full', appearance: 'system', ambient: false };
+export const DEFAULT_SETTINGS = { holdList: null, voice: true, sounds: true, camera: true, autoframe: true, showValues: false, strictness: 'normal', model: 'full', appearance: 'system', ambient: false };
 
 const blank = () => ({
   version: 2, coins: 0, lifetime: 0, unlocked: [...STARTER_HOLDS], purchased: [], daily: null,
@@ -116,6 +116,12 @@ export function load() {
       if (data.temple?.owned?.includes('hall')) {
         data.temple.owned = data.temple.owned.filter(id => id !== 'hall');
         data.temple.tier = Math.max(data.temple.tier ?? 0, TEMPLE_TIERS.findIndex(t => t.id === 'hall'));
+      }
+      // The hold list setting was 'list' (always set, so it couldn't tell a choice from the
+      // default); only a choice of Starred carries over.
+      if (data.settings?.list) {
+        if (data.settings.list === 'starred') data.settings.holdList ??= 'starred';
+        delete data.settings.list;
       }
       // Starter holds added since this save was made are free too.
       data.unlocked = [...new Set([...(data.unlocked ?? []), ...STARTER_HOLDS])];

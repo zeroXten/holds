@@ -181,18 +181,24 @@ function renderGrid() {
   // (a stable sort, so holds needing the same sash keep the section's order).
   const sashOrder = h => (h.sash ? P.RANKS.indexOf(P.sashByKey(h.sash)) : 0);
   const ordered = g => g.ids.map(holdById).sort((a, b) => sashOrder(a) - sashOrder(b));
-  const starredOnly = state.settings.list === 'starred';
-  for (const b of $$('#list-tabs [data-list]')) b.setAttribute('aria-selected', b.dataset.list === state.settings.list);
-  if (starredOnly) {
+  const list = holdList();
+  for (const b of $$('#list-tabs [data-list]')) b.setAttribute('aria-selected', b.dataset.list === list);
+  if (list === 'starred') {
     const holds = HOLD_GROUPS.flatMap(ordered).filter(h => P.isStarred(state, h.id));
     $('#grid').innerHTML = holds.length
       ? `<div class="grid">${holds.map(card).join('')}</div>`
       : '<p class="empty-note">No starred holds yet. Open a hold and tap the star to keep it here.</p>';
     return;
   }
-  $('#grid').innerHTML = HOLD_GROUPS.map(g => `<h3 class="group-title">${g.name}</h3>
-    <div class="grid">${ordered(g).map(card).join('')}</div>`).join('');
+  // My holds: the open ones, in their sections (empty sections left out).
+  const shown = g => ordered(g).filter(h => list === 'all' || P.isOpen(state, h.id));
+  $('#grid').innerHTML = HOLD_GROUPS.filter(g => shown(g).length).map(g => `<h3 class="group-title">${g.name}</h3>
+    <div class="grid">${shown(g).map(card).join('')}</div>`).join('');
 }
+
+// Which holds the home screen lists: the one you last picked, or until you pick, all of
+// them while you're new and only yours once you've unlocked a hold of your own.
+const holdList = () => state.settings.holdList ?? (state.purchased.length ? 'mine' : 'all');
 
 // ---------- Hold sheet ----------
 
@@ -1422,7 +1428,7 @@ $('#hs-star').onclick = () => { P.toggleStar(state, sheetHold.id); renderStar();
 $('#list-tabs').onclick = e => {
   const b = e.target.closest('[data-list]');
   if (!b) return;
-  state.settings.list = b.dataset.list;
+  state.settings.holdList = b.dataset.list;
   P.save(state);
   renderGrid();
 };
