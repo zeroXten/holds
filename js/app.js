@@ -97,8 +97,8 @@ function pips(hs, { label = false } = {}) {
   if (hs.mastered) return '<span class="pips mastered">Mastered</span>';
   if (P.readyForTest(hs)) return `<span class="pips ready"><b class="lvl-bar"><i style="width:100%"></i></b><em>Test ready</em>${label ? `<small>All ${P.qualifyDays(hs.level)} days in · ${hs.level < 4 ? `level ${hs.level + 1}` : 'mastery'} test open</small>` : ''}</span>`;
   const next = hs.level < 4 ? `the level ${hs.level + 1} test` : 'the mastery test', need = P.qualifyDays(hs.level);
-  // Whether today has already counted: if not, there's a day to earn today.
-  const today = hs.qualDays.includes(P.dayKey());
+  // Whether today is done (a day counted, or a level test passed): if not, there's a day to earn today.
+  const today = P.doneToday(hs);
   const words = `${hs.qualDays.length} of ${need} days to ${next}`;
   return `<span class="pips ${today ? 'today' : ''}" title="${words}${today ? ' · today counted' : ''}"><b class="lvl-bar"><i style="width:${Math.round(100 * hs.qualDays.length / need)}%"></i></b>${
     today ? '<em>✓ today</em>' : ''}${label ? `<small>${words}${today ? ' · today’s done' : ' · today still to earn'}</small>` : ''}</span>`;
@@ -752,6 +752,7 @@ function renderSummary(hold, level, r, o, boost) {
       : !r.camera ? 'Honour sessions earn coins but don’t count towards levels: use the camera for that.'
       : !o.reached ? `Reach ${r.unit === 'cycles' ? `${r.goal} slow cycles` : fmtLong(r.target)} to count today towards ${toward}.`
       : r.avgForm < form ? `Average form ${form}+ is needed for the day to count.`
+      : hs.passedOn === P.dayKey() ? `You passed the level test today: days towards ${toward} start tomorrow.`
       : 'Today already counted. Come back tomorrow.'}</span></div>`;
   }
   $('#sum-level').innerHTML = lvl;

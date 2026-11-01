@@ -563,6 +563,8 @@ export const hasSash = (state, key) => !key || sashRank(state).index >= RANKS.in
 export const isUnlocked = (state, id) => state.unlocked.includes(id);
 // All the days for the next level (or mastery) are in, so its test is open.
 export const readyForTest = hs => !hs.mastered && hs.qualDays.length >= qualifyDays(hs.level);
+// This hold's day is done: a day counted towards the next level, or a level test passed.
+export const doneToday = (hs, today = dayKey()) => hs.qualDays.includes(today) || hs.passedOn === today;
 // A level test for this hold has already been taken today.
 export const testedToday = (state, id, today = dayKey()) => holdState(state, id).lastTest === today;
 // What you can open and train: everything in test mode, otherwise what you've unlocked.
@@ -730,14 +732,15 @@ export function recordSession(state, s) {
     hs.lastTest = today;
     const passed = reached && s.camera && s.avgForm >= qualifyForm(testLevel);
     if (passed && testLevel === 5) { hs.mastered = true; hs.qualDays = []; mastered = true; }
-    else if (passed) { hs.level = testLevel; hs.qualDays = []; levelUp = true; }
+    // The test doesn't count towards the next level, but it's today's work on this hold.
+    else if (passed) { hs.level = testLevel; hs.qualDays = []; hs.passedOn = today; levelUp = true; }
     else state.coins -= testPrice(testLevel);
     test = { passed, mastery: testLevel === 5, form: qualifyForm(testLevel), price: testPrice(testLevel) };
   }
   // A day counts towards the next level when the target is reached at your level, on
   // camera, with the level's form.
   const formOk = s.camera && s.avgForm >= qualifyForm(hs.level);
-  if (!s.test && reached && formOk && s.level === hs.level && !hs.mastered && !readyForTest(hs) && !hs.qualDays.includes(today)) {
+  if (!s.test && reached && formOk && s.level === hs.level && !hs.mastered && !readyForTest(hs) && !doneToday(hs, today)) {
     hs.qualDays.push(today);
     qualified = true;
   }

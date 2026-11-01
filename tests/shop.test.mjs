@@ -305,6 +305,9 @@ check('price order', E.REST_DAY_PRICE < E.FREEZE_PRICE && E.FREEZE_PRICE < E.REP
   const up = P.recordSession(s, { holdId: 'horse', level: 2, test: true, held: 46, target: 45, coins: 0, avgForm: 75, camera: true, reached: true });
   check('passing the test levels up, with a bonus', up.test.passed && up.levelUp && P.holdState(s, 'horse').level === 2 && up.levelBonus === E.LEVEL_UP_COINS[2] && s.coins - before === E.LEVEL_UP_COINS[2], JSON.stringify({ lv: P.holdState(s, 'horse').level, bonus: up.levelBonus }));
   check('and starts the next count', P.holdState(s, 'horse').qualDays.length === 0 && !P.readyForTest(P.holdState(s, 'horse')));
+  check('the test day shows as done today', P.doneToday(P.holdState(s, 'horse')));
+  const after = P.recordSession(s, { holdId: 'horse', level: 2, held: 46, target: 45, coins: 0, avgForm: 90, camera: true, reached: true });
+  check('and today doesn\'t count towards the next level', !after.qualified && P.holdState(s, 'horse').qualDays.length === 0);
   // Mastery: after level 4's days, a hard test (3× level 4's target at 90+ form).
   const h = P.holdState(s, 'horse');
   Object.assign(h, { level: 4, qualDays: Array.from({ length: 28 }, (_, i) => day(i - 30)), lastTest: null });
