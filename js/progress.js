@@ -1,7 +1,10 @@
 // Progress kept in localStorage: coins, unlocked holds, the hold of the day,
 // levels, streaks, personal bests and badges.
 
-import { HOLDS, AREAS, RESTFUL_AREAS } from './holds.js';
+import { HOLDS, HOLD_GROUPS, AREAS, RESTFUL_AREAS } from './holds.js';
+import { PLANS, FALLBACK } from './plans.js';
+
+export { PLANS };
 import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
   REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, OLD_THEME_PRICES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
@@ -664,6 +667,67 @@ export function dailyHold(state, today = dayKey()) {
   state.daily = { day: today, holdId: hold.id };
   save(state);
   return hold;
+}
+
+// ---- Plans ----
+
+// Your plan follows your sash: the furthest one whose sash you have.
+export const planFor = state => [...PLANS].reverse().find(p => hasSash(state, p.from));
+
+// Sets of a hold done on a day: sessions that got at least halfway to the target.
+export const setsDone = (state, holdId, day = dayKey()) =>
+  state.history.filter(h => h.holdId === holdId && h.held >= h.target / 2 && dayKey(new Date(h.at)) === day).length;
+
+// How a plan day went: 'full' (every set done), 'part' (some) or null (none).
+function planDayStatus(state, picks, day) {
+  const done = picks.map(p => setsDone(state, p.holdId, day) >= p.sets);
+  return picks.length && done.every(Boolean) ? 'full' : picks.some(p => setsDone(state, p.holdId, day)) ? 'part' : null;
+}
+
+// Today's plan: the day of the cycle you're on, with its slots filled from your holds.
+// Worked out once a day and kept. The cycle moves on from a day you did any of it; a
+// day you didn't waits for you.
+export function planToday(state, today = dayKey()) {
+  const p = state.plan = { step: 0, day: null, picks: [], prev: [], cycle: [], weeks: 0, ...state.plan };
+  if (p.day === today) return p;
+  if (p.day) {
+    const status = planDayStatus(state, p.picks, p.day);
+    if (status) {
+      p.cycle[p.step] = status;
+      p.prev = p.picks.map(x => x.holdId);
+      if (++p.step === 7) { p.step = 0; p.cycle = []; p.weeks++; }
+    }
+  }
+  dailyHold(state, today);
+  p.day = today;
+  p.picks = pickPlanDay(state, planFor(state).days[p.step], p.prev, today);
+  save(state);
+  return p;
+}
+
+// Fills a plan day's slots, each with a different hold. Within a section it favours a
+// hold with a test waiting, one not yet mastered, the hold of the day, and one not done
+// lately, and avoids the holds of the last plan day (a day's recovery).
+function pickPlanDay(state, day, prev, today) {
+  const rand = seeded(`plan ${today}`);
+  const used = new Set();
+  const score = id => {
+    const hs = holdState(state, id);
+    const days = hs.last ? Math.min(7, Math.round((new Date(today) - new Date(hs.last)) / 864e5)) : 7;
+    return rand() + days * 0.3 + (readyForTest(hs) ? 3 : 0) + (hs.mastered ? 0 : 2) + (isDaily(state, id) ? 2.5 : 0) - (prev.includes(id) ? 4 : 0);
+  };
+  const picks = [];
+  for (const slot of day.slots) {
+    for (const key of [slot.group, ...FALLBACK[slot.group]]) {
+      const options = HOLD_GROUPS.find(g => g.key === key).ids.filter(id => isOpen(state, id) && !used.has(id));
+      if (!options.length) continue;
+      const best = options.map(id => [score(id), id]).sort((a, b) => b[0] - a[0])[0][1];
+      used.add(best);
+      picks.push({ holdId: best, sets: slot.sets, group: key });
+      break;
+    }
+  }
+  return picks;
 }
 
 export const isDaily = (state, id) => state.daily?.day === dayKey() && state.daily.holdId === id;

@@ -1569,14 +1569,15 @@ export function prefersLandscape(hold, level = 1) {
   return landscapeCache.get(key);
 }
 
-// How the home screen groups the holds, each group roughly easiest to hardest.
+// How the home screen groups the holds, each group roughly easiest to hardest. Plans
+// (plans.js) refer to the groups by key.
 // Holds that work two areas sit where most of the effort goes.
 export const HOLD_GROUPS = [
-  { name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes'] },
-  { name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow', 'fingertips'] },
-  { name: 'Core & back', ids: ['plank', 'forearm', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei'] },
-  { name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
-  { name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
+  { key: 'stances', name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes'] },
+  { key: 'upper', name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow', 'fingertips'] },
+  { key: 'core', name: 'Core & back', ids: ['plank', 'forearm', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei'] },
+  { key: 'qigong', name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
+  { key: 'still', name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
 ];
 
 export const AREAS = { legs: 'Legs', core: 'Core', upper: 'Arms & shoulders', balance: 'Balance', mobility: 'Mobility', stillness: 'Stillness' };

@@ -136,17 +136,19 @@ function renderHero() {
   const lv = hero.levels[hs.level - 1];
   $('#hero-fig').innerHTML = figureSVG(hero.figure(hs.level));
   $('#hero-name').textContent = hero.name;
-  $('#hero-native').textContent = hero.native;
-  $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name} ${pips(hs, { label: true })}`;
-  $('#hero-desc').textContent = lv.desc;
-  $('#hero-video').href = videoUrl(hero);
-  const best = hs.best[hs.level];
+  $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name}`;
+  // Kept short: the hold's page (Details) has the rest.
   $('#hero-meta').innerHTML = `
     <span class="tag strong">${targetText(hero, lv.target)}</span>
     <span class="tag">${coinRate(hero, hs.level)}</span>
-    <span class="tag">${hero.camera ? viewHint(hero, hs.level) : 'Honour system'}</span>
-    ${best ? `<span class="tag">Best ${amount(hero, best)}</span>` : ''}`;
+    ${pips(hs)}`;
 }
+
+// A level's target in a few characters: "45s", "30s ×2" (each side), "8 cycles".
+const targetShort = (h, level) => {
+  const t = h.levels[level - 1].target;
+  return h.flow ? `${t} cycles` : h.sides ? `${fmtLong(t / 2)} ×2` : fmtLong(t);
+};
 
 const STAR = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg>';
 const star = h => (P.isStarred(state, h.id) ? `<span class="card-star" aria-label="Starred">${STAR}</span>` : '');
@@ -173,7 +175,7 @@ function renderGrid() {
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
       ${kind}
-      <span class="card-sub">Lv ${hs.level} · ${h.flow ? `${h.levels[hs.level - 1].target} cycles` : h.sides ? `${fmtLong(h.levels[hs.level - 1].target / 2)} ×2` : fmtLong(h.levels[hs.level - 1].target)}${best ? ` · best ${amount(h, best)}` : ''}</span>
+      <span class="card-sub">Lv ${hs.level} · ${targetShort(h, hs.level)}${best ? ` · best ${amount(h, best)}` : ''}</span>
       ${pips(hs)}
     </button>`;
   };
@@ -183,6 +185,7 @@ function renderGrid() {
   const ordered = g => g.ids.map(holdById).sort((a, b) => sashOrder(a) - sashOrder(b));
   const list = holdList();
   for (const b of $$('#list-tabs [data-list]')) b.setAttribute('aria-selected', b.dataset.list === list);
+  if (list === 'plan') { renderPlan(); return; }
   if (list === 'starred') {
     const holds = HOLD_GROUPS.flatMap(ordered).filter(h => P.isStarred(state, h.id));
     $('#grid').innerHTML = holds.length
@@ -194,6 +197,37 @@ function renderGrid() {
   const shown = g => ordered(g).filter(h => list === 'all' || P.isOpen(state, h.id));
   $('#grid').innerHTML = HOLD_GROUPS.filter(g => shown(g).length).map(g => `<h3 class="group-title">${g.name}</h3>
     <div class="grid">${shown(g).map(card).join('')}</div>`).join('');
+}
+
+// Today's plan: the day of the cycle, its holds with a dot per set, and what comes next.
+function renderPlan() {
+  const p = P.planToday(state), plan = P.planFor(state), day = plan.days[p.step];
+  const next = P.PLANS[P.PLANS.indexOf(plan) + 1];
+  const dots = plan.days.map((d, i) => {
+    const mark = i < p.step ? p.cycle[i] ?? '' : i === p.step ? 'now' : '';
+    return `<i class="${mark}" title="Day ${i + 1}: ${d.name}"></i>`;
+  }).join('');
+  let allDone = p.picks.length > 0;
+  const items = p.picks.map(it => {
+    const h = holdById(it.holdId), hs = P.holdState(state, h.id);
+    const done = Math.min(it.sets, P.setsDone(state, h.id));
+    if (done < it.sets) allDone = false;
+    const flag = P.isDaily(state, h.id) ? `<span class="pi-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : '';
+    return `<button class="plan-item ${done >= it.sets ? 'done' : ''}" data-hold="${h.id}">
+      ${figureSVG(h.figure(hs.level))}
+      <span class="pi-text"><b>${h.name}</b><small>${it.sets > 1 ? `${it.sets} sets · ` : ''}Lv ${hs.level} · ${targetShort(h, hs.level)}</small>${flag}</span>
+      <span class="pi-sets" aria-label="${done} of ${it.sets} set${it.sets === 1 ? '' : 's'} done">${
+        Array.from({ length: it.sets }, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join('')}</span>
+    </button>`;
+  });
+  $('#grid').innerHTML = `<div class="plan-head">
+      <div class="plan-top"><b>${plan.name}</b><small>Week ${p.weeks + 1} · day ${p.step + 1} of 7</small></div>
+      <div class="plan-dots">${dots}</div>
+    </div>
+    <h3 class="group-title">Today · ${day.name}</h3>
+    <div class="plan-items">${items.join('') || '<p class="empty-note">Nothing to fill today’s plan with yet: unlock a hold to get started.</p>'}</div>
+    <p class="plan-note">${allDone ? '<b>Today’s plan is done.</b> ' : ''}Next: ${plan.days[(p.step + 1) % 7].name.toLowerCase()}. The plan moves on a day once you’ve done some of it, so a missed day waits for you.</p>
+    <p class="plan-note">${plan.about}${p.weeks ? ` ${p.weeks} week${p.weeks === 1 ? '' : 's'} of plans finished so far.` : ''}${next ? ` At the ${P.sashByKey(next.from).name}, it becomes the ${next.name}.` : ''}</p>`;
 }
 
 // Which holds the home screen lists: the one you last picked, or until you pick, all of
@@ -1425,6 +1459,7 @@ $('#hero-start').onclick = () => {
   startSession(hero, hs.level, hero.camera && state.settings.camera);
 };
 $('#hero-fig').onclick = () => openHold(hero);
+$('#hero-more').onclick = () => openHold(hero);
 $('#hs-star').onclick = () => { P.toggleStar(state, sheetHold.id); renderStar(); renderGrid(); };
 $('#list-tabs').onclick = e => {
   const b = e.target.closest('[data-list]');
