@@ -145,9 +145,10 @@ function renderHero() {
 }
 
 // A level's target in a few characters: "45s", "30s ×2" (each side), "8 cycles".
-const targetShort = (h, level) => {
+// `long`: "30s each side", where "×2" could be read as sets.
+const targetShort = (h, level, { long = false } = {}) => {
   const t = h.levels[level - 1].target;
-  return h.flow ? `${t} cycles` : h.sides ? `${fmtLong(t / 2)} ×2` : fmtLong(t);
+  return h.flow ? `${t} cycles` : h.sides ? `${fmtLong(t / 2)} ${long ? 'each side' : '×2'}` : fmtLong(t);
 };
 
 const STAR = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg>';
@@ -206,14 +207,15 @@ function renderPlan() {
     return `<i class="${mark}" title="Day ${i + 1}: ${d.name}"></i>`;
   }).join('');
   let allDone = p.picks.length > 0;
-  const items = p.picks.map(it => {
+  const items = p.picks.map((it, n) => {
     const h = holdById(it.holdId), hs = P.holdState(state, h.id);
     const done = Math.min(it.sets, P.setsDone(state, h.id));
     if (done < it.sets) allDone = false;
     const flag = P.isDaily(state, h.id) ? `<span class="pi-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : '';
     return `<button class="plan-item ${done >= it.sets ? 'done' : ''}" data-hold="${h.id}">
+      <span class="pi-num">${n + 1}</span>
       ${figureSVG(h.figure(hs.level))}
-      <span class="pi-text"><b>${h.name}</b><small>${it.sets > 1 ? `${it.sets} sets · ` : ''}Lv ${hs.level} · ${targetShort(h, hs.level)}</small>${flag}</span>
+      <span class="pi-text"><b>${h.name}</b><small>Lv ${hs.level} · ${targetShort(h, hs.level, { long: true })}</small>${it.sets > 1 ? `<small>${it.sets} sets · rest a minute between</small>` : ''}${flag}</span>
       <span class="pi-sets" aria-label="${done} of ${it.sets} set${it.sets === 1 ? '' : 's'} done">${
         Array.from({ length: it.sets }, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join('')}</span>
     </button>`;
@@ -223,6 +225,7 @@ function renderPlan() {
       <div class="plan-dots">${dots}</div>
     </div>
     <h3 class="group-title">Today · ${day.name}</h3>
+    <p class="plan-order">Work down the list in order.</p>
     <div class="plan-items">${items.join('') || '<p class="empty-note">Nothing to fill today’s plan with yet: unlock a hold to get started.</p>'}</div>
     <p class="plan-note">${allDone ? '<b>Today’s plan is done.</b> ' : ''}Next: ${plan.days[(p.step + 1) % 7].name.toLowerCase()}. The plan moves on a day once you’ve done some of it, so a missed day waits for you.</p>
     <p class="plan-note">${plan.about}${p.weeks ? ` ${p.weeks} week${p.weeks === 1 ? '' : 's'} of plans finished so far.` : ''}${next ? ` At the ${P.sashByKey(next.from).name}, it becomes the ${next.name}.` : ''}</p>`;
