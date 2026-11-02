@@ -297,7 +297,8 @@ export const HOLDS = [
     criteria: level => [
       {
         id: 'hands', label: 'Hand height', weight: 1.5, joints: [15, 16],
-        cue: { low: 'Raise your hands', high: 'Lower your hands a little' },
+        // Measured downwards from the shoulders, so a low value is hands held high.
+        cue: { low: 'Lower your hands a little', high: 'Raise your hands' },
         value: b => ((b.arms.L.c.y + b.arms.R.c.y) / 2 - b.sh.y) / b.torsoLen,
         ...(level === 1 ? { min: 0.35, max: 0.8 } : { min: -0.1, max: 0.45 }), soft: 0.2,
       },
@@ -341,7 +342,7 @@ export const HOLDS = [
           value: handsOffCentre, max: 0.35, soft: 0.25,
         },
         {
-          id: 'chest', label: 'Hands at chest', joints: [15, 16], cue: { low: 'Raise your hands to your chest', high: 'Lower your hands to your chest' },
+          id: 'chest', label: 'Hands at chest', joints: [15, 16], cue: { low: 'Lower your hands to your chest', high: 'Raise your hands to your chest' },
           value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.sh.y) / b.torsoLen, min: -0.05, max: 0.55, soft: 0.25,
         },
       ] : level === 2 ? [
@@ -1178,7 +1179,7 @@ export const HOLDS = [
         value: handsOffCentre, max: 0.3, soft: 0.25,
       },
       {
-        id: 'chest', label: 'Hands at chest', joints: [15, 16], cue: { low: 'Raise your hands to your chest', high: 'Lower your hands to your chest' },
+        id: 'chest', label: 'Hands at chest', joints: [15, 16], cue: { low: 'Lower your hands to your chest', high: 'Raise your hands to your chest' },
         value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.sh.y) / b.torsoLen, min: -0.05, max: 0.5, soft: 0.25,
       },
       {

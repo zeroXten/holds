@@ -73,6 +73,16 @@ for (const [a, b] of [['plank', 'forearm'], ['forearm', 'plank']]) {
   console.log(`${ok ? 'ok  ' : 'FAIL'} plank with the far arm guessed wrong: ${near} (was ${raw})`);
 }
 
+// Hand-height cues point the right way: hands too high are told to come down.
+{
+  const post = HOLDS.find(h => h.id === 'post');
+  const high = score(post, 1, post.figure(2)).results.find(r => r.id === 'hands');
+  const low = score(post, 2, post.figure(1)).results.find(r => r.id === 'hands');
+  const ok = /Lower/.test(high.cue ?? '') && /Raise/.test(low.cue ?? '');
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} standing post hand cues: too high "${high.cue}", too low "${low.cue}"`);
+}
+
 // Every hold appears in exactly one home screen group.
 {
   const grouped = HOLD_GROUPS.flatMap(g => g.ids);
