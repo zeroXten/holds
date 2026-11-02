@@ -124,6 +124,20 @@ function renderHome() {
   if (!hero || !P.isOpen(state, hero.id)) hero = daily;
   renderHero();
   renderGrid();
+  renderDayStats();
+}
+
+// Today's training at a glance, with yesterday's beside it.
+function renderDayStats() {
+  const today = P.dayKey(), d = state.days[today] ?? {}, y = state.days[P.addDays(today, -1)] ?? {};
+  const time = s => (s < 60 ? `${Math.round(s)}s` : `${Math.round(s / 60)} min`);
+  const stat = (label, now, then) => `<div><b>${now}</b><small>${label}</small><em>Yesterday ${then}</em></div>`;
+  $('#day-stats').innerHTML = `<h2 class="section-title">Today</h2><div class="day-stat-grid">
+    ${stat('held', time(d.time ?? 0), time(y.time ?? 0))}
+    ${stat(d.sessions === 1 ? 'hold' : 'holds', d.sessions ?? 0, y.sessions ?? 0)}
+    ${stat('coins', (d.coins ?? 0).toLocaleString(), (y.coins ?? 0).toLocaleString())}
+    ${stat(d.points === 1 ? 'mastery point' : 'mastery points', d.points ?? 0, y.points ?? 0)}
+  </div>`;
 }
 
 function renderHero() {

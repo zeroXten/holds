@@ -795,6 +795,7 @@ export function recordSession(state, s) {
   state.lifetime += coins;
   const day = state.days[today] ?? { coins: 0, time: 0, sessions: 0 };
   day.coins += coins; day.time += s.held; day.sessions++;
+  if (levelUp || mastered) day.points = (day.points ?? 0) + 1;  // mastery points gained
   state.days[today] = day;
   state.history.push({
     at: new Date().toISOString(), holdId: s.holdId, level: s.level, held: Math.round(s.held * 10) / 10,

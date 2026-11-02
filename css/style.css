@@ -284,6 +284,12 @@ p { margin: 0; }
 .unlock-box .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .unlock-box .btn .ico { color: currentColor; }
 .foot { text-align: center; margin-top: 18px; }
+.day-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 560px) { .day-stat-grid { grid-template-columns: repeat(4, 1fr); } }
+.day-stat-grid div { display: grid; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); }
+.day-stat-grid b { font-family: var(--display); font-size: 1.6rem; line-height: 1.1; }
+.day-stat-grid small { color: var(--muted); font-weight: 600; font-size: .82rem; }
+.day-stat-grid em { font-style: normal; color: var(--muted); font-size: .78rem; margin-top: 4px; }
 
 /* ---------- Sheets ---------- */
 .sheet {
