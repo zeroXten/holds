@@ -1,4 +1,4 @@
-import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, AREA_WORDS, mainArea } from './holds.js';
+import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, mainArea } from './holds.js';
 import {
   coinsAtTarget, shownTheme, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FRAMES, FREEZE_PRICE, FREEZE_MAX,
@@ -155,9 +155,7 @@ const star = h => (P.isStarred(state, h.id) ? `<span class="card-star" aria-labe
 
 function renderGrid() {
   const price = P.unlockPrice(state);
-  const over = P.overworked(state);
   const card = h => {
-    const tired = over && P.leansOn(h, over.area);
     const kind = `<span class="card-kind ${h.style}">${STYLES[h.style]} · ${AREAS[mainArea(h)]}</span>`;
     const hs = P.holdState(state, h.id);
     const best = hs.best[hs.level];
@@ -170,8 +168,8 @@ function renderGrid() {
         <span class="card-sub price">${LOCK} ${need || `${COIN} ${price}`}</span>
       </button>`;
     }
-    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''} ${tired ? 'tired' : ''}" data-hold="${h.id}">${star(h)}
-      ${P.isDaily(state, h.id) ? `<span class="card-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : tired ? `<span class="card-flag rest">${over.name} resting</span>` : ''}
+    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''}" data-hold="${h.id}">${star(h)}
+      ${P.isDaily(state, h.id) ? `<span class="card-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : ''}
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
       ${kind}
@@ -1136,16 +1134,6 @@ function renderHomeCards() {
       <div class="row"><button class="btn" data-act="dismiss-repair">Let it go</button><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div>
     </div>`);
   }
-  const over = P.overworked(state);
-  if (over) {
-    const { unlocked, locked } = P.restingHolds(state, over.area);
-    const [work, rest] = AREA_WORDS[over.area];
-    const picks = (unlocked.length ? unlocked : locked).map(h => `<button class="chip-btn" data-open-hold="${h.id}">${h.name}${unlocked.length ? '' : ` ${LOCK}`}</button>`).join('');
-    cards.push(`<div class="home-card rest-hint">
-      <p><b>You’ve done a lot of ${work} lately.</b> Give ${rest} a rest and try ${unlocked.length ? 'one of these' : 'unlocking one of these'}:</p>
-      <div class="chip-row">${picks}</div>
-    </div>`);
-  }
   for (const slot of ['bet', 'weekBet']) { const bp = P.betProgress(state, slot); if (bp) cards.push(betCard(bp)); }
   $('#home-cards').innerHTML = cards.join('');
 }
@@ -1350,11 +1338,6 @@ document.addEventListener('click', e => {
   if (msg) { toast(msg); audio.play(/built|unlocked|repaired/.test(msg) ? 'level' : 'point'); }
   document.documentElement.dataset.scene = shownTheme(state.temple.theme);
   if (document.body.dataset.screen === 'shop') renderShop(); else renderHome();
-});
-
-document.addEventListener('click', e => {
-  const b = e.target.closest('[data-open-hold]');
-  if (b) openHold(holdById(b.dataset.openHold));
 });
 
 $('#shop-tabs').onclick = e => { const t = e.target.closest('[data-tab]'); if (t) { shopTab = t.dataset.tab; renderShop(); } };

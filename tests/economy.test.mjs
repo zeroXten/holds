@@ -92,34 +92,12 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   check('history and days converted', s.history[0].coins === 5 && s.days['2026-10-24'].coins === 10);
 }
 
-// Body areas: a run of leg holds flags legs, and suggestions spare them.
+// Shuffle picks an open hold.
 {
   store.clear();
   const s = P.load();
-  const now = Date.now(), ago = h => new Date(now - h * 3.6e6).toISOString();
-  s.history.push(
-    { holdId: 'horse', level: 1, held: 40, at: ago(2) },
-    { holdId: 'bow', level: 1, held: 35, at: ago(1.5) },
-    { holdId: 'horse', level: 1, held: 30, at: ago(1) },
-  );
-  const over = P.overworked(s, now);
-  check('legs flagged after three leg holds', over?.area === 'legs', JSON.stringify(over));
-  const rest = P.restingHolds(s, 'legs');
-  check('suggests holds that spare the legs, soft ones first', rest.unlocked.length > 0 && rest.unlocked[0].style === 'soft' && rest.unlocked.every(h => !P.leansOn(h, 'legs')), rest.unlocked.map(h => h.id).join());
-  s.daily = null;
-  const daily = P.dailyHold(s);
-  check('hold of the day avoids leg holds', !P.leansOn(daily, 'legs'), daily.id);
   const picks = new Set(Array.from({ length: 40 }, () => P.pickHold(s).id));
-  check('shuffle still works', picks.size >= 1);
-
-  store.clear();
-  const old = P.load();
-  old.history.push({ holdId: 'horse', level: 1, held: 300, at: ago(24 * 5) });
-  check('old sessions fade out', P.overworked(old, now) === null);
-  store.clear();
-  const mixed = P.load();
-  mixed.history.push({ holdId: 'horse', level: 1, held: 40, at: ago(1) }, { holdId: 'hollow', level: 1, held: 60, at: ago(1) }, { holdId: 'weituo', level: 1, held: 60, at: ago(1) });
-  check('balanced training not flagged', P.overworked(mixed, now) === null);
+  check('shuffle picks open holds', [...picks].every(id => P.isUnlocked(s, id)));
 }
 
 console.log(failures ? `${failures} failure(s)` : 'all passed');

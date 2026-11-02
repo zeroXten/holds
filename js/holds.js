@@ -1,8 +1,8 @@
 // The holds. Each has four levels (a position and a target time), a stick figure
 // per level, and the criteria the camera uses to judge form.
 //
-// `areas` says what a hold works, as weights that add up to 1 (used to spot when one
-// part of you has done a lot lately). `style` is 'hard' (external strength) or 'soft'
+// `areas` says what a hold works, as weights that add up to 1 (for the Progress
+// screen's week by body area). `style` is 'hard' (external strength) or 'soft'
 // (internal: qigong-style standing work).
 // `video` is a YouTube search for demonstrations of the stance. Whether the phone is
 // better on its side is worked out from each level's figure (see prefersLandscape).
@@ -1581,15 +1581,7 @@ export const HOLD_GROUPS = [
 ];
 
 export const AREAS = { legs: 'Legs', core: 'Core', upper: 'Arms & shoulders', balance: 'Balance', mobility: 'Mobility', stillness: 'Stillness' };
-// Areas that don't wear out, so they're never flagged as overworked.
-export const RESTFUL_AREAS = ['stillness'];
 export const STYLES = { hard: 'Hard', soft: 'Soft' };
-// For sentences: "a lot of <work> lately. Give <rest> a rest".
-export const AREA_WORDS = {
-  legs: ['leg work', 'your legs'], core: ['core work', 'your core'], upper: ['arm and shoulder work', 'your arms and shoulders'],
-  balance: ['balance work', 'those muscles'], mobility: ['stretching', 'those muscles'],
-  stillness: ['stillness practice', 'it'],
-};
 // The area a hold works most.
 export const mainArea = hold => Object.entries(hold.areas).sort((x, y) => y[1] - x[1])[0][0];
 

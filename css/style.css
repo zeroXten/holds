@@ -700,11 +700,8 @@ button.chip { cursor: pointer; }
 /* ---------- Body areas ---------- */
 .card-kind { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .card-kind.soft { color: #5aa89a; }
-.card.tired .figure { opacity: .55; }
-.card-flag.rest { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
 .tag.style-soft { background: color-mix(in srgb, #5aa89a 20%, transparent); color: #3f8f80; font-weight: 700; }
 .tag.style-hard { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); font-weight: 700; }
-.home-card.rest-hint { border-color: color-mix(in srgb, #5aa89a 55%, var(--line)); }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip-btn {
   border: 1.5px solid var(--line); background: var(--surface-2); border-radius: var(--r-chip);
