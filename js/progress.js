@@ -682,8 +682,8 @@ export function planToday(state, today = dayKey()) {
   return p;
 }
 
-// Fills a plan day's slots, each with a different hold. Within a section it favours a
-// hold with a test waiting, one not yet mastered, the hold of the day, and one not done
+// Fills a plan day's slots, each with a different hold. A main slot (2+ sets) takes a hard
+// hold if any are open. Within a section it favours a hold with a test waiting, one not yet mastered, the hold of the day, and one not done
 // lately, and avoids the holds of the last plan day (a day's recovery).
 function pickPlanDay(state, day, prev, today) {
   const rand = seeded(`plan ${today}`);
@@ -696,8 +696,10 @@ function pickPlanDay(state, day, prev, today) {
   const picks = [];
   for (const slot of day.slots) {
     for (const key of [slot.group, ...FALLBACK[slot.group]]) {
-      const options = HOLD_GROUPS.find(g => g.key === key).ids.filter(id => isOpen(state, id) && !used.has(id));
+      let options = HOLD_GROUPS.find(g => g.key === key).ids.filter(id => isOpen(state, id) && !used.has(id));
       if (!options.length) continue;
+      const hard = options.filter(id => HOLDS.find(h => h.id === id).style === 'hard');
+      if (slot.sets > 1 && hard.length) options = hard;
       const best = options.map(id => [score(id), id]).sort((a, b) => b[0] - a[0])[0][1];
       used.add(best);
       picks.push({ holdId: best, sets: slot.sets, group: key });

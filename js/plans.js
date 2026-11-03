@@ -3,8 +3,11 @@
 // plan works whatever you've unlocked and grows as you unlock more.
 //
 // A slot is { group, sets }: `group` is a home screen section (HOLD_GROUPS' keys) and
-// `sets` how many times to do the hold. Hard days (legs, upper body, core) alternate with
-// easy ones, and a hold done one day is avoided the next, so muscles get a day to recover.
+// `sets` how many times to do the hold. The main slot of a day (2 or more sets) takes a
+// hard hold when you have one. Hard days stick to their theme, and no section's main work
+// falls on two days running, so muscles get a day to recover; a hold done one day is also
+// avoided the next. Every plan has the same week: legs, arms, easy, core, legs, arms &
+// core, easy. Qigong holds are mostly arm work, so they fill out arm days and easy days.
 // The cycle moves on a day when you train, so a missed day doesn't skip anything.
 //
 // Plans are structure only: they don't earn or cost coins.
@@ -16,12 +19,12 @@ export const PLANS = [
     key: 'foundation', name: 'Foundation plan', from: 'white',
     about: 'About 3 holds a day, with two easy days a week. Short sessions, done regularly, are what build tendons.',
     days: [
-      day('Legs', ['stances', 2], ['core'], ['qigong']),
-      day('Arms & upper body', ['upper', 2], ['still']),
+      day('Legs', ['stances', 2], ['core']),
+      day('Arms & upper body', ['upper', 2], ['upper']),
       day('Easy day', ['still'], ['qigong']),
-      day('Legs', ['stances', 2], ['upper']),
       day('Core', ['core', 2], ['qigong']),
-      day('All round', ['stances'], ['upper'], ['core']),
+      day('Legs', ['stances', 2], ['stances']),
+      day('Arms & core', ['upper', 2], ['core']),
       day('Easy day', ['still'], ['qigong']),
     ],
   },
@@ -29,12 +32,12 @@ export const PLANS = [
     key: 'steady', name: 'Steady plan', from: 'green',
     about: 'About 5 holds a day, with repeat sets on the main hold of each hard day, and two easy days a week.',
     days: [
-      day('Legs', ['stances', 3], ['stances'], ['core'], ['qigong']),
-      day('Arms & upper body', ['upper', 2], ['upper'], ['core'], ['still']),
+      day('Legs', ['stances', 3], ['stances'], ['core']),
+      day('Arms & upper body', ['upper', 3], ['upper'], ['qigong']),
       day('Easy day', ['still'], ['qigong'], ['qigong']),
-      day('Legs', ['stances', 3], ['stances'], ['upper']),
-      day('Core', ['core', 2], ['core'], ['qigong'], ['still']),
-      day('All round', ['stances', 2], ['upper'], ['core'], ['qigong']),
+      day('Core', ['core', 3], ['core'], ['qigong']),
+      day('Legs', ['stances', 3], ['stances'], ['still']),
+      day('Arms & core', ['upper', 2], ['upper'], ['core', 2]),
       day('Easy day', ['still'], ['qigong']),
     ],
   },
@@ -42,12 +45,12 @@ export const PLANS = [
     key: 'deep', name: 'Deep plan', from: 'brown',
     about: 'About 7 holds a day: three sets of the main hold on hard days, a second hold of the same kind, and easy days to recover.',
     days: [
-      day('Legs', ['stances', 3], ['stances', 2], ['core'], ['qigong']),
-      day('Arms & upper body', ['upper', 3], ['upper', 2], ['core'], ['still']),
+      day('Legs', ['stances', 3], ['stances', 2], ['core'], ['still']),
+      day('Arms & upper body', ['upper', 3], ['upper', 2], ['qigong'], ['qigong']),
       day('Easy day', ['still'], ['qigong'], ['qigong']),
-      day('Legs', ['stances', 3], ['stances', 2], ['upper'], ['qigong']),
       day('Core', ['core', 3], ['core', 2], ['qigong'], ['still']),
-      day('All round', ['stances', 2], ['upper', 2], ['core', 2], ['qigong']),
+      day('Legs', ['stances', 3], ['stances', 2], ['still'], ['qigong']),
+      day('Arms & core', ['upper', 2], ['upper'], ['core', 3]),
       day('Easy day', ['still'], ['qigong'], ['still']),
     ],
   },
@@ -56,7 +59,7 @@ export const PLANS = [
 // When a section has none of your holds left for a slot, the slot takes one from these instead.
 export const FALLBACK = {
   stances: ['core', 'qigong'],
-  upper: ['core', 'qigong'],
+  upper: ['qigong', 'core'],
   core: ['upper', 'stances'],
   qigong: ['still', 'upper'],
   still: ['qigong', 'core'],

@@ -55,10 +55,31 @@ const did = (s, holdId, d) => s.history.push({ at: `${d}T12:00:00`, holdId, leve
   P.planToday(s, day(0));
   const legs = s.plan.picks[0].holdId;
   for (const x of s.plan.picks) did(s, x.holdId, day(0));
-  for (let i = 1; i < 3; i++) { P.planToday(s, day(i)); for (const x of s.plan.picks) did(s, x.holdId, day(i)); }
-  P.planToday(s, day(3));  // the next legs day
+  for (let i = 1; i < 4; i++) { P.planToday(s, day(i)); for (const x of s.plan.picks) did(s, x.holdId, day(i)); }
+  P.planToday(s, day(4));  // the next legs day
   check('yesterday\'s holds are avoided', !s.plan.picks.some(x => s.plan.prev.includes(x.holdId)));
   check('legs days spread over different stances', s.plan.picks[0].group === 'stances', `${legs} then ${s.plan.picks[0].holdId}`);
+}
+
+{
+  // No section's main work two days running (the week wraps round), and hard days stay on theme.
+  const main = d => d.slots.find(sl => sl.sets > 1)?.group;
+  const bad = PLANS.flatMap(p => p.days.map((d, i) => [p.key, d, p.days[(i + 1) % 7]])
+    .filter(([, d, next]) => main(d) && next.slots.some(sl => sl.group === main(d))).map(([k, d]) => `${k} ${d.name}`));
+  check('main work gets a day to recover', !bad.length, bad.join());
+  const upper = PLANS.flatMap(p => p.days.filter(d => main(d) === 'upper')).some(d => d.slots.some(sl => sl.group === 'still'));
+  check('no stillness on arm days', !upper);
+}
+
+{
+  // The main hold of a day is a hard one when you have one open.
+  const s = fresh();
+  s.unlocked = ['claws', 'drawbow', 'palms', 'post'];
+  s.holds.claws = { ...P.holdState(s, 'claws'), level: 1 };  // claws would win on every other count
+  s.plan = { step: 1 };
+  const p = P.planToday(s, day(0));
+  const style = id => HOLDS.find(h => h.id === id).style;
+  check('arm day leads with a hard hold', p.picks[0].holdId === 'palms' && style(p.picks[1].holdId) === 'soft' && p.picks[1].group === 'upper', p.picks.map(x => x.holdId).join());
 }
 
 {
