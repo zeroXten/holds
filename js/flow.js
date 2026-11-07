@@ -1,6 +1,6 @@
 // Flowing holds: instead of timing a still position, count slow cycles through key
 // positions (for Holding Up the Sky: hands low at the belly → palms high overhead →
-// low again). A cycle only counts if it takes at least the level's minimum time, so
+// low again). What the coach says comes from the hold's `flow.say` (see holds.js). A cycle only counts if it takes at least the level's minimum time, so
 // the movement stays slow and soft. Without the camera it becomes a paced guide.
 //
 // Camera states: framing → ready (waiting in the start position) → flowing → done
@@ -25,6 +25,7 @@ export class FlowSession {
   constructor({ hold, level, camera, daily = false, boost = 1, manual = false, target, now }) {
     Object.assign(this, { hold, level, camera, daily, manual, last: now });
     const f = hold.flow;
+    this.words = f.say;
     this.goal = target ?? hold.levels[level - 1].target;
     this.minCycle = f.minCycle[level - 1];
     this.dwell = f.dwell[level - 1];
@@ -109,7 +110,7 @@ export class FlowSession {
 
     switch (this.state) {
       case 'framing':
-        if (this.seenTime > 0.7) { this.go('ready'); say('Hands together in front of your belly, palms up', { priority: true }); }
+        if (this.seenTime > 0.7) { this.go('ready'); say(this.words.ready, { priority: true }); }
         break;
       case 'ready':
         this.lowTime = low ? this.lowTime + dt : 0;
@@ -117,7 +118,7 @@ export class FlowSession {
           this.go('flowing');
           this.startCycle();
           play('go');
-          say('Slowly lift your hands up the front of your body', { priority: true });
+          say(this.words.start, { priority: true });
         }
         break;
       case 'flowing':
@@ -125,10 +126,11 @@ export class FlowSession {
         if (this.phase === 'up') {
           this.topScore = Math.max(this.topScore, this.scores.high);
           this.topTime = high ? this.topTime + dt : 0;
-          if (this.hands < 0.15 && this.hands > -0.3 && !this.turned) { this.turned = true; say('Turn the palms over and push up to the sky', { minGap: 6000 }); }
+          // Holding Up the Sky: a reminder halfway up, as the hands pass the chest.
+          if (this.words.turn && this.hands < 0.15 && this.hands > -0.3 && !this.turned) { this.turned = true; say(this.words.turn, { minGap: 6000 }); }
           if (this.topTime >= Math.max(0.3, this.dwell)) {
             this.setPhase('down');
-            say(this.dwell >= 1 ? 'Open your hands and float them down the sides' : 'And slowly down', { minGap: 4000 });
+            say(this.dwell >= 1 ? this.words.down : 'And slowly back', { minGap: 4000 });
           } else if (this.phaseTime > 6 && this.worst) say(this.worst.cue, { minGap: 6000 });
         } else {
           this.lowTime = low ? this.lowTime + dt : 0;

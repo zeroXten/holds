@@ -38,12 +38,12 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   const s = new Session({ hold, level: 1, camera: false, now: 0 });
   let t = 0;
   const run = secs => { for (const end = t + secs; t < end;) { t += 1 / 30; s.tick(t, null); } };
-  run(5 + 14);             // countdown, then 14s on side one (target 10s)
+  run(5 + 19);             // countdown, then 19s on side one (target 15s)
   const bonusOne = s.view().sideReached;
   s.switchNow();
-  run(5 + 12);             // switch countdown, then 12s on side two
+  run(5 + 17);             // switch countdown, then 17s on side two
   const r = s.finish('stopped');
-  const ok = bonusOne && r.reached && r.sides[0] > 13 && r.sides[1] > 11;
+  const ok = bonusOne && r.reached && r.sides[0] > 18 && r.sides[1] > 16;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} honour rest L1: sides ${r.sides.map(x => x.toFixed(1)).join(' + ')}, reached ${r.reached}`);
 }

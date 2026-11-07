@@ -539,12 +539,14 @@ function updateHud(v) {
   }
 }
 
-// The step of the movement you're on, from where your hands are.
+// The step of the movement you're on: what to do next, or the worst check's cue if
+// it's been a while. The words come from the hold's `flow.say`.
 function flowStep(v) {
-  if (v.phase === 'down') return v.worst && v.phaseTime > 3 ? v.worst.cue : 'Float your arms down the sides';
-  if (v.inPose && v.hands < -0.3) return v.topTime < v.dwell ? 'Stretch up through the palms… hold' : 'Stretch up';
+  const w = run.hold.flow.say;
+  if (v.phase === 'down') return v.worst && v.phaseTime > 3 ? v.worst.cue : w.down;
+  if (v.inPose && v.aim === 'high') return v.topTime < v.dwell ? w.hold : w.top;
   if (v.worst && v.phaseTime > 6) return v.worst.cue;
-  return v.hands > 0.15 ? 'Lift your hands up the front of your body' : 'Turn the palms over and push up to the sky';
+  return typeof w.up === 'function' ? w.up(v) : w.up;
 }
 
 // Session screen for flowing holds: cycles counted instead of a timer.
@@ -562,7 +564,7 @@ function updateFlowHud(v) {
   $('#session').dataset.state = v.state;
   $('#s-fill').style.width = `${v.score}%`;
   $('#s-fill').className = `fill ${v.score >= 70 ? 'good' : v.score >= 45 ? 'warn' : 'bad'}`;
-  $('#s-score').textContent = run.camera ? `${{ lift: 'Rise', high: 'Reach up', lower: 'Lower', low: 'Hands low' }[v.aim]} ${v.score}` : '';
+  $('#s-score').textContent = run.camera ? `${run.hold.flow.say.aims[v.aim]} ${v.score}` : '';
   const done = $('#s-done');
   if (done) done.textContent = 'Done';
   const secs = Math.floor(v.cycleTime);
@@ -572,12 +574,12 @@ function updateFlowHud(v) {
       $('#s-cue').textContent = orientationTip(run) ?? `${viewHint(run.hold, run.level)}, about 2–3 m from the phone.`;
       break;
     case 'ready':
-      setStatus('wait', 'Hands at your belly to begin');
-      $('#s-cue').textContent = v.worst?.cue ?? 'Hands together in front of your belly, palms up';
+      setStatus('wait', run.hold.flow.say.begin);
+      $('#s-cue').textContent = v.worst?.cue ?? run.hold.flow.say.ready;
       break;
     case 'countdown':
       setStatus('wait', `Get ready · ${Math.ceil(5 - v.stateTime)}`);
-      $('#s-cue').textContent = 'Hands together in front of your belly, palms up';
+      $('#s-cue').textContent = run.hold.flow.say.ready;
       break;
     case 'paused':
       setStatus('wait', 'Paused');

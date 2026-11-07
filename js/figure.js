@@ -13,8 +13,10 @@
 // rests on the floor instead of the feet, with `groundGap` above it), `props`
 // (chairs/benches drawn under joints: { under, w, gap }), `feet` (side view: how far
 // each heel is raised, in degrees of foot tilt; 0 is flat) and `hands` (the angle each
-// hand points from the wrist to the fingertips). Without `feet` or `hands`, the heel,
-// toe and fingertip points sit on the ankle and wrist.
+// hand points from the wrist to the fingertips), and `turn` (side view: degrees the hips
+// and shoulders turn open towards the ceiling, the left side rising, as in a hip
+// airplane). Without `feet` or `hands`, the heel, toe and fingertip points sit on the
+// ankle and wrist.
 
 export const SEG = { torso: 30, neck: 3, headR: 6, upper: 14, fore: 13, thigh: 22, shin: 22, foot: 8.7, heel: 3.8, hand: 4 };
 const RAD = Math.PI / 180;
@@ -36,6 +38,14 @@ export function buildJoints(spec) {
   const hipDir = spec.compact ? perp : [1, 0];
   j.lHip = add(pelvis, hipDir, hipHalf);
   j.rHip = add(pelvis, hipDir, -hipHalf);
+  if (!front && spec.turn) {
+    // Turning open: seen side-on, the far side of the body rises into view above the near side.
+    const up = Math.sin(spec.turn * RAD);
+    for (const [k, half, at] of [['Shoulder', 9, neck], ['Hip', 6, pelvis]]) {
+      j['l' + k] = [j['l' + k][0], at[1] - half * up];
+      j['r' + k] = [j['r' + k][0], at[1] + half * up];
+    }
+  }
   for (const s of ['l', 'r']) {
     const S = s.toUpperCase();
     const [thigh, shin] = spec.legs[S];
@@ -82,7 +92,7 @@ export function lerpSpec(a, b, t) {
   return {
     view: b.view,
     torso: l(a.torso ?? 180, b.torso ?? 180),
-    head: b.head, lift: l(a.lift ?? 0, b.lift ?? 0), props: b.props,
+    head: b.head, lift: l(a.lift ?? 0, b.lift ?? 0), props: b.props, turn: l(a.turn ?? 0, b.turn ?? 0),
     compact: b.compact, ground: t > 0.5 ? b.ground : a.ground, groundGap: b.groundGap,
     legs: { L: pair(a.legs.L, b.legs.L), R: pair(a.legs.R, b.legs.R) },
     arms: { L: pair(a.arms.L, b.arms.L), R: pair(a.arms.R, b.arms.R) },
