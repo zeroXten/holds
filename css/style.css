@@ -411,6 +411,30 @@ body.demo .stage video { display: none; }
 .hud-btns .btn.primary { background: #f06a2c; color: #1a0f08; }
 .session .hud-bottom:has(.meter[hidden]) { grid-template-columns: 1fr; }
 
+/* Calm view (still holds): see js/calm.js. Fast back to the full screen, slow into calm. */
+.calm-layer { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; opacity: 0; transition: opacity .3s ease; }
+.calm-layer svg { width: min(78vw, 60vh, 440px); height: auto; overflow: visible; }
+.calm-layer .glow { fill: var(--calm, #f0b350); opacity: .12; }
+.calm-layer .stroke { fill: none; stroke: #f3e9da; stroke-width: 10; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: .9; transition: stroke-dashoffset .3s linear; }
+.calm-layer .stroke.thin { stroke-width: 3; opacity: .35; }
+.calm-layer.whole .stroke { stroke: #ffcf73; }
+.calm-word { position: absolute; left: 0; right: 0; top: calc(50% + min(42vw, 33vh, 240px)); text-align: center; font-family: var(--display); font-style: italic; font-size: clamp(20px, 5.5vw, 30px); color: #f3e9da; }
+.calm-time {
+  position: absolute; left: 0; right: 0; bottom: max(24px, env(safe-area-inset-bottom)); text-align: center;
+  font-variant-numeric: tabular-nums; font-weight: 800; font-size: 22px; color: #f3e9da; opacity: .45; transition: all .8s ease;
+}
+.session.calm-peek .calm-time { bottom: 78vh; font-size: clamp(56px, 18vw, 140px); opacity: .95; }
+.session .stage canvas, .session .stage video, .session .honour-fig, .session .hud > *, .session .hud { transition: opacity .3s ease, background .3s ease; }
+.session.calm .calm-layer { opacity: 1; transition: opacity 2.5s ease; }
+.session.calm .stage canvas, .session.calm .stage video, .session.calm .honour-fig { opacity: .12; transition: opacity 2.5s ease; }
+.session.calm .hud > * { opacity: 0; transition: opacity 2.5s ease; pointer-events: none; }
+.session.calm .hud > .hud-top { pointer-events: auto; }
+.session.calm .hud > .hud-top { opacity: 1; }
+.session.calm .hud-title, .session.calm .hud-coins { opacity: 0; transition: opacity 2.5s ease; }
+.session.calm .hud-x { opacity: .4; }
+.session.calm .hud { background: transparent; transition: background 2.5s ease; }
+@media (prefers-reduced-motion: reduce) { .calm-layer, .calm-time, .session.calm .calm-layer { transition-duration: .01s; } }
+
 .error-panel {
   position: absolute; inset: auto 16px 50% 16px; transform: translateY(50%);
   background: #211912; border-radius: 20px; padding: 22px; display: grid; gap: 12px; text-align: center;

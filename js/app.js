@@ -10,6 +10,7 @@ import { figureSVG } from './figure.js';
 import * as P from './progress.js';
 import { STRICTNESS } from './session.js';
 import { createSession } from './flow.js';
+import { CalmView } from './calm.js';
 import { CameraSource, DemoSource, loadLandmarker } from './pose.js';
 import { AutoFrame } from './framing.js';
 import * as audio from './audio.js';
@@ -372,6 +373,7 @@ async function startSession(hold, level, useCamera, { test = false, mastery = fa
   $('#s-tick').style.left = `${STRICTNESS[state.settings.strictness].hold}%`;
   document.body.classList.toggle('demo', DEMO);
   run = { hold, level, camera: useCamera, test, mastery };
+  calm.reset();
   const target = mastery ? masteryTarget(hold) : lv.target;
   const myRun = run;
   setStatus('wait', useCamera ? (DEMO ? 'Demo mode' : 'Starting camera…') : '');
@@ -427,10 +429,27 @@ async function startSession(hold, level, useCamera, { test = false, mastery = fa
       }
     }
     updateHud(v);
+    updateCalm(v);
     if (v.state === 'done') return finishSession();
     run.raf = requestAnimationFrame(loop);
   };
   run.raf = requestAnimationFrame(loop);
+}
+
+// The calm view for still holds (js/calm.js), tinted with your sash. A black sash
+// would vanish on the dark screen, so it glows gold.
+const calm = new CalmView($('#calm'), { reduceMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
+$('#session').addEventListener('pointerdown', () => { if ($('#session').classList.contains('calm')) calm.wake(); });
+
+function updateCalm(v) {
+  if (v.flow || !state.settings.calm) return;
+  const t = performance.now() / 1000, dt = Math.min(t - (run.calmAt ?? t), 0.25);
+  run.calmAt = t;
+  const sash = P.sashRank(state);
+  calm.update(v, dt, t, {
+    camera: run.camera, thr: run.session.thr, timeText: $('#s-time').textContent,
+    colour: sash.key === 'black' || sash.degree ? '#f0b350' : sash.color,
+  });
 }
 
 function setStatus(kind, text) {
@@ -695,6 +714,7 @@ function stopRun() {
   run.source?.stop();
   run.wake?.release?.().catch(() => {});
   audio.hush();
+  calm.reset();
   const c = $('#overlay');
   c.getContext('2d').clearRect(0, 0, c.width, c.height);
   run = null;
@@ -961,7 +981,7 @@ function openSettings() {
   $('#version').textContent = `Version ${VERSION}`;
   checkVersion();
   const f = $('#settings form');
-  for (const k of ['voice', 'sounds', 'camera', 'autoframe', 'showValues']) f.elements[k].checked = state.settings[k];
+  for (const k of ['voice', 'sounds', 'camera', 'autoframe', 'calm', 'showValues']) f.elements[k].checked = state.settings[k];
   f.elements.strictness.value = state.settings.strictness;
   f.elements.appearance.value = state.settings.appearance;
   f.elements.model.value = state.settings.model;
