@@ -47,23 +47,21 @@ export function play(name) {
   for (const [f, at, dur, type, vol] of SOUNDS[name]) tone(f, now + at, dur, type, vol);
 }
 
-// Breath tones for the calm view: a soft bowl-like note that slides into a second one,
-// rising for the in-breath and falling for the out-breath, so you can tell which is
-// which with your eyes closed.
+// Breath tones for the calm view: one soft, slow-swelling tone at each turn, higher
+// for the in-breath and lower for the out-breath, so you can tell which is which with
+// your eyes closed. A gentle attack and a slightly detuned twin keep it from sounding
+// like a bell or a chime.
 export function breath(inhale) {
   if (!settings.sounds || !ctx) return;
-  const at = ctx.currentTime + 0.02;
-  const [a, b] = inhale ? [293.66, 440] : [440, 293.66];  // D4 and A4, a fifth apart
-  for (const [f, t] of [[a, 0], [b, 0.32]]) {
-    for (const [r, v] of [[1, 1], [2, 0.18], [2.76, 0.06]]) {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.frequency.value = f * r;
-      g.gain.setValueAtTime(0.0001, at + t);
-      g.gain.exponentialRampToValueAtTime(0.09 * v, at + t + 0.06);
-      g.gain.exponentialRampToValueAtTime(0.0001, at + t + 2.2 / r ** 0.4);
-      o.connect(g).connect(ctx.destination);
-      o.start(at + t); o.stop(at + t + 2.4);
-    }
+  const at = ctx.currentTime + 0.02, f = inhale ? 392 : 261.63;  // G4 in, C4 out
+  for (const [r, v] of [[1, 1], [1.004, 0.6], [2, 0.08]]) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = f * r;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(0.07 * v, at + 0.35);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 2.6);
+    o.connect(g).connect(ctx.destination);
+    o.start(at); o.stop(at + 2.7);
   }
 }
 
