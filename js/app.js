@@ -438,7 +438,10 @@ async function startSession(hold, level, useCamera, { test = false, mastery = fa
 
 // The calm view for still holds (js/calm.js), tinted with your sash. A black sash
 // would vanish on the dark screen, so it glows gold.
-const calm = new CalmView($('#calm'), { reduceMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
+const calm = new CalmView($('#calm'), {
+  reduceMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+  onBreath: inhale => audio.breath(inhale),
+});
 $('#session').addEventListener('pointerdown', () => { if ($('#session').classList.contains('calm')) calm.wake(); });
 
 function updateCalm(v) {

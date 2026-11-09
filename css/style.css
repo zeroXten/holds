@@ -414,12 +414,16 @@ body.demo .stage video { display: none; }
 /* Calm view (still holds): see js/calm.js. Fast back to the full screen, slow into calm. */
 .calm-layer { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; opacity: 0; transition: opacity .3s ease; }
 .calm-layer svg { width: min(78vw, 60vh, 440px); height: auto; overflow: visible; }
+/* Cool for the in-breath, warm for the out-breath. */
+.calm-layer { --in: #7fd0e6; --out: #f2a65a; }
 .calm-layer .orb-a { stop-color: #fff8ea; stop-opacity: .95; }
-.calm-layer .orb-b { stop-color: var(--calm, #f0b350); stop-opacity: .75; }
-.calm-layer .orb-c { stop-color: var(--calm, #f0b350); stop-opacity: 0; }
+.calm-layer .orb-b, .calm-layer .orb-c { stop-color: var(--in); transition: stop-color .4s ease; }
+.calm-layer.out .orb-b, .calm-layer.out .orb-c { stop-color: var(--out); }
+.calm-layer .orb-b { stop-opacity: .8; }
+.calm-layer .orb-c { stop-opacity: 0; }
 .calm-layer .core { fill: #fff8ea; opacity: .5; }
-.calm-layer .ripple { fill: none; stroke: var(--calm, #f0b350); stroke-width: 3.5; opacity: 0; }
-.calm-layer .enso { fill: none; stroke: #f3e9da; stroke-width: 5; stroke-linecap: round; stroke-dasharray: 92 8; opacity: .3; }
+.calm-layer .ripple { fill: none; stroke: var(--out); stroke-width: 3.5; opacity: 0; }
+.calm-layer .enso { fill: none; stroke: var(--calm, #f3e9da); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 92 8; opacity: .45; }
 .calm-word { position: absolute; left: 0; right: 0; top: calc(50% + min(42vw, 33vh, 240px)); text-align: center; font-family: var(--display); font-style: italic; font-size: clamp(20px, 5.5vw, 30px); color: #f3e9da; }
 .calm-time {
   position: absolute; left: 0; right: 0; bottom: max(24px, env(safe-area-inset-bottom)); text-align: center;

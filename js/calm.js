@@ -41,12 +41,16 @@ export function breathAt(t) {
 }
 
 export class CalmView {
-  constructor(root, { reduceMotion = false } = {}) {
+  // `onBreath(inhale)` is called as each in-breath and out-breath begins (for the tones).
+  constructor(root, { reduceMotion = false, onBreath = () => {} } = {}) {
     this.root = root;
     this.reduceMotion = reduceMotion;
-    // The breath is the main thing: an orb in your sash colour that swells to fill a
-    // brush-stroke ensō as you breathe in and shrinks as you breathe out, with rings
-    // rippling outwards on the out-breath. Nothing here counts time.
+    this.onBreath = onBreath;
+    // The breath is the main thing: an orb that swells to fill a brush-stroke ensō
+    // (in your sash colour) as you breathe in and shrinks as you breathe out, with rings
+    // rippling outwards on the out-breath. The orb turns cool for the in-breath and warm
+    // for the out-breath, switching quickly so the turn is easy to see. Nothing here
+    // counts time.
     root.innerHTML = `<svg viewBox="0 0 220 220" aria-hidden="true">
       <defs><radialGradient id="calm-orb">
         <stop offset="0" class="orb-a"/><stop offset=".55" class="orb-b"/><stop offset="1" class="orb-c"/>
@@ -70,6 +74,7 @@ export class CalmView {
   reset() {
     this.st = {};
     this.since = null;  // when the calm view last came on, for the breath words
+    this.inhale = null; // the breath we're on, to spot the turn
     this.root.parentElement?.classList.remove('calm', 'calm-peek');
   }
 
@@ -79,15 +84,22 @@ export class CalmView {
     this.st.steady = 0;
   }
 
-  // `colour` tints the glow (the sash), `timeText` is the hold's clock.
+  // `colour` tints the ensō (the sash), `timeText` is the hold's clock.
   update(v, dt, now, { camera, thr, colour, timeText }) {
     const on = calmStep(this.st, v, dt, { camera, thr });
     const screen = this.root.parentElement;
     screen.classList.toggle('calm', on);
     screen.classList.toggle('calm-peek', on && this.st.peek);
-    if (!on) { this.since = null; return; }
+    if (!on) { this.since = null; this.inhale = null; return; }
     this.since ??= now;
-    const b = this.reduceMotion ? { inhale: true, k: 0.5 } : breathAt(now - this.since);
+    // With reduced motion the orb keeps still, but the colours and tones still pace the breath.
+    const phase = breathAt(now - this.since);
+    const b = this.reduceMotion ? { inhale: phase.inhale, k: 0.5 } : phase;
+    if (b.inhale !== this.inhale) {
+      this.inhale = b.inhale;
+      this.root.classList.toggle('out', !b.inhale);
+      this.onBreath(b.inhale);
+    }
     this.root.style.setProperty('--calm', colour);
     // The orb fills the ensō at the top of the in-breath.
     this.orb.setAttribute('r', (34 + 58 * b.k).toFixed(1));
@@ -101,7 +113,7 @@ export class CalmView {
       r.style.opacity = this.reduceMotion || b.inhale ? 0 : (0.85 * (1 - e) * Math.min(1, e * 6)).toFixed(3);
     });
     const breaths = (now - this.since) / CALM.breath;
-    const words = !this.reduceMotion && breaths < CALM.words;
+    const words = breaths < CALM.words;
     this.word.textContent = words ? (b.inhale ? 'breathe in' : 'breathe out') : '';
     this.word.style.opacity = (0.45 + 0.5 * b.k).toFixed(2);
     this.time.textContent = timeText;

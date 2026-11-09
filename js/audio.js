@@ -47,6 +47,26 @@ export function play(name) {
   for (const [f, at, dur, type, vol] of SOUNDS[name]) tone(f, now + at, dur, type, vol);
 }
 
+// Breath tones for the calm view: a soft bowl-like note that slides into a second one,
+// rising for the in-breath and falling for the out-breath, so you can tell which is
+// which with your eyes closed.
+export function breath(inhale) {
+  if (!settings.sounds || !ctx) return;
+  const at = ctx.currentTime + 0.02;
+  const [a, b] = inhale ? [293.66, 440] : [440, 293.66];  // D4 and A4, a fifth apart
+  for (const [f, t] of [[a, 0], [b, 0.32]]) {
+    for (const [r, v] of [[1, 1], [2, 0.18], [2.76, 0.06]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f * r;
+      g.gain.setValueAtTime(0.0001, at + t);
+      g.gain.exponentialRampToValueAtTime(0.09 * v, at + t + 0.06);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + t + 2.2 / r ** 0.4);
+      o.connect(g).connect(ctx.destination);
+      o.start(at + t); o.stop(at + t + 2.4);
+    }
+  }
+}
+
 // Speak a phrase. `minGap` stops the same phrase repeating too often;
 // `priority` phrases interrupt whatever is being said.
 export function say(text, { minGap = 0, priority = false, pitch = 1 } = {}) {
