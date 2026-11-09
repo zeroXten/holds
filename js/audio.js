@@ -53,12 +53,14 @@ export function play(name) {
 // like a bell or a chime.
 export function breath(inhale) {
   if (!settings.sounds || !ctx) return;
-  const at = ctx.currentTime + 0.02, f = inhale ? 392 : 261.63;  // G4 in, C4 out
-  for (const [r, v] of [[1, 1], [1.004, 0.6], [2, 0.08]]) {
+  // An octave up from where it started: phone speakers barely play anything below
+  // about 400 Hz, which is why the low out-breath tone vanished.
+  const at = ctx.currentTime + 0.02, f = inhale ? 784 : 523.25;  // G5 in, C5 out
+  for (const [r, v] of [[1, 1], [1.004, 0.5], [2, 0.15]]) {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.frequency.value = f * r;
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(0.07 * v, at + 0.35);
+    g.gain.exponentialRampToValueAtTime(0.2 * v, at + 0.3);
     g.gain.exponentialRampToValueAtTime(0.0001, at + 2.6);
     o.connect(g).connect(ctx.destination);
     o.start(at); o.stop(at + 2.7);
