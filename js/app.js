@@ -1121,7 +1121,8 @@ function celebrateMilestone(m) {
 
 // ---------- Streak strip: the last week, today, and the days to the next milestone ----------
 
-const SHOW_PAST = 6, SHOW_AHEAD = 7;
+// About a week: a few days back, today, and a few ahead, so it fits a phone at large text sizes.
+const SHOW_PAST = 3, SHOW_AHEAD = 3;
 const MARK_ICON = { trained: '✓', rest: 'z', freeze: '❄', repair: '✓', missed: '', open: '' };
 
 function renderStreakStrip() {

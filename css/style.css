@@ -414,10 +414,12 @@ body.demo .stage video { display: none; }
 /* Calm view (still holds): see js/calm.js. Fast back to the full screen, slow into calm. */
 .calm-layer { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; opacity: 0; transition: opacity .3s ease; }
 .calm-layer svg { width: min(78vw, 60vh, 440px); height: auto; overflow: visible; }
-.calm-layer .glow { fill: var(--calm, #f0b350); opacity: .12; }
-.calm-layer .stroke { fill: none; stroke: #f3e9da; stroke-width: 10; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: .9; transition: stroke-dashoffset .3s linear; }
-.calm-layer .stroke.thin { stroke-width: 3; opacity: .35; }
-.calm-layer.whole .stroke { stroke: #ffcf73; }
+.calm-layer .orb-a { stop-color: #fff8ea; stop-opacity: .95; }
+.calm-layer .orb-b { stop-color: var(--calm, #f0b350); stop-opacity: .75; }
+.calm-layer .orb-c { stop-color: var(--calm, #f0b350); stop-opacity: 0; }
+.calm-layer .core { fill: #fff8ea; opacity: .5; }
+.calm-layer .ripple { fill: none; stroke: var(--calm, #f0b350); stroke-width: 3.5; opacity: 0; }
+.calm-layer .enso { fill: none; stroke: #f3e9da; stroke-width: 5; stroke-linecap: round; stroke-dasharray: 92 8; opacity: .3; }
 .calm-word { position: absolute; left: 0; right: 0; top: calc(50% + min(42vw, 33vh, 240px)); text-align: center; font-family: var(--display); font-style: italic; font-size: clamp(20px, 5.5vw, 30px); color: #f3e9da; }
 .calm-time {
   position: absolute; left: 0; right: 0; bottom: max(24px, env(safe-area-inset-bottom)); text-align: center;
@@ -576,7 +578,7 @@ button.chip { cursor: pointer; }
   display: grid; gap: 10px; width: 100%; margin: 0 0 14px; padding: 12px 14px; text-align: left; cursor: pointer;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); font: inherit;
 }
-.ss-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ss-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 8px; }
 .ss-head b { font-size: 1rem; }
 .ss-head span { font-size: .82rem; font-weight: 700; color: var(--gold); }
 .ss-days { display: flex; align-items: flex-start; justify-content: space-between; gap: 2px; }

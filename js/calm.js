@@ -44,19 +44,24 @@ export class CalmView {
   constructor(root, { reduceMotion = false } = {}) {
     this.root = root;
     this.reduceMotion = reduceMotion;
+    // The breath is the main thing: an orb in your sash colour that swells to fill a
+    // brush-stroke ensō as you breathe in and shrinks as you breathe out, with rings
+    // rippling outwards on the out-breath. Nothing here counts time.
     root.innerHTML = `<svg viewBox="0 0 220 220" aria-hidden="true">
-      <circle class="glow" cx="110" cy="110" r="70"/>
-      <circle class="glow inner" cx="110" cy="110" r="50"/>
-      <g class="enso" transform="rotate(-100 110 110)">
-        <circle class="stroke" cx="110" cy="110" r="84" pathLength="100"/>
-        <circle class="stroke thin" cx="110" cy="110" r="79" pathLength="100"/>
-      </g>
+      <defs><radialGradient id="calm-orb">
+        <stop offset="0" class="orb-a"/><stop offset=".55" class="orb-b"/><stop offset="1" class="orb-c"/>
+      </radialGradient></defs>
+      <circle class="ripple" cx="110" cy="110" r="90"/>
+      <circle class="ripple" cx="110" cy="110" r="90"/>
+      <circle class="orb" cx="110" cy="110" r="40" fill="url(#calm-orb)"/>
+      <circle class="core" cx="110" cy="110" r="10"/>
+      <circle class="enso" cx="110" cy="110" r="96" pathLength="100" transform="rotate(-100 110 110)"/>
     </svg>
     <div class="calm-word"></div>
     <div class="calm-time"></div>`;
-    [this.glow, this.inner] = root.querySelectorAll('.glow');
-    [this.stroke, this.thin] = root.querySelectorAll('.stroke');
-    this.enso = root.querySelector('.enso');
+    this.orb = root.querySelector('.orb');
+    this.core = root.querySelector('.core');
+    this.ripples = [...root.querySelectorAll('.ripple')];
     this.word = root.querySelector('.calm-word');
     this.time = root.querySelector('.calm-time');
     this.reset();
@@ -84,17 +89,21 @@ export class CalmView {
     this.since ??= now;
     const b = this.reduceMotion ? { inhale: true, k: 0.5 } : breathAt(now - this.since);
     this.root.style.setProperty('--calm', colour);
-    this.glow.setAttribute('r', (56 + 28 * b.k).toFixed(1));
-    this.inner.setAttribute('r', (38 + 24 * b.k).toFixed(1));
-    this.glow.style.opacity = (0.1 + 0.14 * b.k).toFixed(3);
+    // The orb fills the ensō at the top of the in-breath.
+    this.orb.setAttribute('r', (34 + 58 * b.k).toFixed(1));
+    this.orb.style.opacity = (0.55 + 0.45 * b.k).toFixed(3);
+    this.core.setAttribute('r', (6 + 10 * b.k).toFixed(1));
+    // On the out-breath two rings drift outwards and fade, one after the other.
+    const out = b.inhale ? 0 : 1 - b.k;
+    this.ripples.forEach((r, i) => {
+      const e = Math.max(0, Math.min(1, out * 1.4 - i * 0.4));
+      r.setAttribute('r', (92 + 34 * e).toFixed(1));
+      r.style.opacity = this.reduceMotion || b.inhale ? 0 : (0.85 * (1 - e) * Math.min(1, e * 6)).toFixed(3);
+    });
     const breaths = (now - this.since) / CALM.breath;
     const words = !this.reduceMotion && breaths < CALM.words;
     this.word.textContent = words ? (b.inhale ? 'breathe in' : 'breathe out') : '';
-    this.word.style.opacity = (0.25 + 0.45 * b.k).toFixed(2);
-    const p = Math.min(v.sideHeld / v.sideTarget, 1);
-    this.stroke.style.strokeDashoffset = (100 - p * 96).toFixed(2);
-    this.thin.style.strokeDashoffset = (100 - Math.max(p * 96 - 4, 0)).toFixed(2);
-    this.root.classList.toggle('whole', p >= 1);
+    this.word.style.opacity = (0.45 + 0.5 * b.k).toFixed(2);
     this.time.textContent = timeText;
   }
 }
