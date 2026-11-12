@@ -22,8 +22,8 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   // A deeper level's figure should also pass easier levels (some holds' levels change the position, e.g. knees to straight legs, rather than deepening it).
   // (Bear Crawl's last level reaches one arm and leg, which its even levels don't expect.
   // Heel Stand leans back on a wall, then stands free; Iron Bridge now starts at the
-  // straight-armed reverse plank.)
-  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes', 'heel', 'bridge'].includes(hold.id)) continue;
+  // straight-armed reverse plank; Back Bend turns from face down to face up.)
+  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes', 'heel', 'bridge', 'backbend'].includes(hold.id)) continue;
   const r = score(hold, 1, hold.figure(4));
   if (r.score < 90) { failures++; console.log(`FAIL ${hold.id}: L4 figure scores ${r.score} at L1`); }
 }
@@ -31,7 +31,7 @@ for (const hold of HOLDS.filter(h => h.camera)) {
 // (Horse Stance is left out: its depth limits allow for the camera reading real stances
 // high, so the stick figures, drawn at the exact described depths, overlap the next level.
 // Its limits still fall level by level; see below.)
-for (const id of ['bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank', 'hollow', 'squat', 'feet', 'nordic']) {
+for (const id of ['bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank', 'hollow', 'squat', 'feet', 'nordic', 'backbend']) {
   const hold = HOLDS.find(h => h.id === id);
   // (A hold that starts partway up its ladder holds the top position longer at level 4.)
   for (let level = 1; level < (hold.startAt ? 3 : 4); level++) {

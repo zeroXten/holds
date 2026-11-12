@@ -16,7 +16,9 @@
 // `side.main` is the working leg and `side.other` the second leg.
 
 import { kneeDrop, lean, dist, mid, angleAt } from './scoring.js';
-import { legReaching, buildJoints } from './figure.js';
+import { legReaching, buildJoints, SEG } from './figure.js';
+
+const SEG_THIGH = SEG.thigh, SEG_SHIN = SEG.shin;
 
 const HIPS_SHOULDERS = [11, 12, 23, 24];
 
@@ -170,7 +172,7 @@ export const HOLDS = [
     about: 'A long forward stance: front leg bent like a bow, back leg straight like the arrow.',
     levels: [
       { name: 'Short bow', target: 30, desc: 'Long step forward, front toes pointing ahead, back foot turned out about 45°. Bend the front knee, keep the back leg straight and both heels down. Then switch legs.' },
-      { name: 'Bow', target: 45, desc: 'Lower: front knee over the ankle, back leg locked straight.' },
+      { name: 'Bow', target: 45, desc: 'Lower: front knee over the ankle, back leg locked straight. Press the back heel into the floor: you should feel it along the back of the calf.' },
       { name: 'Deep bow', target: 60, desc: 'Front thigh nearly level. Hips square, back upright.' },
       { name: 'Pushing bow', target: 90, desc: 'Front thigh level. Arms straight in front at shoulder height, palms pushing.' },
     ],
@@ -214,7 +216,7 @@ export const HOLDS = [
     levels: [
       { name: 'High cat', target: 30, desc: 'Almost all your weight on the back leg: knee bent, foot flat and turned out about 45°. Front foot forward with just the toes resting lightly, knee slightly bent. Hips square. Then switch legs.' },
       { name: 'Cat', target: 45, desc: 'Sit lower on the back leg. Front foot light enough to lift at any moment.' },
-      { name: 'Low cat', target: 60, desc: 'Back thigh sinking towards level. Hips over the back heel.' },
+      { name: 'Low cat', target: 60, desc: 'Back thigh sinking towards level. Hips over the back heel, which stays heavy on the floor while the knee travels forward over the toes: a stretch for the Achilles.' },
       { name: 'Deep cat', target: 75, desc: 'As low as you can while staying upright, front leg long and light.' },
     ],
     criteria: level => [
@@ -732,7 +734,7 @@ export const HOLDS = [
     about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier.',
     levels: [
       { name: 'Supported squat', target: 30, desc: 'Feet a little wider than your hips, toes slightly out. Hold a door frame or post and sink until your thighs are level. If your heels lift, rest them on a rolled towel; over a few weeks they’ll come down on their own.' },
-      { name: 'Deep squat', target: 45, desc: 'Let go and sink all the way: hips below your knees, heels flat on the floor.' },
+      { name: 'Deep squat', target: 45, desc: 'Let go and sink all the way: hips below your knees, heels flat on the floor. Let your knees travel forward over your toes and keep your heels heavy: you should feel it in the ankles and low in the calves.' },
       { name: 'Prayer squat', target: 60, desc: 'Deep squat with your palms together at your chest, elbows pressing your knees out. Chest up.' },
       { name: 'Overhead squat', target: 60, desc: 'Deep squat with both arms straight overhead. Heels down, chest proud.' },
     ],
@@ -1293,6 +1295,104 @@ export const HOLDS = [
     },
   }),
 
+  {
+    id: 'backbend', name: 'Back Bend', native: 'Xià Yāo', view: 'side', sides: false, camera: true,
+    areas: { mobility: 0.6, core: 0.2, upper: 0.2 }, style: 'soft', sash: 'orange',
+    hint: 'Phone low to the ground, side-on to you',
+    video: 'sphinx cobra bridge wheel pose progression',
+    about: 'Lowering the waist (xià yāo) is Shaolin’s backbend. Most holds fold you forward or keep you flat; this one opens the front of the body (spine, chest, shoulders and hip flexors) and, at the wheel, loads the wrists bent back. Press into each position rather than hanging in it: holding a stretch under load is what tendons respond to.',
+    levels: [
+      { name: 'Sphinx', target: 45, desc: 'Lie face down, elbows under your shoulders and forearms flat on the floor. Press your forearms down and lift your chest, shoulders away from your ears. Hips and legs stay heavy on the floor.' },
+      { name: 'Cobra', target: 45, desc: 'Hands under your shoulders. Press up until your arms are straight, hips and thighs staying on the floor. Push the floor away and let your chest open forward. Stop if your lower back pinches.' },
+      { name: 'Bridge', target: 45, desc: 'Lie on your back, knees bent and feet flat near your hips. Press through your heels and lift your hips as high as they go, hands reaching towards your heels. Push your chest towards your chin.' },
+      { name: 'Wheel', target: 30, desc: 'On your back, hands by your ears with fingers pointing towards your shoulders, feet flat. Press up through hands and feet until your arms are straight and your back is arched. Use a mat, and come down slowly with your chin tucked.' },
+    ],
+    criteria: level => {
+      const height = (p, b) => (anklesMid(b).y - p.y) / b.torsoLen;  // above the feet (the floor)
+      if (level <= 2) return [
+        {
+          id: 'down', label: 'Lying face down', cue: 'Lie face down, legs long behind you', weight: 2, joints: [23, 24, 25, 26, 27, 28],
+          value: b => tilt(b.hip, anklesMid(b)), max: 20, soft: 20,
+        },
+        {
+          id: 'chest', label: 'Chest lifted', weight: 2, joints: [11, 12, 23, 24],
+          cue: { low: level === 1 ? 'Press your forearms down and lift your chest' : 'Press up higher, chest forward', high: 'Ease your chest down a little' },
+          value: b => (b.hip.y - b.sh.y) / b.torsoLen, min: by(level, [0.22, 0.55]), max: by(level, [0.75, 1]), soft: 0.15,
+        },
+        {
+          id: 'hips', label: 'Hips down', cue: 'Keep your hips on the floor', joints: [23, 24, 27, 28],
+          value: b => height(b.hip, b), max: 0.3, soft: 0.2,
+        },
+        level === 1 ? {
+          id: 'arms', label: 'On your forearms', cue: 'Elbows under your shoulders, forearms flat', joints: [13, 14, 15, 16],
+          value: b => Math.max(b.arms.L.angle, b.arms.R.angle), max: 125, soft: 30,
+        } : {
+          id: 'arms', label: 'Straight arms', cue: 'Straighten your arms', joints: [13, 14, 15, 16],
+          value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 150, soft: 30,
+        },
+      ];
+      return [
+        {
+          id: 'lift', label: 'Hips high', weight: 2, joints: [11, 12, 23, 24, 27, 28],
+          cue: level === 3 ? 'Press through your heels, hips higher' : 'Press up, hips higher',
+          value: b => height(b.hip, b), min: by(level, [0, 0, 0.45, 0.85]), soft: 0.25,
+        },
+        {
+          id: 'arch', label: 'Hips above shoulders', cue: level === 3 ? 'Keep your shoulders on the floor' : 'Push your chest towards your hands', weight: 1.5, joints: [11, 12, 23, 24],
+          value: b => (b.sh.y - b.hip.y) / b.torsoLen, min: by(level, [0, 0, 0.35, 0.1]), soft: 0.2,
+        },
+        {
+          id: 'knees', label: 'Knees bent, feet flat', cue: 'Bend your knees, feet flat near your hips', joints: [23, 24, 25, 26, 27, 28],
+          value: b => (b.legs.L.angle + b.legs.R.angle) / 2, min: level === 3 ? 50 : 70, max: level === 3 ? 115 : 150, soft: 25,
+        },
+        ...(level === 4 ? [
+          {
+            id: 'arms', label: 'Straight arms', cue: 'Press through your hands, arms straight', joints: [13, 14, 15, 16],
+            value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 145, soft: 30,
+          },
+          {
+            id: 'hands', label: 'Hands on the floor', cue: 'Hands flat on the floor by your head', joints: [15, 16, 27, 28],
+            value: b => Math.abs(height(mid(b.arms.L.c, b.arms.R.c), b)), max: 0.25, soft: 0.25,
+          },
+        ] : []),
+      ];
+    },
+    figure: level => {
+      // Side-on, head to the left.
+      if (level <= 2) {
+        // Face down on the hips, chest lifted on the forearms (sphinx) or straight arms (cobra).
+        const up = by(level, [20, 44]);
+        const rise = 5 + 30 * Math.sin(up * DEG);  // shoulder height
+        const arms = level === 1
+          ? (() => { const u = Math.acos(Math.min(1, (rise - 2) / 14)) / DEG; return [-u, -90]; })()
+          : (() => { const u = Math.acos(Math.min(1, (rise - 1) / 27)) / DEG; return [-u, -u]; })();
+        return {
+          view: 'side', compact: true, torso: -(90 + up), head: -(90 + up + 15), ground: 'pelvis', groundGap: 5,
+          legs: { L: [88, 90], R: [88, 90] }, arms: { L: arms, R: [arms[0] + 2, arms[1] + 2] },
+        };
+      }
+      if (level === 3) {
+        // On the back: shoulders down, hips high, knees bent, feet flat.
+        const a = 34, hip = 2 + 30 * Math.sin(a * DEG), thigh = 98;
+        const knee = hip - SEG_THIGH * Math.cos(thigh * DEG);
+        const shin = -Math.acos(Math.min(1, knee / SEG_SHIN)) / DEG;
+        return {
+          view: 'side', compact: true, torso: -(90 - a), head: -100,
+          legs: { L: [thigh, shin], R: [thigh, shin] }, arms: { L: [80, 86], R: [81, 87] },
+        };
+      }
+      // Wheel: hands and feet on the floor, hips highest, arms straight.
+      const thigh = 48, shin = -10;
+      const hip = SEG_THIGH * Math.cos(thigh * DEG) + SEG_SHIN * Math.cos(shin * DEG);
+      const arm = -8, neck = 27 * Math.cos(arm * DEG);
+      const a = Math.asin(Math.max(0, (hip - neck) / 30)) / DEG;
+      return {
+        view: 'side', compact: true, torso: -(90 - a), head: -25,
+        legs: { L: [thigh, shin], R: [thigh, shin] }, arms: { L: [arm, arm], R: [arm + 2, arm + 2] },
+      };
+    },
+  },
+
   startAt(2, {
     id: 'nordic', name: 'Reverse Nordic', native: '', view: 'side', sides: false, camera: true,
     areas: { legs: 0.8, core: 0.2 }, style: 'hard', coins: 1.3, sash: 'red',
@@ -1788,7 +1888,7 @@ export function prefersLandscape(hold, level = 1) {
 export const HOLD_GROUPS = [
   { key: 'stances', name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes', 'heel', 'airplane'] },
   { key: 'upper', name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow', 'dand', 'fingertips'] },
-  { key: 'core', name: 'Core & back', ids: ['plank', 'forearm', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei'] },
+  { key: 'core', name: 'Core & back', ids: ['plank', 'forearm', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei', 'backbend'] },
   { key: 'qigong', name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
   { key: 'still', name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
 ];
