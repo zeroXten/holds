@@ -669,19 +669,46 @@ export function startPlan(state, choice = {}, today = dayKey()) {
     prev: old.prev ?? [], prevMains: old.prevMains ?? [],
     points: sashRank(state).points,  // to count mastery points earned during the plan
     finished: old.finished ?? 0,
-    chosen: !!choice.chosen,  // false for a plan set up for you, until you pick your own
   };
   return planToday(state, today);
 }
 
+// Whether you're on a plan (or have just finished one): plans are only ever ones you chose.
+// A plan set up automatically before that (`chosen: false`) or from before plans had choices
+// doesn't count.
+export const hasPlan = state => !!state.plan?.minutes && state.plan.chosen !== false;
+
+// Stops the plan: back to training whatever you like. Keeps the count of plans finished.
+export function endPlan(state) {
+  const old = state.plan ?? {};
+  state.plan = { finished: old.finished ?? 0, prev: old.prev ?? [], prevMains: old.prevMains ?? [] };
+  if (state.settings.holdList === 'plan') delete state.settings.holdList;
+  save(state);
+}
+
+// The card inviting you to build a plan, while you don't have one: shown until you dismiss
+// it, then once more after a few more sessions.
+export const PLAN_INVITE_AFTER = 3;
+const sessionCount = state => Object.values(state.days).reduce((t, d) => t + (d.sessions ?? 0), 0);
+export function showPlanInvite(state) {
+  if (hasPlan(state) || state.testMode) return false;
+  const n = state.planInvite ?? { dismissed: 0, at: 0 };
+  return n.dismissed === 0 || (n.dismissed === 1 && sessionCount(state) >= n.at + PLAN_INVITE_AFTER);
+}
+export function dismissPlanInvite(state) {
+  const n = state.planInvite ?? { dismissed: 0, at: 0 };
+  state.planInvite = { dismissed: n.dismissed + 1, at: sessionCount(state) };
+  save(state);
+}
+
 const planLength = p => p.weeks * 7;
 
-// Today's plan: the day of the plan you're on, with its holds picked to fill its minutes.
-// Worked out once a day and kept. The plan moves on from a day you did any of it; a day
-// you didn't waits for you. After the last day the plan is done (p.done) until you start
-// another.
+// Today's plan: the day of the plan you're on, with its holds picked to fill its minutes,
+// or null with no plan. Worked out once a day and kept. The plan moves on from a day you
+// did any of it; a day you didn't waits for you. After the last day the plan is done
+// (p.done) until you start another.
 export function planToday(state, today = dayKey()) {
-  if (!state.plan?.minutes) return startPlan(state, {}, today);  // a new player, or a plan from before plans had choices
+  if (!hasPlan(state)) return null;
   const p = state.plan;
   if (p.day === today) return p;
   if (p.day && !p.done) {
@@ -715,7 +742,7 @@ function advancePlan(state, status, today) {
 // last day, the finished plan. A last day only partly done finishes the plan the next day.
 function planAfterSession(state, today) {
   const p = state.plan;
-  if (!p?.minutes || p.done || p.day !== today || p.fullOn === today) return null;
+  if (!hasPlan(state) || p.done || p.day !== today || p.fullOn === today) return null;
   if (planDayStatus(state, p.picks, today) !== 'full') return null;
   p.fullOn = today;
   if (p.step === planLength(p) - 1) advancePlan(state, 'full', today);

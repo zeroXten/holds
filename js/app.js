@@ -8,7 +8,7 @@ import { drawTemple, SCENE_H } from './temple.js';
 import { renderAvatar } from './avatar.js';
 import { figureSVG } from './figure.js';
 import * as P from './progress.js';
-import { DAY_TYPES, FOCUSES, MINUTES, LENGTHS, RAMPS, PLAN_COINS, dayBudget, focusByKey } from './plans.js';
+import { DAY_TYPES, FOCUSES, MINUTES, LENGTHS, RAMPS, PLAN_COINS, DEFAULT_PLAN, dayBudget, focusByKey } from './plans.js';
 import { STRICTNESS } from './session.js';
 import { createSession } from './flow.js';
 import { CalmView } from './calm.js';
@@ -127,7 +127,7 @@ function renderHome() {
   if (heroPlan && next) hero = holdById(next.holdId);
   else if (heroPlan || !hero || !P.isOpen(state, hero.id)) hero = daily;
   renderHero();
-  if (state.plan?.done && !state.plan.done.seen) celebratePlan();
+  if (P.hasPlan(state) && state.plan.done && !state.plan.done.seen) celebratePlan();
   renderGrid();
   renderDayStats();
 }
@@ -247,7 +247,7 @@ let heroPlan = true;
 // Today's plan, and its next hold with sets still to do (null once it's all done).
 function planNow() {
   const p = P.planToday(state);
-  return { p, next: p.picks.find(x => P.setsDone(state, x.holdId) < x.sets) ?? null };
+  return { p, next: p?.picks.find(x => P.setsDone(state, x.holdId) < x.sets) ?? null };
 }
 
 const dayType = (p, step = p.step) => DAY_TYPES[focusByKey(p.focus).week[step % 7]];
@@ -259,6 +259,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // The Plan tab: today's holds with a dot per set, where you are in the plan, and what's next.
 function renderPlan() {
   const { p } = planNow();
+  if (!p) { $('#grid').innerHTML = planPitchHTML(); return; }
   if (p.done) { $('#grid').innerHTML = planDoneHTML(p); return; }
   const week = Math.floor(p.step / 7), focus = focusByKey(p.focus), length = p.weeks * 7;
   const dots = focus.week.map((t, i) => {
@@ -286,7 +287,6 @@ function renderPlan() {
       <div class="plan-top"><b>${planLabel(p)}</b><button class="text-btn" data-act="plan-builder">Change</button></div>
       <small class="plan-where">${p.weeks > 1 ? `Week ${week + 1} of ${p.weeks} · ` : ''}day ${p.step % 7 + 1} of 7</small>
       <div class="plan-dots">${dots}</div>
-      ${p.chosen ? '' : `<p class="plan-new">You’re on ${planLabel(p)} for ${weeksText(p.weeks)}. <button class="text-btn" data-act="plan-builder">Change it to suit you</button></p>`}
     </div>
     <h3 class="group-title">Today · ${dayType(p).name} · about ${minText(planned)}</h3>
     <p class="plan-order">Work down the list in order.</p>
@@ -294,6 +294,16 @@ function renderPlan() {
     ${planned && planned < budget - 60 ? `<p class="plan-note">Your holds fill about ${minText(planned)} of today’s ${minText(budget)}. Days grow as you unlock holds and level up.</p>` : ''}
     <p class="plan-note">${allDone ? '<b>Today’s plan is done.</b> ' : ''}${nextDay} The plan moves on a day once you’ve done some of it, so a missed day waits for you.</p>
     <p class="plan-note">Finishing the plan pays ${PLAN_COINS.full} coins for each day you did in full and ${PLAN_COINS.part} for each day you did some of.${p.finished ? ` ${plural(p.finished, 'plan')} finished so far.` : ''}</p>`;
+}
+
+// With no plan: what a plan is, and a button to build one.
+function planPitchHTML() {
+  return `<div class="plan-pitch">
+    <h3>Train to a plan</h3>
+    <p>Pick how many minutes a day, a focus and how many weeks. Each day you get a list of holds from the ones you have, filled to your minutes, with hard days and easy days in a sensible order. Work down the list; the home screen shows what’s next.</p>
+    <p class="plan-note">No plan? No problem: the hold of the day and your holds are always there.</p>
+    <button class="btn primary" data-act="plan-builder">Build a plan</button>
+  </div>`;
 }
 
 // A finished plan: how it went, and what next.
@@ -305,6 +315,7 @@ function planDoneHTML(p, { card = false } = {}) {
     <div class="stats"><div><b>${d.full + d.part}/${d.days}</b><small>days trained</small></div><div><b>${fmtLong(d.time)}</b><small>held</small></div><div><b>${d.points}</b><small>mastery points</small></div></div>
     <p class="plan-note">${d.coins ? `+${d.coins} coins for the plan. ` : ''}Go again with the same plan, or change it.</p>
     <div class="row"><button class="btn" data-act="plan-builder">Change plan</button><button class="btn primary" data-act="plan-again">Go again</button></div>
+    <button class="text-btn" data-act="plan-end">No plan for now</button>
   </div>`;
 }
 
@@ -324,7 +335,7 @@ function celebratePlan() {
 let choice = null;
 
 function openBuilder() {
-  const p = state.plan ?? {};
+  const p = P.hasPlan(state) ? state.plan : DEFAULT_PLAN;
   choice = { minutes: p.minutes, focus: p.focus, weeks: p.weeks };
   show('plan-builder');
   renderBuilder();
@@ -344,7 +355,7 @@ function renderBuilder() {
   // A week at full minutes, as an example.
   const full = Math.max(0, RAMPS[choice.weeks].indexOf(1)) * 7;
   const preview = focus.week.map((t, i) => `<li><span>Day ${i + 1}</span><b>${DAY_TYPES[t].name}</b><small>about ${minText(dayBudget(choice, full + i))}</small></li>`).join('');
-  const p = state.plan;
+  const p = P.hasPlan(state) ? state.plan : null;
   const replacing = p && !p.done && (p.step > 0 || p.cycle.length || P.setsDone(state, p.picks[0]?.holdId));
   $('#builder-body').innerHTML = `
     <h2 class="section-title">Minutes a day</h2>${seg('minutes', MINUTES, v => `${v}`)}
@@ -356,14 +367,15 @@ function renderBuilder() {
     <ol class="plan-preview">${preview}</ol>
     <p class="plan-note">Each day is filled from the holds you have, so days grow as you unlock holds and level up. A missed day waits for you. Finishing the plan pays ${PLAN_COINS.full} coins for each full day.</p>
     ${replacing ? `<p class="plan-note"><b>This starts again from day 1</b>, in place of your current plan.</p>` : ''}
-    <button class="btn primary builder-start" id="builder-start">Start plan</button>`;
+    <button class="btn primary builder-start" id="builder-start">Start plan</button>
+    ${p && !p.done ? '<p class="builder-end"><button class="text-btn" id="builder-end">End this plan and train freely</button></p>' : ''}`;
 }
 
 $('#builder-body').onclick = e => {
   const b = e.target.closest('[data-pick]');
   if (b) { choice[b.dataset.pick] = b.dataset.pick === 'focus' ? b.dataset.v : +b.dataset.v; renderBuilder(); return; }
   if (e.target.closest('#builder-start')) {
-    P.startPlan(state, { ...choice, chosen: true });
+    P.startPlan(state, choice);
     state.settings.holdList = 'plan';
     P.save(state);
     heroPlan = true;
@@ -372,12 +384,20 @@ $('#builder-body').onclick = e => {
     show('home');
     renderHome();
     toast('Plan started');
+    return;
+  }
+  if (e.target.closest('#builder-end')) {
+    P.endPlan(state);
+    heroPlan = true;
+    show('home');
+    renderHome();
+    toast('Plan ended');
   }
 };
 
 // Which holds the home screen lists: the one you last picked, or until you pick, all of
 // them while you're new and only yours once you've unlocked a hold of your own.
-const holdList = () => state.settings.holdList ?? (state.purchased.length ? 'mine' : 'all');
+const holdList = () => state.settings.holdList ?? (P.hasPlan(state) ? 'plan' : state.purchased.length ? 'mine' : 'all');
 
 // ---------- Hold sheet ----------
 
@@ -932,7 +952,7 @@ function renderSummary(hold, level, r, o, boost) {
   const { p, next } = planNow();
   // (Not when this set didn't count: Go again is the retry.)
   const same = next?.holdId === hold.id, doneSets = P.setsDone(state, hold.id);
-  const inPlan = !o.testMode && next && p.picks.some(x => x.holdId === hold.id) && !(same && !doneSets);
+  const inPlan = !o.testMode && !!next && p.picks.some(x => x.holdId === hold.id) && !(same && !doneSets);
   if (inPlan) $('#sum-next').textContent = same ? `Next set: ${doneSets + 1} of ${next.sets}` : `Next: ${holdById(next.holdId).name}`;
   $('#sum-next').hidden = !inPlan;
   $('#sum-done').classList.toggle('primary', !inPlan);
@@ -1316,7 +1336,13 @@ function renderHomeCards() {
       <div class="row"><button class="btn" data-act="dismiss-repair">Let it go</button><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div>
     </div>`);
   }
-  if (state.plan?.done) cards.push(planDoneHTML(state.plan, { card: true }));
+  if (P.hasPlan(state) && state.plan.done) cards.push(planDoneHTML(state.plan, { card: true }));
+  else if (P.showPlanInvite(state)) {
+    cards.push(`<div class="home-card plan-invite">
+      <p><b>Want a daily routine?</b> Pick your minutes a day and a focus, and get a list of holds each day, filled to your minutes.</p>
+      <div class="row"><button class="btn" data-act="plan-invite-off">Not now</button><button class="btn primary" data-act="plan-builder">Build a plan</button></div>
+    </div>`);
+  }
   for (const slot of ['bet', 'weekBet']) { const bp = P.betProgress(state, slot); if (bp) cards.push(betCard(bp)); }
   $('#home-cards').innerHTML = cards.join('');
 }
@@ -1515,7 +1541,9 @@ document.addEventListener('click', e => {
     'test-mode-off': () => { P.setTestMode(state, false); return 'Test mode off'; },
     bet: () => P.placeBet(state, id) && 'Bet placed. Good luck!',
     'plan-builder': () => { openBuilder(); },
-    'plan-again': () => { const { minutes, focus, weeks } = state.plan; P.startPlan(state, { minutes, focus, weeks, chosen: true }); heroPlan = true; return 'New plan started'; },
+    'plan-again': () => { const { minutes, focus, weeks } = state.plan; P.startPlan(state, { minutes, focus, weeks }); heroPlan = true; return 'New plan started'; },
+    'plan-end': () => { P.endPlan(state); return 'Plan ended'; },
+    'plan-invite-off': () => { P.dismissPlanInvite(state); return ''; },
   };
   const msg = actions[b.dataset.act]?.();
   if (msg === false || msg === undefined) return;
@@ -1660,7 +1688,10 @@ $('#settings-btn').onclick = openSettings;
 // Welcome: once on first use, and whenever asked for from Settings.
 // Opening a dialog focuses its first button, which can scroll it; start at the top.
 function openWelcome() { $('#welcome').showModal(); $('#welcome').scrollTop = 0; }
-$('#welcome').addEventListener('close', () => { if (!state.welcomed) { state.welcomed = true; P.save(state); } });
+$('#welcome').addEventListener('close', () => {
+  if (!state.welcomed) { state.welcomed = true; P.save(state); }
+  if ($('#welcome').returnValue === 'plan') openBuilder();
+});
 $('#how-btn').onclick = () => { $('#settings').close(); openWelcome(); };
 $('#rank-btn').onclick = renderProgress;
 $('#progress-btn').onclick = renderProgress;

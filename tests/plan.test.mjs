@@ -29,8 +29,9 @@ const style = id => HOLDS.find(h => h.id === id).style;
 
 {
   const s = fresh();
-  const p = P.planToday(s, day(0));
-  check('a new player gets a plan set up', p.minutes === 10 && p.focus === 'balanced' && p.weeks === 2 && !p.chosen);
+  check('a new player has no plan until they choose one', P.planToday(s, day(0)) === null && !P.hasPlan(s));
+  const p = P.startPlan(s, { minutes: 10, focus: 'balanced', weeks: 2 }, day(0));
+  check('a chosen plan', P.hasPlan(s) && p.minutes === 10 && p.focus === 'balanced' && p.weeks === 2);
   check('filled from open holds only', p.picks.length > 0 && p.picks.every(x => P.isUnlocked(s, x.holdId)), p.picks.map(x => x.holdId).join());
   check('no hold twice in a day', new Set(p.picks.map(x => x.holdId)).size === p.picks.length);
   check('day 1 is legs, led by a stance with more than one set', p.picks[0].group === 'stances' && p.picks[0].sets >= 2 && p.picks[0].main);
@@ -73,7 +74,7 @@ const style = id => HOLDS.find(h => h.id === id).style;
   const s = fresh();
   s.unlocked = HOLDS.map(h => h.id);
   for (const focus of ['balanced', 'legs', 'arms', 'core']) {
-    P.startPlan(s, { minutes: 15, focus, weeks: 1, chosen: true }, day(0));
+    P.startPlan(s, { minutes: 15, focus, weeks: 1 }, day(0));
     let bad = [];
     for (let i = 0; i < 7; i++) {
       const prev = s.plan.picks;
@@ -100,7 +101,7 @@ const style = id => HOLDS.find(h => h.id === id).style;
 {
   // Finishing a plan: coins for each day trained, and it waits for you to start another.
   const s = fresh();
-  P.startPlan(s, { minutes: 5, focus: 'legs', weeks: 1, chosen: true }, day(0));
+  P.startPlan(s, { minutes: 5, focus: 'legs', weeks: 1 }, day(0));
   const coins = s.coins;
   for (let i = 0; i < 6; i++) { if (i === 2) did(s, s.plan.picks[0].holdId, day(i)); else doAll(s, day(i)); P.planToday(s, day(i + 1)); }
   check('on the last day', s.plan.step === 6 && !s.plan.done);
@@ -118,19 +119,41 @@ const style = id => HOLDS.find(h => h.id === id).style;
   const want = 6 * PLAN_COINS.full + PLAN_COINS.part;
   check('coins for each day trained', s.plan.done.coins === want && s.coins - coins === want + o.coins, `${s.plan.done.coins} vs ${want}`);
   check('a finished plan has no holds until you start another', P.planToday(s, P.addDays(P.dayKey(), 1)).picks.length === 0);
-  P.startPlan(s, { minutes: 20, focus: 'core', weeks: 4, chosen: true });
+  P.startPlan(s, { minutes: 20, focus: 'core', weeks: 4 });
   check('going again starts from day 1', s.plan.step === 0 && !s.plan.done && s.plan.finished === 1 && s.plan.minutes === 20);
 }
 
 {
-  // Plans from before plans had choices get set up afresh; bad choices fall back.
+  // Plans from before plans had choices, or set up without being chosen, aren't plans; bad choices fall back.
   store.clear();
   localStorage.setItem('holds.v1', JSON.stringify({ version: 2, plan: { step: 3, day: '2026-01-01', picks: [], prev: [], cycle: ['full'], weeks: 4 } }));
   const s = P.load();
-  P.planToday(s, day(0));
-  check('an old plan becomes a new one', s.plan.minutes === 10 && s.plan.step === 0 && !s.plan.chosen);
+  check('an old plan isn\'t a plan', P.planToday(s, day(0)) === null);
+  s.plan = { minutes: 10, focus: 'balanced', weeks: 2, step: 0, picks: [], cycle: [], prev: [], prevMains: [], chosen: false };
+  check('a plan set up without choosing isn\'t a plan', !P.hasPlan(s) && P.planToday(s, day(0)) === null);
   P.startPlan(s, { minutes: 7, focus: 'toes', weeks: 3 });
   check('unknown choices fall back', s.plan.minutes === 10 && s.plan.focus === 'balanced' && s.plan.weeks === 2);
+}
+
+{
+  // Ending a plan, and the invite to build one.
+  const s = fresh();
+  check('the invite shows with no plan', P.showPlanInvite(s));
+  P.dismissPlanInvite(s);
+  check('dismissed, it goes', !P.showPlanInvite(s));
+  s.days[day(0)] = { sessions: 3 };
+  check('it comes back once after a few sessions', P.showPlanInvite(s));
+  P.dismissPlanInvite(s);
+  s.days[day(1)] = { sessions: 10 };
+  check('then it stays away', !P.showPlanInvite(s));
+  const t = fresh();
+  P.startPlan(t, { minutes: 10, focus: 'legs', weeks: 2 }, day(0));
+  t.settings.holdList = 'plan';
+  check('no invite while on a plan', !P.showPlanInvite(t));
+  P.endPlan(t);
+  check('ending a plan leaves no plan', !P.hasPlan(t) && P.planToday(t, day(1)) === null && t.settings.holdList === undefined);
+  const r = P.recordSession(t, { holdId: 'horse', level: 1, held: 40, target: 30, coins: 5, camera: false, avgForm: 0, unit: 'seconds' });
+  check('sessions without a plan are fine', r.plan === null);
 }
 
 console.log(failures ? `${failures} failed` : 'all passed');
