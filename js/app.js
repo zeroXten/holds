@@ -8,6 +8,7 @@ import { drawTemple, SCENE_H } from './temple.js';
 import { renderAvatar } from './avatar.js';
 import { figureSVG } from './figure.js';
 import * as P from './progress.js';
+import { DAY_TYPES, FOCUSES, MINUTES, LENGTHS, RAMPS, PLAN_COINS, dayBudget, focusByKey } from './plans.js';
 import { STRICTNESS } from './session.js';
 import { createSession } from './flow.js';
 import { CalmView } from './calm.js';
@@ -122,8 +123,11 @@ function renderHome() {
   renderHomeCards();
   drawScenes(true);
   const daily = P.dailyHold(state);
-  if (!hero || !P.isOpen(state, hero.id)) hero = daily;
+  const { next } = planNow();
+  if (heroPlan && next) hero = holdById(next.holdId);
+  else if (heroPlan || !hero || !P.isOpen(state, hero.id)) hero = daily;
   renderHero();
+  if (state.plan?.done && !state.plan.done.seen) celebratePlan();
   renderGrid();
   renderDayStats();
 }
@@ -141,22 +145,44 @@ function renderDayStats() {
   </div>`;
 }
 
+// The hero card: the next hold in today's plan, or (once it's done, or you pick something
+// else) the hold of the day or a shuffled pick.
 function renderHero() {
+  const { p, next } = planNow();
+  const inPlan = heroPlan && next?.holdId === hero.id;
   const hs = P.holdState(state, hero.id);
   const daily = P.isDaily(state, hero.id);
-  $('#hero').classList.toggle('daily', daily);
-  $('#hero-kicker').innerHTML = daily
-    ? `Hold of the day <span class="mult">${P.dailyAvailable(state, hero.id) ? `${DAILY_MULT}× coins` : `${DAILY_MULT}× used today`}</span>` : 'Random pick';
-  $('#back-daily').hidden = daily;
+  const mult = daily ? `<span class="mult">${P.dailyAvailable(state, hero.id) ? `${DAILY_MULT}× coins` : `${DAILY_MULT}× used today`}</span>` : '';
+  $('#hero').classList.toggle('daily', daily && !inPlan);
+  $('#hero').classList.toggle('plan', inPlan);
+  $('#shuffle').hidden = inPlan;
   const lv = hero.levels[hs.level - 1];
   $('#hero-fig').innerHTML = figureSVG(hero.figure(hs.level));
   $('#hero-name').textContent = hero.name;
   $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name}`;
-  // Kept short: the hold's page (Details) has the rest.
-  $('#hero-meta').innerHTML = `
-    <span class="tag strong">${targetText(hero, lv.target)}</span>
-    <span class="tag">${coinRate(hero, hs.level)}</span>
-    ${pips(hs)}`;
+  if (inPlan) {
+    const n = p.picks.indexOf(next), done = P.setsDone(state, hero.id);
+    const planned = P.planSeconds(state, p.picks), held = state.days[P.dayKey()]?.time ?? 0;
+    $('#hero-kicker').innerHTML = `Today’s plan · ${dayType(p).name}${mult}`;
+    $('#hero-meta').innerHTML = `
+      <span class="tag strong">${targetText(hero, lv.target)}</span>
+      <span class="tag">${next.sets > 1 ? `Set ${done + 1} of ${next.sets}` : '1 set'}</span>
+      <span class="tag">Hold ${n + 1} of ${p.picks.length}</span>`;
+    $('#hero-plan').innerHTML = `<div class="hp-top"><span><b>${fmt(held)}</b> of ${fmt(planned)} today</span><small>${
+      held < planned ? `about ${minText(planned - held)} to go` : 'Time’s in: finish the list'}</small></div>
+      <div class="progress"><i style="width:${Math.min(100, Math.round(100 * held / Math.max(1, planned)))}%"></i></div>`;
+  } else {
+    $('#hero-kicker').innerHTML = daily ? `Hold of the day ${mult}` : 'Random pick';
+    // Kept short: the hold's page (Details) has the rest.
+    $('#hero-meta').innerHTML = `
+      <span class="tag strong">${targetText(hero, lv.target)}</span>
+      <span class="tag">${coinRate(hero, hs.level)}</span>
+      ${pips(hs)}`;
+  }
+  $('#hero-plan').hidden = !inPlan;
+  const back = inPlan ? 'Train something else' : next ? 'Back to today’s plan' : daily ? '' : 'Back to the hold of the day';
+  $('#back-daily').hidden = !back;
+  $('#back-daily').textContent = back;
 }
 
 // A level's target in a few characters: "45s", "30s ×2" (each side), "8 cycles".
@@ -213,13 +239,32 @@ function renderGrid() {
     <div class="grid">${shown(g).map(card).join('')}</div>`).join('');
 }
 
-// Today's plan: the day of the cycle, its holds with a dot per set, and what comes next.
+// ---------- Plan ----------
+
+// Whether the hero shows the plan's next hold (until you shuffle or pick something else).
+let heroPlan = true;
+
+// Today's plan, and its next hold with sets still to do (null once it's all done).
+function planNow() {
+  const p = P.planToday(state);
+  return { p, next: p.picks.find(x => P.setsDone(state, x.holdId) < x.sets) ?? null };
+}
+
+const dayType = (p, step = p.step) => DAY_TYPES[focusByKey(p.focus).week[step % 7]];
+const planLabel = p => `${p.minutes} min a day · ${focusByKey(p.focus).name.toLowerCase()}`;
+const weeksText = n => `${n} week${n === 1 ? '' : 's'}`;
+const minText = s => `${Math.max(1, Math.round(s / 60))} min`;
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+// The Plan tab: today's holds with a dot per set, where you are in the plan, and what's next.
 function renderPlan() {
-  const p = P.planToday(state), plan = P.planFor(state), day = plan.days[p.step];
-  const next = P.PLANS[P.PLANS.indexOf(plan) + 1];
-  const dots = plan.days.map((d, i) => {
-    const mark = i < p.step ? p.cycle[i] ?? '' : i === p.step ? 'now' : '';
-    return `<i class="${mark}" title="Day ${i + 1}: ${d.name}"></i>`;
+  const { p } = planNow();
+  if (p.done) { $('#grid').innerHTML = planDoneHTML(p); return; }
+  const week = Math.floor(p.step / 7), focus = focusByKey(p.focus), length = p.weeks * 7;
+  const dots = focus.week.map((t, i) => {
+    const step = week * 7 + i;
+    const mark = step < p.step ? p.cycle[step] ?? '' : step === p.step ? 'now' : '';
+    return `<i class="${mark}" title="Day ${i + 1}: ${DAY_TYPES[t].name}"></i>`;
   }).join('');
   let allDone = p.picks.length > 0;
   const items = p.picks.map((it, n) => {
@@ -235,16 +280,100 @@ function renderPlan() {
         Array.from({ length: it.sets }, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join('')}</span>
     </button>`;
   });
+  const planned = P.planSeconds(state, p.picks), budget = dayBudget(p, p.step);
+  const nextDay = p.step + 1 < length ? `Next: ${dayType(p, p.step + 1).name.toLowerCase()}.` : 'This is the last day of the plan: train today to finish it.';
   $('#grid').innerHTML = `<div class="plan-head">
-      <div class="plan-top"><b>${plan.name}</b><small>Week ${p.weeks + 1} · day ${p.step + 1} of 7</small></div>
+      <div class="plan-top"><b>${planLabel(p)}</b><button class="text-btn" data-act="plan-builder">Change</button></div>
+      <small class="plan-where">${p.weeks > 1 ? `Week ${week + 1} of ${p.weeks} · ` : ''}day ${p.step % 7 + 1} of 7</small>
       <div class="plan-dots">${dots}</div>
+      ${p.chosen ? '' : `<p class="plan-new">You’re on ${planLabel(p)} for ${weeksText(p.weeks)}. <button class="text-btn" data-act="plan-builder">Change it to suit you</button></p>`}
     </div>
-    <h3 class="group-title">Today · ${day.name}</h3>
+    <h3 class="group-title">Today · ${dayType(p).name} · about ${minText(planned)}</h3>
     <p class="plan-order">Work down the list in order.</p>
     <div class="plan-items">${items.join('') || '<p class="empty-note">Nothing to fill today’s plan with yet: unlock a hold to get started.</p>'}</div>
-    <p class="plan-note">${allDone ? '<b>Today’s plan is done.</b> ' : ''}Next: ${plan.days[(p.step + 1) % 7].name.toLowerCase()}. The plan moves on a day once you’ve done some of it, so a missed day waits for you.</p>
-    <p class="plan-note">${plan.about}${p.weeks ? ` ${p.weeks} week${p.weeks === 1 ? '' : 's'} of plans finished so far.` : ''}${next ? ` At the ${P.sashByKey(next.from).name}, it becomes the ${next.name}.` : ''}</p>`;
+    ${planned && planned < budget - 60 ? `<p class="plan-note">Your holds fill about ${minText(planned)} of today’s ${minText(budget)}. Days grow as you unlock holds and level up.</p>` : ''}
+    <p class="plan-note">${allDone ? '<b>Today’s plan is done.</b> ' : ''}${nextDay} The plan moves on a day once you’ve done some of it, so a missed day waits for you.</p>
+    <p class="plan-note">Finishing the plan pays ${PLAN_COINS.full} coins for each day you did in full and ${PLAN_COINS.part} for each day you did some of.${p.finished ? ` ${plural(p.finished, 'plan')} finished so far.` : ''}</p>`;
 }
+
+// A finished plan: how it went, and what next.
+function planDoneHTML(p, { card = false } = {}) {
+  const d = p.done;
+  return `<div class="${card ? 'home-card plan-done' : 'plan-done'}">
+    <p class="pd-kicker">Plan complete</p>
+    <h3>${weeksText(p.weeks)} · ${planLabel(p)}</h3>
+    <div class="stats"><div><b>${d.full + d.part}/${d.days}</b><small>days trained</small></div><div><b>${fmtLong(d.time)}</b><small>held</small></div><div><b>${d.points}</b><small>mastery points</small></div></div>
+    <p class="plan-note">${d.coins ? `+${d.coins} coins for the plan. ` : ''}Go again with the same plan, or change it.</p>
+    <div class="row"><button class="btn" data-act="plan-builder">Change plan</button><button class="btn primary" data-act="plan-again">Go again</button></div>
+  </div>`;
+}
+
+function celebratePlan() {
+  const p = state.plan, d = p.done;
+  d.seen = true;
+  P.save(state);
+  celebrate({
+    win: true, kicker: 'Plan complete', title: `${weeksText(p.weeks)} done!`, coins: d.coins, ok: 'Nice!',
+    msg: `${d.full + d.part} of ${d.days} days trained, ${fmtLong(d.time)} held${d.points ? `, ${plural(d.points, 'mastery point')}` : ''}.`,
+    say: 'Plan complete', alt: { label: 'Change plan', go: openBuilder },
+  });
+}
+
+// ---------- Plan builder ----------
+
+let choice = null;
+
+function openBuilder() {
+  const p = state.plan ?? {};
+  choice = { minutes: p.minutes, focus: p.focus, weeks: p.weeks };
+  show('plan-builder');
+  renderBuilder();
+}
+
+const RAMP_NOTES = {
+  1: 'Every day at your full minutes.',
+  2: 'Week 1 eases in with a little less; week 2 is your full minutes.',
+  4: 'Week 1 eases in, weeks 2 and 3 are your full minutes, and week 4 eases off.',
+  6: 'Weeks 1 and 2 ease in, weeks 3 to 5 are your full minutes, and week 6 eases off.',
+};
+
+function renderBuilder() {
+  const seg = (key, list, label) => `<div class="seg" role="radiogroup">${list.map(v =>
+    `<button type="button" role="radio" aria-checked="${choice[key] === v}" data-pick="${key}" data-v="${v}">${label(v)}</button>`).join('')}</div>`;
+  const focus = focusByKey(choice.focus);
+  // A week at full minutes, as an example.
+  const full = Math.max(0, RAMPS[choice.weeks].indexOf(1)) * 7;
+  const preview = focus.week.map((t, i) => `<li><span>Day ${i + 1}</span><b>${DAY_TYPES[t].name}</b><small>about ${minText(dayBudget(choice, full + i))}</small></li>`).join('');
+  const p = state.plan;
+  const replacing = p && !p.done && (p.step > 0 || p.cycle.length || P.setsDone(state, p.picks[0]?.holdId));
+  $('#builder-body').innerHTML = `
+    <h2 class="section-title">Minutes a day</h2>${seg('minutes', MINUTES, v => `${v}`)}
+    <h2 class="section-title">Focus</h2>${seg('focus', FOCUSES.map(f => f.key), v => focusByKey(v).name)}
+    <p class="plan-note">${focus.key === 'balanced' ? 'Legs, arms and core each get hard days, with easy days between.' : `Three ${focus.name.toLowerCase()} days a week, with the rest of the body still trained and easy days between.`}</p>
+    <h2 class="section-title">Length</h2>${seg('weeks', LENGTHS, v => weeksText(v))}
+    <p class="plan-note">${RAMP_NOTES[choice.weeks]}</p>
+    <h2 class="section-title">A week of it</h2>
+    <ol class="plan-preview">${preview}</ol>
+    <p class="plan-note">Each day is filled from the holds you have, so days grow as you unlock holds and level up. A missed day waits for you. Finishing the plan pays ${PLAN_COINS.full} coins for each full day.</p>
+    ${replacing ? `<p class="plan-note"><b>This starts again from day 1</b>, in place of your current plan.</p>` : ''}
+    <button class="btn primary builder-start" id="builder-start">Start plan</button>`;
+}
+
+$('#builder-body').onclick = e => {
+  const b = e.target.closest('[data-pick]');
+  if (b) { choice[b.dataset.pick] = b.dataset.pick === 'focus' ? b.dataset.v : +b.dataset.v; renderBuilder(); return; }
+  if (e.target.closest('#builder-start')) {
+    P.startPlan(state, { ...choice, chosen: true });
+    state.settings.holdList = 'plan';
+    P.save(state);
+    heroPlan = true;
+    audio.unlock();
+    audio.play('point');
+    show('home');
+    renderHome();
+    toast('Plan started');
+  }
+};
 
 // Which holds the home screen lists: the one you last picked, or until you pick, all of
 // them while you're new and only yours once you've unlocked a hold of your own.
@@ -797,13 +926,23 @@ function renderSummary(hold, level, r, o, boost) {
   }
   for (const b of o.bets) extra.push(b.result === 'won' ? `<div class="banner good">Bet won: ${b.def.name}! +${b.payout} coins.</div>` : `<div class="banner bad">Bet lost: ${b.def.name}.</div>`);
   for (const m of o.milestones) extra.push(`<div class="banner gold">🔥 ${m.name}! ${milestoneReward(m)}${m.double ? ' (starting with this hold)' : ''}.</div>`);
+  if (o.plan?.dayDone && !o.plan.done) extra.push('<div class="banner good">Today’s plan is done. See you tomorrow.</div>');
   $('#sum-extra').innerHTML = extra.join('');
+  // Straight on to the next hold in today's plan.
+  const { p, next } = planNow();
+  // (Not when this set didn't count: Go again is the retry.)
+  const same = next?.holdId === hold.id, doneSets = P.setsDone(state, hold.id);
+  const inPlan = !o.testMode && next && p.picks.some(x => x.holdId === hold.id) && !(same && !doneSets);
+  if (inPlan) $('#sum-next').textContent = same ? `Next set: ${doneSets + 1} of ${next.sets}` : `Next: ${holdById(next.holdId).name}`;
+  $('#sum-next').hidden = !inPlan;
+  $('#sum-done').classList.toggle('primary', !inPlan);
   if (o.test?.passed) setTimeout(() => audio.play('level'), 300);
   // The big moments get the full-screen treatment, once the summary has appeared.
   setTimeout(() => {
     o.betSteps.forEach(celebrateBetStep);
     o.bets.forEach(celebrateBet);
     o.milestones.forEach(celebrateMilestone);
+    if (o.plan?.done) celebratePlan();
   }, 900);
   $('#sum-stats').innerHTML = `
     ${r.unit === 'cycles'
@@ -1177,6 +1316,7 @@ function renderHomeCards() {
       <div class="row"><button class="btn" data-act="dismiss-repair">Let it go</button><button class="btn primary" data-act="repair" ${state.coins < b.price ? 'disabled' : ''}>${COIN} Repair for ${b.price}</button></div>
     </div>`);
   }
+  if (state.plan?.done) cards.push(planDoneHTML(state.plan, { card: true }));
   for (const slot of ['bet', 'weekBet']) { const bp = P.betProgress(state, slot); if (bp) cards.push(betCard(bp)); }
   $('#home-cards').innerHTML = cards.join('');
 }
@@ -1374,6 +1514,8 @@ document.addEventListener('click', e => {
     'dismiss-repair': () => { P.dismissRepair(state); return ''; },
     'test-mode-off': () => { P.setTestMode(state, false); return 'Test mode off'; },
     bet: () => P.placeBet(state, id) && 'Bet placed. Good luck!',
+    'plan-builder': () => { openBuilder(); },
+    'plan-again': () => { const { minutes, focus, weeks } = state.plan; P.startPlan(state, { minutes, focus, weeks, chosen: true }); heroPlan = true; return 'New plan started'; },
   };
   const msg = actions[b.dataset.act]?.();
   if (msg === false || msg === undefined) return;
@@ -1478,8 +1620,14 @@ $('#temple-banner').onclick = openTempleView;
 $('#wallet-chip').onclick = () => openShop('temple');
 $('#streak-strip').onclick = () => openShop('streak');
 
-$('#shuffle').onclick = () => { hero = P.pickHold(state, hero.id); renderHero(); };
-$('#back-daily').onclick = () => { hero = P.dailyHold(state); renderHero(); };
+$('#shuffle').onclick = () => { heroPlan = false; hero = P.pickHold(state, hero.id); renderHero(); };
+$('#back-daily').onclick = () => {
+  const { next } = planNow();
+  if (heroPlan && next) { heroPlan = false; hero = P.dailyHold(state); }  // train something else
+  else if (next) { heroPlan = true; hero = holdById(next.holdId); }       // back to the plan
+  else hero = P.dailyHold(state);
+  renderHero();
+};
 $('#hero-start').onclick = () => {
   const hs = P.holdState(state, hero.id);
   startSession(hero, hs.level, hero.camera && state.settings.camera);
@@ -1524,6 +1672,13 @@ $('#sum-again').onclick = () => {
   const { hold, level, camera, test } = lastRun;
   // One test try a day: after it, "go again" is an ordinary session at your level.
   startSession(hold, test ? P.holdState(state, hold.id).level : level, camera);
+};
+$('#sum-next').onclick = () => {
+  const { next } = planNow();
+  if (!next) return;
+  const h = holdById(next.holdId);
+  heroPlan = true;
+  startSession(h, P.holdState(state, h.id).level, h.camera && state.settings.camera);
 };
 document.addEventListener('click', e => {
   if (e.target.closest('[data-home]')) { stopRun(); show('home'); renderHome(); }

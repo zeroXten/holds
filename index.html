@@ -55,6 +55,7 @@
           <div class="meta" id="hero-meta"></div>
         </div>
       </div>
+      <div class="hero-plan" id="hero-plan" hidden></div>
       <div class="row hero-btns"><button class="btn primary" id="hero-start">Start</button><button class="btn" id="hero-more">Details</button></div>
       <button class="text-btn back-daily" id="back-daily" hidden>Back to the hold of the day</button>
     </article>
@@ -99,6 +100,12 @@
       <button role="tab" data-tab="bets">Bets</button>
     </div>
     <div id="shop-body"></div>
+  </section>
+
+  <!-- Plan builder -->
+  <section id="plan-builder" class="screen" hidden>
+    <header class="subbar"><button class="icon-btn back" data-home aria-label="Back"><svg viewBox="0 0 24 24" class="ico"><path d="M15 4l-8 8 8 8 1.4-1.4L9.8 12l6.6-6.6z"/></svg></button><h1>Your plan</h1></header>
+    <div id="builder-body"></div>
   </section>
 
   <!-- Session -->
@@ -147,7 +154,8 @@
       <div class="sum-level" id="sum-level"></div>
       <div class="sum-badges" id="sum-badges"></div>
       <p class="sum-msg" id="sum-msg"></p>
-      <div class="row"><button class="btn" id="sum-again">Go again</button><button class="btn primary" data-home>Done</button></div>
+      <button class="btn primary sum-next" id="sum-next" hidden></button>
+      <div class="row"><button class="btn" id="sum-again">Go again</button><button class="btn primary" id="sum-done" data-home>Done</button></div>
     </div>
   </section>
 
@@ -243,7 +251,7 @@
         <li><b>Set up the camera.</b> Prop your phone 2–3&nbsp;m away at about waist height, then step back until your whole body is in view. The lines on your body go green when you’re in the hold; anything to adjust opens up in the column of ticks on the left. The camera checks you’re doing the hold, not that your form is perfect.</li>
         <li><b>Hold.</b> Coins build up as you hold. Reaching a target pays the same however long it is (the hardest holds pay a little more), and bonus time past it earns faster.</li>
         <li><b>Level up.</b> Reach a hold’s target on camera on 7 different days to earn the level 2 test, then 14, 21 and 28 days for the levels after. Pass the test (the next level’s full target, on camera with good form) to move up; you get one try a day. Passing is free; not passing costs coins (50 for level 2, 100 for level 3, 150 for level 4), but your days are kept. After level 4’s days comes the mastery test, the hardest of all: level 4’s position held for three times as long, with 90+ form (200 coins if you don’t pass, 100 if you do). Every level earns a point towards your sash, and the harder holds open as your sash grows.</li>
-        <li><b>Follow a plan</b> if you’d like some structure: the Plan tab gives you a few holds each day from the ones you have, with hard days for legs, arms and core, easy days in between, and more as your sash grows. It doesn’t earn or cost anything; the holds do.</li>
+        <li><b>Follow a plan.</b> Pick how many minutes a day, a focus (balanced, legs, arms or core) and how many weeks. Each day is filled from the holds you have, with hard days for each area, easy days in between, and a day’s rest for whatever worked hardest yesterday. The home screen shows the next hold in today’s plan, and finishing a plan earns coins for every day you trained.</li>
         <li><b>Come back each day.</b> The hold of the day pays 2× on your first go, and streaks bring bonuses and milestone rewards.</li>
         <li><b>Spend your coins</b> on new holds, your temple, your monk, or bets on yourself.</li>
       </ol>
