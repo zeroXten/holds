@@ -477,6 +477,19 @@ body.demo .stage video { display: none; }
 .session.calm .hud-x { opacity: .4; }
 .session.calm .hud { background: transparent; transition: background 2.5s ease; }
 @media (prefers-reduced-motion: reduce) { .calm-layer, .calm-time, .session.calm .calm-layer { transition-duration: .01s; } }
+/* Landscape phones: too short for words and time under the orb, so the orb sits in the
+   middle with the breath word to its right and the big halfway / last-seconds time to its
+   left. The small time stays at the bottom, below the orb. (The ripples reach about 0.57
+   of the orb's width from its centre.) */
+@media (orientation: landscape) and (max-height: 600px) {
+  .calm-layer svg { width: min(68vh, 440px); }
+  .calm-word { top: 50%; transform: translateY(-50%); left: calc(50% + 41vh); right: max(12px, env(safe-area-inset-right)); text-align: left; font-size: clamp(18px, 6vh, 28px); }
+  .calm-time { bottom: max(8px, env(safe-area-inset-bottom)); font-size: 18px; }
+  .session.calm-peek .calm-time {
+    left: max(12px, env(safe-area-inset-left)); right: calc(50% + 41vh); bottom: calc(50% - .6em);
+    text-align: right; font-size: clamp(40px, 18vh, 110px);
+  }
+}
 
 .error-panel {
   position: absolute; inset: auto 16px 50% 16px; transform: translateY(50%);
