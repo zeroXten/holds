@@ -42,6 +42,28 @@ for (const id of ['bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank',
   }
 }
 
+// Empty Stance's back knee points out over its turned-out foot, partly towards the camera,
+// so seen flat it looks straighter than it is. Turned 45°, each level's pose should still
+// pass; and a straight back leg mustn't be read as bent (below 55, under the lowest score
+// that starts a hold).
+{
+  const hold = HOLDS.find(h => h.id === 'cat');
+  const turn = (lm, phi) => lm.map((p, i) => ([26, 28, 30, 32].includes(i) ? { ...p, x: lm[24].x + (p.x - lm[24].x) * Math.cos(phi * Math.PI / 180) } : p));
+  for (let level = 1; level <= 4; level++) {
+    let sum = 0;
+    for (let i = 0; i < 60; i++) sum += scorePose(hold, level, makeBody(turn(syntheticLandmarks(hold.figure(level), { width: W, height: H, noise: 0.004 }), 45), W, H, viewing(hold, level))).score;
+    const ok = sum / 60 >= 80;
+    if (!ok) failures++;
+    console.log(`${ok ? 'ok  ' : 'FAIL'} cat L${level} with the back knee turned 45°: ${Math.round(sum / 60)}`);
+  }
+  const straight = { view: 'side', torso: 180, legs: { R: [0, 0], L: [25, 15] }, arms: { L: [60, 120], R: [35, 150] } };
+  let worst = 0;
+  for (let i = 0; i < 50; i++) worst = Math.max(worst, score(hold, 1, straight, 0.004).score);
+  const ok = worst < 55;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} cat with a straight back leg at L1: at most ${worst}`);
+}
+
 // The arm holds look alike to the camera in places; each one's pose must fail the others.
 for (const [a, b] of [['tray', 'claws'], ['claws', 'tray'], ['wings', 'palms'], ['palms', 'wings'], ['wings', 'drawbow'], ['drawbow', 'wings']]) {
   const ha = HOLDS.find(h => h.id === a), hb = HOLDS.find(h => h.id === b);

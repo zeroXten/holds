@@ -111,6 +111,22 @@ const startAt = (from, hold) => {
   return { ...hold, startAt: from, criteria: level => hold.criteria(position(level)), figure: level => hold.figure(position(level)) };
 };
 
+// The bend of a knee that may point partly towards the camera (Empty Stance's back knee
+// turns out with its foot). Seen flat, a turned leg's sideways bend shrinks and the knee
+// looks straighter than it is, but how far the knee drops below the hip, and the ankle
+// below the knee, doesn't change. So the bend is also worked out from those drops and the
+// thigh and shin lengths (the longest seen of either leg, as turning only shortens them),
+// and the more bent of the two readings counts. Near straight, small jitter in the drops
+// looks like a lot of bend, so this only helps a knee the camera already sees bending
+// (under `from`), by at most `most` degrees, and `margin` keeps it on the cautious side.
+const turnedKnee = (main, other, { from = 165, most = 20, margin = 8 } = {}) => {
+  if (main.angle > from) return main.angle;
+  const tilt = (drop, len) => Math.acos(Math.max(-1, Math.min(1, drop / (len || 1)))) / DEG;
+  const thigh = tilt(main.b.y - main.a.y, Math.max(main.upperLen, other.upperLen));
+  const shin = tilt(main.c.y - main.b.y, Math.max(main.lowerLen, other.lowerLen));
+  return Math.max(Math.min(main.angle, 180 - thigh - shin + margin), main.angle - most);
+};
+
 const chambered = { L: [25, -10], R: [-25, 10] };
 const by = (level, values) => values[level - 1];
 const lerp4 = (level, a, b) => a + (b - a) * (level - 1) / 3;
@@ -212,17 +228,18 @@ export const HOLDS = [
     id: 'cat', name: 'Empty Stance', native: 'Xū Bù', view: 'side', sides: true, camera: true,
     areas: { legs: 0.7, balance: 0.3 }, style: 'hard',
     video: 'xu bu empty stance cat stance kung fu tutorial',
-    about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly.',
+    hint: 'Stand side-on to the phone, front foot pointing across it',
+    about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly. Unlike horse stance, the depth comes from the back ankle: with your hips over the back heel, the only way down is for that shin to tip forward over the foot. If it won’t go, don’t force it by pushing your hips back (that’s when your back starts to stick out): take a little less depth, and build the ankle range with Deep Squat’s press and relax. The camera allows for the back knee pointing partly towards it.',
     levels: [
-      { name: 'High cat', target: 30, desc: 'Almost all your weight on the back leg: knee bent, foot flat and turned out about 45°. Front foot forward with just the toes resting lightly, knee slightly bent. Hips square. Then switch legs.' },
-      { name: 'Cat', target: 45, desc: 'Sit lower on the back leg. Front foot light enough to lift at any moment.' },
+      { name: 'High cat', target: 30, desc: 'Almost all your weight on the back leg: knee bent, foot flat and turned out about 45°, and the knee pointing the same way as those toes, not straight ahead. Front foot forward with just the toes resting lightly, knee slightly bent. Hips square. Then switch legs.' },
+      { name: 'Cat', target: 45, desc: 'Sit lower on the back leg: sit down, not back, as if onto a high stool right under you, tailbone tucked. Let the back knee travel forward and out over its toes. If your back starts to stick out, slide the front foot a little further forward rather than forcing the knee. Front foot light enough to lift at any moment.' },
       { name: 'Low cat', target: 60, desc: 'Back thigh sinking towards level. Hips over the back heel, which stays heavy on the floor while the knee travels forward over the toes: a stretch for the Achilles.' },
       { name: 'Deep cat', target: 75, desc: 'As low as you can while staying upright, front leg long and light.' },
     ],
     criteria: level => [
       {
         id: 'sit', label: 'Back knee bend', cue: 'Sit lower on your back leg', weight: 2,
-        joints: s => s.main.idx, value: (b, s) => s.main.angle, max: by(level, [150, 135, 120, 110]), soft: 20,
+        joints: s => s.main.idx, value: (b, s) => turnedKnee(s.main, s.other), max: by(level, [150, 135, 120, 110]), soft: 20,
       },
       {
         id: 'weight', label: 'Weight back', cue: 'Shift your weight onto the back leg', joints: s => [23, 24, s.main.idx[2]],
