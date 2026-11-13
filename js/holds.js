@@ -1164,6 +1164,53 @@ export const HOLDS = [
     ],
     figure: () => ({ view: 'front', torso: 180, legs: { L: [2, 0], R: [-2, 0] }, arms: { L: [90, 90], R: [-90, -90] } }),
   },
+  {
+    id: 'jar', name: 'Grabbing the Jar', native: 'Zhuā Tán', view: 'front', sides: false, camera: true,
+    areas: { upper: 1 }, style: 'hard', sash: 'yellow',
+    hint: 'Face the phone',
+    video: 'kung fu jar training grip strength',
+    about: 'Traditional kung fu grip training: holding a jar by its rim with the fingertips, arm out from the body. It loads the tendons of the fingers, hand and forearm, which few other holds reach. Use a plastic jar or tub with a lip (a peanut-butter jar is ideal) filled with sand, rice or dried beans, so you can set the weight and a drop doesn’t matter; train over carpet or a mat. The camera checks your arm; the grip is on your honour: fingertips over the rim, thumb on the other side, palm off the jar.',
+    levels: [
+      { name: 'Jar at the side', target: 40, desc: 'Fill the jar with about half a kilo. Hold it from above by the rim, fingertips curled over the lip, thumb on the other side, palm off the jar. Arm straight, raised halfway out to the side (about 45°). Switch hands halfway.' },
+      { name: 'Jar at shoulder height', target: 40, desc: 'The same jar, arm straight out to the side at shoulder height. Keep the wrist firm and level; don’t let it bend down. Switch hands halfway.' },
+      { name: 'Heavy jar', target: 60, desc: 'Fill it to 1.5–2 kg, arm at shoulder height, 30 seconds each hand. If the jar starts to slip, set it down: that’s the end of the set, not a failure.' },
+      { name: 'Two jars', target: 30, desc: 'A jar in each hand, both arms straight out to the sides at shoulder height. Shoulders down, wrists level.' },
+    ],
+    criteria: level => {
+      if (level === 4) return [
+        ...armsAtShoulders({ low: 'Raise both arms to shoulder height', high: 'Lower your arms to shoulder height' }),
+        {
+          id: 'wide', label: 'Arms wide', cue: 'Arms straight out to the sides', joints: [15, 16],
+          value: b => dist(b.arms.L.c, b.arms.R.c) / b.shoulderW, min: 3, soft: 1,
+        },
+        upright(8, 'Stand tall', 12),
+      ];
+      // One arm: the one held further out. Its angle from hanging straight down, in degrees.
+      const raised = b => [b.arms.L, b.arms.R].sort((x, y) => lean(y.a, y.c) - lean(x.a, x.c))[0];
+      const angle = level === 1 ? 45 : 90;
+      return [
+        {
+          id: 'arm', label: level === 1 ? 'Arm halfway up' : 'Arm at shoulder height', weight: 2, joints: [11, 12, 13, 14, 15, 16],
+          cue: { low: level === 1 ? 'Raise your arm halfway out to the side' : 'Raise your arm to shoulder height', high: level === 1 ? 'Lower your arm a little, about halfway' : 'Lower your arm to shoulder height' },
+          value: b => lean(raised(b).a, raised(b).c), min: angle - 12, max: angle + 15, soft: 20,
+        },
+        {
+          id: 'straight', label: 'Straight arm', cue: 'Straighten your arm', joints: [11, 12, 13, 14, 15, 16],
+          value: b => raised(b).angle, min: 150, soft: 30,
+        },
+        upright(8, 'Stand tall, don’t lean away from the jar', 12),
+      ];
+    },
+    figure: level => {
+      const out = level === 1 ? 45 : 90;
+      return {
+        view: 'front', torso: 180, legs: { L: [2, 0], R: [-2, 0] },
+        arms: { L: [out, out], R: level === 4 ? [-90, -90] : [-6, -3] },
+        // Fingers hooked down over the jar's rim.
+        hands: level === 4 ? { L: 0, R: 0 } : { L: 0 },
+      };
+    },
+  },
 
   {
     id: 'drawbow', name: 'Drawing the Bow', native: 'Zuǒ Yòu Kāi Gōng', view: 'front', sides: true, camera: true,
@@ -1890,7 +1937,7 @@ export function prefersLandscape(hold, level = 1) {
 // Holds that work two areas sit where most of the effort goes.
 export const HOLD_GROUPS = [
   { key: 'stances', name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes', 'heel', 'airplane'] },
-  { key: 'upper', name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'claws', 'drawbow', 'dand', 'fingertips'] },
+  { key: 'upper', name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'jar', 'claws', 'drawbow', 'dand', 'fingertips'] },
   { key: 'core', name: 'Core & back', ids: ['plank', 'forearm', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei', 'backbend'] },
   { key: 'qigong', name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
   { key: 'still', name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
