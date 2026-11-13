@@ -1169,12 +1169,12 @@ export const HOLDS = [
     areas: { upper: 1 }, style: 'hard', sash: 'yellow',
     hint: 'Face the phone',
     video: 'kung fu jar training grip strength',
-    about: 'Traditional kung fu grip training: holding a jar by its rim with the fingertips, arm out from the body. It loads the tendons of the fingers, hand and forearm, which few other holds reach. Use a plastic jar or tub with a lip (a peanut-butter jar is ideal) filled with sand, rice or dried beans, so you can set the weight and a drop doesn’t matter; train over carpet or a mat. The camera checks your arm; the grip is on your honour: fingertips over the rim, thumb on the other side, palm off the jar.',
+    about: 'Traditional kung fu grip training: holding a jar by its rim with the fingertips, arm out from the body. It loads the tendons of the fingers, hand and forearm, which few other holds reach. Use something wide and unbreakable you can pinch with your fingertips, 7 cm or more across: a plastic jar or tub by its rim, or a wide reusable bottle by its base. Fill it with sand, rice, dried beans or water, so you can set the weight, and train over carpet or a mat so a drop doesn’t matter. How heavy: fill it until the last 10 seconds of each hold are hard, and add more when they aren’t. For most people that’s 1.5–3 kg; a kilo or less does very little. The camera checks your arm; the grip is on your honour: fingertips on one side, thumb on the other, palm off.',
     levels: [
-      { name: 'Jar at the side', target: 40, desc: 'Fill the jar with about half a kilo. Hold it from above by the rim, fingertips curled over the lip, thumb on the other side, palm off the jar. Arm straight, raised halfway out to the side (about 45°). Switch hands halfway.' },
-      { name: 'Jar at shoulder height', target: 40, desc: 'The same jar, arm straight out to the side at shoulder height. Keep the wrist firm and level; don’t let it bend down. Switch hands halfway.' },
-      { name: 'Heavy jar', target: 60, desc: 'Fill it to 1.5–2 kg, arm at shoulder height, 30 seconds each hand. If the jar starts to slip, set it down: that’s the end of the set, not a failure.' },
-      { name: 'Two jars', target: 30, desc: 'A jar in each hand, both arms straight out to the sides at shoulder height. Shoulders down, wrists level.' },
+      { name: 'Shoulder height', target: 60, desc: 'Pinch the jar with your fingertips, thumb on the other side, palm off. Arm straight out to the side at shoulder height, wrist level. Fill it so the last 10 seconds are hard. 30 seconds each hand: switch halfway.' },
+      { name: 'Long hold', target: 90, desc: '45 seconds each hand at shoulder height. Same rule: the last 10 seconds should be hard, so add weight when they aren’t.' },
+      { name: 'Heavy jar', target: 60, desc: 'Fill it heavier, until your grip only just lasts 30 seconds each hand. If it starts to slip, set it down: that’s the end of the set, not a failure.' },
+      { name: 'Two jars', target: 40, desc: 'A jar in each hand, both arms straight out to the sides at shoulder height, filled so the end is hard. Shoulders down, wrists level.' },
     ],
     criteria: level => {
       if (level === 4) return [
@@ -1187,12 +1187,11 @@ export const HOLDS = [
       ];
       // One arm: the one held further out. Its angle from hanging straight down, in degrees.
       const raised = b => [b.arms.L, b.arms.R].sort((x, y) => lean(y.a, y.c) - lean(x.a, x.c))[0];
-      const angle = level === 1 ? 45 : 90;
       return [
         {
-          id: 'arm', label: level === 1 ? 'Arm halfway up' : 'Arm at shoulder height', weight: 2, joints: [11, 12, 13, 14, 15, 16],
-          cue: { low: level === 1 ? 'Raise your arm halfway out to the side' : 'Raise your arm to shoulder height', high: level === 1 ? 'Lower your arm a little, about halfway' : 'Lower your arm to shoulder height' },
-          value: b => lean(raised(b).a, raised(b).c), min: angle - 12, max: angle + 15, soft: 20,
+          id: 'arm', label: 'Arm at shoulder height', weight: 2, joints: [11, 12, 13, 14, 15, 16],
+          cue: { low: 'Raise your arm to shoulder height', high: 'Lower your arm to shoulder height' },
+          value: b => lean(raised(b).a, raised(b).c), min: 78, max: 105, soft: 20,
         },
         {
           id: 'straight', label: 'Straight arm', cue: 'Straighten your arm', joints: [11, 12, 13, 14, 15, 16],
@@ -1202,10 +1201,9 @@ export const HOLDS = [
       ];
     },
     figure: level => {
-      const out = level === 1 ? 45 : 90;
       return {
         view: 'front', torso: 180, legs: { L: [2, 0], R: [-2, 0] },
-        arms: { L: [out, out], R: level === 4 ? [-90, -90] : [-6, -3] },
+        arms: { L: [90, 90], R: level === 4 ? [-90, -90] : [-6, -3] },
         // Fingers hooked down over the jar's rim.
         hands: level === 4 ? { L: 0, R: 0 } : { L: 0 },
       };

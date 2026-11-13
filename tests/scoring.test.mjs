@@ -22,9 +22,8 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   // A deeper level's figure should also pass easier levels (some holds' levels change the position, e.g. knees to straight legs, rather than deepening it).
   // (Bear Crawl's last level reaches one arm and leg, which its even levels don't expect.
   // Heel Stand leans back on a wall, then stands free; Iron Bridge now starts at the
-  // straight-armed reverse plank; Back Bend turns from face down to face up; Grabbing
-  // the Jar raises the arm from 45° to shoulder height.)
-  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes', 'heel', 'bridge', 'backbend', 'jar'].includes(hold.id)) continue;
+  // straight-armed reverse plank; Back Bend turns from face down to face up.)
+  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes', 'heel', 'bridge', 'backbend'].includes(hold.id)) continue;
   const r = score(hold, 1, hold.figure(4));
   if (r.score < 90) { failures++; console.log(`FAIL ${hold.id}: L4 figure scores ${r.score} at L1`); }
 }
