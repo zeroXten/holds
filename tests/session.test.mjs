@@ -120,5 +120,21 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   }
 }
 
+// Active stretching: holds with a press tell you to press, then relax, through the hold.
+{
+  const { PRESS } = await import('../js/session.js');
+  const hold = HOLDS.find(h => h.id === 'feet');
+  const phases = level => {
+    const s = new Session({ hold, level, camera: false, now: 0 });
+    const seen = [];
+    for (let t = 0; t < 40; t += 1 / 30) { const v = s.tick(t, null); if (v.press && v.press !== seen.at(-1)) seen.push(v.press); }
+    return seen;
+  };
+  const two = phases(2), one = phases(1);
+  const ok = two.join() === 'press,relax,press,relax' && !one.length && HOLDS.every(h => !h.press || (h.press.press && h.press.relax && h.press.levels.every(l => l >= 1 && l <= 4)));
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} press and relax every ${PRESS.cycle}s from level 2: ${two.join(' ')} (level 1: ${one.join(' ') || 'none'})`);
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);

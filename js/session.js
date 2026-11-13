@@ -24,6 +24,16 @@ const GIVE_UP = 8;        // seconds out of form before the session ends
 const GIVE_UP_AFTER = 3.5; // ...once the target has been reached
 const SWITCH_TIMEOUT = 15; // seconds allowed to change sides
 
+// Active stretching, for holds with a `press` at this level: after `start` seconds in the
+// stretch, each `cycle` begins with `on` seconds of tensing the stretched muscles (as if
+// to pull out of the stretch), then relaxing and sinking a little deeper. Strength at the
+// end of your range is what lets the body allow more of it.
+export const PRESS = { start: 5, cycle: 15, on: 5 };
+export function pressPhase(held) {
+  if (held < PRESS.start) return null;
+  return (held - PRESS.start) % PRESS.cycle < PRESS.on ? 'press' : 'relax';
+}
+
 export class Session {
   // `boost`: extra multipliers from outside the hold (streak, milestone day). `manual`: the
   // session only ends when you tap Done (test mode), however long you're out of position.
@@ -48,6 +58,7 @@ export class Session {
     this.seenTime = 0;
     this.goodTime = 0;
     this.reached = false;
+    this.pressCue = hold.press?.levels.includes(level) ? hold.press : null;
     this.sides = hold.sides ? 2 : 1;
     this.sideTarget = this.target / this.sides;
     this.sideIndex = 0;
@@ -196,6 +207,13 @@ export class Session {
     const t = this.sideTarget, h = this.sideHeld[i];
     if (this.sides === 1 && t >= 40 && h >= t / 2) once('half', () => say('Halfway'));
     if (t - h <= 10 && t >= 30) once('ten', () => say('Ten seconds'));
+    const phase = this.pressCue && pressPhase(h);
+    if (phase) {
+      const n = Math.floor((h - PRESS.start) / PRESS.cycle);
+      // "Relax" only follows a "press" that was heard.
+      if (phase === 'press') once('press' + n, () => { this.pressSaid = say(this.pressCue.press); });
+      else once('relax' + n, () => { if (this.pressSaid) say(this.pressCue.relax); });
+    }
     for (const n of [3, 2, 1]) if (t - h <= n) once('c' + n, () => play('tick'));
     if (!this.sideReached[i] && h >= t) {
       this.sideReached[i] = true;
@@ -261,6 +279,7 @@ export class Session {
       seen: this.seen, stateTime: this.stateTime, side: this.side,
       sides: this.sides, sideIndex: this.sideIndex, sideHeld: this.sideHeld[this.sideIndex],
       sideTarget: this.sideTarget, sideReached: this.sideReached[this.sideIndex], canSwitch: this.onFirstSide(),
+      press: this.state === 'holding' && this.pressCue ? pressPhase(this.sideHeld[this.sideIndex]) : null,
     };
   }
 }

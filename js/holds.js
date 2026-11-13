@@ -291,12 +291,13 @@ export const HOLDS = [
     areas: { legs: 0.7, mobility: 0.3 }, style: 'hard', coins: 1.2, sash: 'brown',
     hint: 'Face the phone',
     video: 'pu bu drop stance kung fu tutorial',
-    about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together.',
+    about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together. From level 2, every 15 seconds you’re told to press the straight leg’s heel into the floor and squeeze it towards you for 5 seconds, then relax and sink lower: the inner thigh gets strong where it’s stretched.',
+    press: { levels: [2, 3, 4], press: 'Press: heel down, squeeze the straight leg in', relax: 'Relax, and sink a little lower' },
     levels: [
       { name: 'Drop', target: 30, desc: 'Very wide stance, feet parallel and flat, toes forward. Sink low onto one bent leg with the other straight out to the side. Fists at your hips. Then switch legs.' },
       { name: 'Low drop', target: 45, desc: 'Hips close to the heel of the bent leg. Chest up, looking along the straight leg.' },
       { name: 'Full drop', target: 45, desc: 'Fully folded, hips just above the floor, extended leg straight and low.' },
-      { name: 'Long full drop', target: 75, desc: 'The full drop for 75 seconds, both feet still flat. Breathe into the stretch.' },
+      { name: 'Long full drop', target: 75, desc: 'The full drop for 75 seconds, both feet still flat. Press and relax when told, sinking a little lower each time.' },
     ],
     criteria: level => [
       {
@@ -453,12 +454,13 @@ export const HOLDS = [
     id: 'feet', name: 'Hands to Feet', native: 'Liǎng Shǒu Pān Zú', view: 'side', sides: false, camera: true,
     areas: { mobility: 0.7, core: 0.3 }, style: 'soft', coins: 0.8, sash: 'yellow',
     video: 'ba duan jin two hands hold the feet',
-    about: 'From the Ba Duan Jin (Eight Brocades): a slow forward fold, said to strengthen the kidneys and waist. In plain terms, it stretches the back and hamstrings. Roll down and up slowly, one bone at a time, so the bend is shared along the whole spine rather than a few joints. If bending forward hurts during a back flare-up, leave this one until it settles.',
+    about: 'From the Ba Duan Jin (Eight Brocades): a slow forward fold, said to strengthen the kidneys and waist. In plain terms, it stretches the back and hamstrings. Roll down and up slowly, one bone at a time, so the bend is shared along the whole spine rather than a few joints. From level 2 it becomes an active stretch: every 15 seconds you’re told to press (tense the backs of your legs as if to stand up, for 5 seconds) and then to relax and fold a little deeper. Getting strong at the end of your range is what lets your body allow more of it. If bending forward hurts during a back flare-up, leave this one until it settles.',
+    press: { levels: [2, 3, 4], press: 'Press: tense the backs of your legs, as if to stand up', relax: 'Relax, and fold a little deeper' },
     levels: [
       { name: 'Hands to knees', target: 30, desc: 'Feet hip width. Roll down from the top: drop your chin to your chest and let the weight of your head take you down one bone at a time, arms hanging, legs as straight as is comfortable, until your hands reach your knees. Let your head hang. Come up the same way, head last.' },
-      { name: 'Hands to shins', target: 45, desc: 'Fold further, hands down to your shins. Breathe out as you sink.' },
-      { name: 'Hands to ankles', target: 60, desc: 'Hands to your ankles, legs straight, back long.' },
-      { name: 'Holding the feet', target: 60, desc: 'Hold your toes or put your palms by your feet. Only go as far as feels good.' },
+      { name: 'Hands to shins', target: 45, desc: 'Fold further, hands down to your shins. Fold at the hips, belly towards your thighs. When you’re told to press, tense your hamstrings and calves hard for 5 seconds as if to stand up, without moving; then relax, breathe out and sink a little further.' },
+      { name: 'Hands to ankles', target: 60, desc: 'Hands round your ankles, legs straight, back long. Use your arms to draw yourself gently into the fold, and on each press, pull against them with the backs of your legs.' },
+      { name: 'Holding the feet', target: 60, desc: 'Hold your toes or put your palms by your feet, and press and relax as before. Press firmly but not all-out: build up the effort over weeks.' },
     ],
     criteria: level => [
       {
@@ -731,7 +733,8 @@ export const HOLDS = [
     id: 'squat', name: 'Deep Squat', native: 'Shēn Dūn', view: 'side', sides: false, camera: true,
     areas: { mobility: 0.6, legs: 0.4 }, style: 'hard', coins: 0.9, sash: 'orange',
     video: 'deep squat hold mobility how to',
-    about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier.',
+    about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier. From level 2, every 15 seconds you’re told to press (push the floor away as if to stand, without rising, for 5 seconds), then relax and sink deeper with your heels heavy.',
+    press: { levels: [2, 3, 4], press: 'Press: push the floor away, as if to stand', relax: 'Relax, sink deeper, heels heavy' },
     levels: [
       { name: 'Supported squat', target: 30, desc: 'Feet a little wider than your hips, toes slightly out. Hold a door frame or post and sink until your thighs are level. If your heels lift, rest them on a rolled towel; over a few weeks they’ll come down on their own.' },
       { name: 'Deep squat', target: 45, desc: 'Let go and sink all the way: hips below your knees, heels flat on the floor. Let your knees travel forward over your toes and keep your heels heavy: you should feel it in the ankles and low in the calves.' },
