@@ -22,8 +22,9 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   // A deeper level's figure should also pass easier levels (some holds' levels change the position, e.g. knees to straight legs, rather than deepening it).
   // (Bear Crawl's last level reaches one arm and leg, which its even levels don't expect.
   // Heel Stand leans back on a wall, then stands free; Iron Bridge now starts at the
-  // straight-armed reverse plank; Back Bend turns from face down to face up.)
-  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes', 'heel', 'bridge', 'backbend'].includes(hold.id)) continue;
+  // straight-armed reverse plank; Back Bend turns from face down to face up; Kneeling Sit
+  // tucks the toes under.)
+  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes', 'heel', 'bridge', 'backbend', 'kneel'].includes(hold.id)) continue;
   const r = score(hold, 1, hold.figure(4));
   if (r.score < 90) { failures++; console.log(`FAIL ${hold.id}: L4 figure scores ${r.score} at L1`); }
 }
@@ -62,6 +63,23 @@ for (const id of ['bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank',
   const ok = worst < 55;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} cat with a straight back leg at L1: at most ${worst}`);
+}
+
+// Sitting cross-legged mustn't pass as Ninety-Ninety (below 55, the lowest score that
+// starts a hold); and kneeling on a cushion mustn't pass as full seiza.
+{
+  const ninety = HOLDS.find(h => h.id === 'ninety'), cross = HOLDS.find(h => h.id === 'zuochan');
+  for (let level = 1; level <= 4; level++) {
+    const r = score(ninety, level, cross.figure(1));
+    const ok = r.score < 55;
+    if (!ok) failures++;
+    console.log(`${ok ? 'ok  ' : 'FAIL'} cross-legged as ninety L${level} scores ${r.score}`);
+  }
+  const kneel = HOLDS.find(h => h.id === 'kneel');
+  const r = score(kneel, 2, kneel.figure(1));
+  const ok = r.score < 90;
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} cushioned kneel as seiza scores ${r.score}`);
 }
 
 // The arm holds look alike to the camera in places; each one's pose must fail the others.

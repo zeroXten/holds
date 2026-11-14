@@ -1458,6 +1458,97 @@ export const HOLDS = [
     },
   },
 
+  {
+    id: 'kneel', name: 'Kneeling Sit', native: '', view: 'side', sides: false, camera: true,
+    areas: { mobility: 0.7, legs: 0.3 }, style: 'soft', sash: 'yellow',
+    hint: 'Phone low, side-on to you',
+    video: 'seiza toes tucked kneeling sit feet',
+    about: 'Kneeling with your seat on your heels, as in Japanese seiza: it keeps the knees able to bend fully and the ankles and feet supple. With the toes tucked under, it stretches the soles and the big-toe joints, the base every stance stands on, which nothing else here reaches. Use a mat, and a cushion between heels and seat until you can sit back fully. Pins and needles: shift your weight or come out.',
+    levels: [
+      { name: 'Cushioned kneel', target: 60, desc: 'Kneel on a mat, knees together, tops of your feet flat on the floor behind you. Sit back onto a cushion resting on your heels. Back upright, hands on your thighs.' },
+      { name: 'Seiza', target: 90, desc: 'No cushion: sit right back onto your heels, tops of the feet flat. Upright and still. If your ankles complain, a folded towel under them helps.' },
+      { name: 'Toes tucked', target: 45, desc: 'Curl your toes under so you kneel on the balls of your feet, heels up, and sit back onto your heels. Intense on the soles: start with a little weight forward on your hands if you need to.' },
+      { name: 'Long toes tucked', target: 90, desc: 'Toes tucked, sitting fully back, upright, hands on your thighs, for a minute and a half. Breathe slowly into the soles of your feet.' },
+    ],
+    criteria: level => {
+      const leg = b => (b.legs.L.c.y > b.legs.R.c.y ? b.legs.L : b.legs.R);  // the leg drawn lower
+      const tucked = level >= 3;
+      return [
+        {
+          id: 'kneel', label: 'Kneeling, knees fully bent', cue: 'Kneel and sit back towards your heels', weight: 2, joints: [23, 24, 25, 26, 27, 28],
+          value: b => leg(b).angle, max: by(level, [65, 32, 40, 40]), soft: 20,
+        },
+        {
+          id: 'seat', label: level === 1 ? 'Sitting back' : 'Sitting on your heels', cue: 'Sit back onto your heels', joints: [23, 24, 25, 26],
+          value: b => (leg(b).b.y - b.hip.y) / b.torsoLen, max: by(level, [0.6, 0.36, 0.55, 0.55]), soft: 0.15,
+        },
+        {
+          id: 'feet', label: tucked ? 'Toes tucked, heels up' : 'Tops of the feet flat', joints: [25, 26, 27, 28],
+          cue: tucked ? 'Tuck your toes under, heels up' : 'Lay the tops of your feet flat',
+          // How far the ankle sits above the knee, in shin lengths: ~0 with the feet flat, ~0.3 up on the toes.
+          value: b => (leg(b).b.y - leg(b).c.y) / (leg(b).lowerLen || 1), ...(tucked ? { min: 0.2 } : { max: 0.15 }), soft: 0.12,
+        },
+        upright(15, 'Sit tall, back upright', 12),
+      ];
+    },
+    figure: level => {
+      // Side-on, facing right: knees on the floor, shins along it behind, seat on the heels.
+      if (level >= 3) {
+        const shin = -110, thigh = 52;
+        return { view: 'side', torso: 180, legs: { L: [thigh, shin], R: [thigh + 2, shin] }, arms: { L: [25, 75], R: [23, 73] }, feet: { L: 96, R: 96 } };
+      }
+      const thigh = level === 1 ? 52 : 66;
+      return {
+        view: 'side', torso: 180, legs: { L: [thigh, -90], R: [thigh + 2, -90] }, arms: { L: [25, 75], R: [23, 73] }, feet: { L: 156, R: 156 },
+        ...(level === 1 ? { props: [{ under: 'pelvis', w: 12, gap: 1 }] } : {}),
+      };
+    },
+  },
+
+  {
+    id: 'ninety', name: 'Ninety-Ninety', native: '', view: 'front', sides: false, camera: true,
+    areas: { mobility: 0.8, legs: 0.2 }, style: 'soft', sash: 'yellow',
+    hint: 'Sit facing the phone, the phone low',
+    video: '90 90 hip stretch sitting',
+    about: 'Sitting on the floor with both knees bent to 90°: one leg folded in front of you, the other out to the side and folded behind. It takes the hips to the ends of their rotation, turning out in the front leg and in in the back leg, which no stance reaches. From level 3 it becomes an active stretch: every 15 seconds you’re told to lift the back knee for 5 seconds, then relax. Switch legs halfway. A cushion under the front hip helps if you tip to one side.',
+    press: { levels: [3, 4], press: 'Press: lift the back knee off the floor', relax: 'Relax, and sit tall' },
+    levels: [
+      { name: 'Hands down', target: 60, desc: 'Sit with your front leg folded in front of you, shin across your body, and your back leg out to the side with the knee bent so the foot points behind you. Both knees at about 90°. Hands on the floor beside you, sitting up as tall as you can. Switch legs halfway.' },
+      { name: 'Hands free', target: 60, desc: 'The same, hands together at your chest. Sit tall on both sit bones, chest facing over the front shin. Switch legs halfway.' },
+      { name: 'Lifting the back knee', target: 60, desc: 'Hands at your chest. When told to press, lift the back knee a little off the floor and hold it there, without leaning away; then relax. Switch legs halfway.' },
+      { name: 'Long ninety-ninety', target: 120, desc: 'Two minutes, a minute each way, pressing and relaxing as before. Stay tall throughout.' },
+    ],
+    criteria: level => [
+      {
+        id: 'seated', label: 'Sitting on the floor', cue: 'Sit down on the floor', weight: 2, joints: [23, 24, 25, 26],
+        value: b => Math.abs(kneesMid(b).y - b.hip.y) / b.torsoLen, max: 0.3, soft: 0.25,
+      },
+      {
+        id: 'wide', label: 'Knees out to the sides', cue: 'Front knee out to one side, back knee to the other', joints: [25, 26],
+        value: b => Math.abs(b.legs.L.b.x - b.legs.R.b.x) / b.shoulderW, min: 2.2, soft: 0.8,
+      },
+      {
+        // The back foot lies out to the side behind its knee; sitting cross-legged, both feet
+        // tuck in near the middle.
+        id: 'back', label: 'Back foot out to the side', cue: 'Take the back foot out to the side, behind its knee', joints: [23, 24, 27, 28],
+        value: b => Math.max(Math.abs(b.la.x - b.hip.x), Math.abs(b.ra.x - b.hip.x)) / b.shoulderW, min: 1.2, soft: 0.5,
+      },
+      ...(level > 1 ? [{
+        id: 'hands', label: 'Hands at your chest', cue: 'Bring your hands together at your chest', joints: [15, 16],
+        value: b => (b.hip.y - mid(b.arms.L.c, b.arms.R.c).y) / b.torsoLen, min: 0.35, soft: 0.25,
+      }] : []),
+      upright(level === 1 ? 20 : 12, 'Sit tall', 12),
+    ],
+    figure: level => ({
+      // Facing the camera: the front leg folded across in front, the back leg out to the
+      // side with its shin going back behind (seen end-on, so drawn rising away), the front
+      // shin a little lower as it's nearer the camera.
+      view: 'front', torso: 180, ground: 'pelvis', groundGap: 2,
+      legs: { L: [84, -66], R: [-86, -158] },
+      arms: level === 1 ? { L: [25, 25], R: [-25, -25] } : { L: [30, -95], R: [-30, 95] },
+    }),
+  },
+
   startAt(2, {
     id: 'nordic', name: 'Reverse Nordic', native: '', view: 'side', sides: false, camera: true,
     areas: { legs: 0.8, core: 0.2 }, style: 'hard', coins: 1.3, sash: 'red',
@@ -1951,11 +2042,11 @@ export function prefersLandscape(hold, level = 1) {
 // (plans.js) refer to the groups by key.
 // Holds that work two areas sit where most of the effort goes.
 export const HOLD_GROUPS = [
-  { key: 'stances', name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes', 'heel', 'airplane'] },
+  { key: 'stances', name: 'Stances', ids: ['horse', 'bow', 'cat', 'rest', 'drop', 'crane', 'kick', 'swallow', 'squat', 'nordic', 'toes', 'heel', 'airplane', 'ninety'] },
   { key: 'upper', name: 'Arms & upper body', ids: ['tray', 'palms', 'wings', 'jar', 'claws', 'drawbow', 'dand', 'fingertips'] },
   { key: 'core', name: 'Core & back', ids: ['plank', 'forearm', 'sideplank', 'birddog', 'bear', 'hollow', 'bridge', 'yanfei', 'backbend'] },
   { key: 'qigong', name: 'Qigong', ids: ['post', 'weituo', 'stars', 'sky', 'feet'] },
-  { key: 'still', name: 'Balance & stillness', ids: ['balance', 'wuji', 'zuochan'] },
+  { key: 'still', name: 'Balance & stillness', ids: ['balance', 'kneel', 'wuji', 'zuochan'] },
 ];
 
 export const AREAS = { legs: 'Legs', core: 'Core', upper: 'Arms & shoulders', balance: 'Balance', mobility: 'Mobility', stillness: 'Stillness' };
