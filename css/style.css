@@ -868,8 +868,6 @@ button.chip { cursor: pointer; }
 .swipe-track::-webkit-scrollbar { display: none; }
 .swipe-track > * { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; margin: 0; }
 .swipe-track > [hidden] { display: none; }
-/* With more than one card, the next one peeks in at the edge. */
-.swipe.multi .swipe-track > * { flex-basis: calc(100% - 26px); }
 .swipe-dots { display: flex; justify-content: center; gap: 2px; margin-top: 6px; }
 .swipe-dots:empty { display: none; }
 .swipe-dots button { width: 26px; height: 22px; padding: 0; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
