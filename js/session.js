@@ -8,7 +8,7 @@
 // its own target and bonus time; side one switches over once you drop out of
 // position (or tap Switch in honour mode).
 
-import { makeBody, scorePose, visible, viewing, SwayMeter } from './scoring.js';
+import { makeBody, scorePose, visible, viewing, sided, SwayMeter } from './scoring.js';
 import { requiredFor } from './holds.js';
 import { coinRateFor, targetBonusFor, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { play, say } from './audio.js';
@@ -59,7 +59,7 @@ export class Session {
     this.goodTime = 0;
     this.reached = false;
     this.pressCue = hold.press?.levels.includes(level) ? hold.press : null;
-    this.sides = hold.sides ? 2 : 1;
+    this.sides = sided(hold, level) ? 2 : 1;
     this.sideTarget = this.target / this.sides;
     this.sideIndex = 0;
     this.sideHeld = new Array(this.sides).fill(0);

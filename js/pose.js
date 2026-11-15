@@ -3,6 +3,7 @@
 
 import { syntheticLandmarks, standing, lerpSpec } from './figure.js';
 import { LandmarkTracker } from './tracker.js';
+import { sided } from './scoring.js';
 
 const VERSION = '0.10.14';
 const BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
@@ -99,7 +100,7 @@ export class DemoSource {
     }
     // Seconds of wall time for each phase (before speed-up): [start, end, from→to].
     const T = 4.5, B = Math.min(target * 0.4, 25);
-    const half = hold.sides ? target / 2 : null;
+    const half = sided(hold, level) ? target / 2 : null;
     const end = T + target + 6 + (half ? 6 : 0) + 4;
     // A wobble out of position partway through, except in balance and stillness holds,
     // where the demo shows a calm hold instead. Those end by walking out of view (for

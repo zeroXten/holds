@@ -23,8 +23,8 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   // (Bear Crawl's last level reaches one arm and leg, which its even levels don't expect.
   // Heel Stand leans back on a wall, then stands free; Iron Bridge now starts at the
   // straight-armed reverse plank; Back Bend turns from face down to face up; Kneeling Sit
-  // tucks the toes under.)
-  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes', 'heel', 'bridge', 'backbend', 'kneel'].includes(hold.id)) continue;
+  // tucks the toes under; Empty Stance starts with both feet side by side.)
+  if (['post', 'plank', 'bear', 'squat', 'sideplank', 'hollow', 'weituo', 'stars', 'sky', 'toes', 'heel', 'bridge', 'backbend', 'kneel', 'cat'].includes(hold.id)) continue;
   const r = score(hold, 1, hold.figure(4));
   if (r.score < 90) { failures++; console.log(`FAIL ${hold.id}: L4 figure scores ${r.score} at L1`); }
 }
@@ -46,11 +46,11 @@ for (const id of ['bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank',
 // Empty Stance's back knee points out over its turned-out foot, partly towards the camera,
 // so seen flat it looks straighter than it is. Turned 45°, each level's pose should still
 // pass; and a straight back leg mustn't be read as bent (below 55, under the lowest score
-// that starts a hold).
+// that starts a hold). (Level 1, the ankle bend, is on both feet, toes forward.)
 {
   const hold = HOLDS.find(h => h.id === 'cat');
   const turn = (lm, phi) => lm.map((p, i) => ([26, 28, 30, 32].includes(i) ? { ...p, x: lm[24].x + (p.x - lm[24].x) * Math.cos(phi * Math.PI / 180) } : p));
-  for (let level = 1; level <= 4; level++) {
+  for (let level = 2; level <= 4; level++) {
     let sum = 0;
     for (let i = 0; i < 60; i++) sum += scorePose(hold, level, makeBody(turn(syntheticLandmarks(hold.figure(level), { width: W, height: H, noise: 0.004 }), 45), W, H, viewing(hold, level))).score;
     const ok = sum / 60 >= 80;
@@ -59,10 +59,10 @@ for (const id of ['bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank',
   }
   const straight = { view: 'side', torso: 180, legs: { R: [0, 0], L: [25, 15] }, arms: { L: [60, 120], R: [35, 150] } };
   let worst = 0;
-  for (let i = 0; i < 50; i++) worst = Math.max(worst, score(hold, 1, straight, 0.004).score);
+  for (let i = 0; i < 50; i++) worst = Math.max(worst, score(hold, 2, straight, 0.004).score);
   const ok = worst < 55;
   if (!ok) failures++;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} cat with a straight back leg at L1: at most ${worst}`);
+  console.log(`${ok ? 'ok  ' : 'FAIL'} cat with a straight back leg at L2: at most ${worst}`);
 }
 
 // Sitting cross-legged mustn't pass as Ninety-Ninety (below 55, the lowest score that

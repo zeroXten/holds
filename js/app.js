@@ -16,6 +16,7 @@ import { CameraSource, DemoSource, loadLandmarker } from './pose.js';
 import { AutoFrame } from './framing.js';
 import * as audio from './audio.js';
 import { VERSION } from './version.js';
+import { sided } from './scoring.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -56,7 +57,7 @@ const fmtLong = s => s < 60 ? `${Math.round(s)}s`
   : s < 3600 ? `${Math.floor(s / 60)}m${Math.round(s % 60) ? ` ${String(Math.round(s % 60)).padStart(2, '0')}s` : ''}`
   : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
 // One-sided holds split the target between the sides.
-const targetText = (hold, t) => hold.flow ? `${t} slow cycles` : hold.sides ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
+const targetText = (hold, level, t) => hold.flow ? `${t} slow cycles` : sided(hold, level) ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
 // A best or a target in the hold's own unit: seconds, or cycles for flowing holds.
 const amount = (hold, n) => (hold.flow ? `${n} cycle${n === 1 ? '' : 's'}` : fmtLong(n));
 const videoUrl = hold => `https://www.youtube.com/results?search_query=${encodeURIComponent(hold.video)}`;
@@ -218,7 +219,7 @@ function renderPlanCard() {
   $('#pc-name').textContent = h.name;
   $('#pc-level').textContent = `Level ${hs.level} · ${lv.name}`;
   $('#pc-meta').innerHTML = `
-    <span class="tag strong">${targetText(h, lv.target)}</span>
+    <span class="tag strong">${targetText(h, hs.level, lv.target)}</span>
     <span class="tag">${next.sets > 1 ? `Set ${done + 1} of ${next.sets}` : '1 set'}</span>
     <span class="tag">Hold ${n + 1} of ${p.picks.length}</span>
     ${P.isDaily(state, h.id) ? `<span class="tag gold">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× coins` : `${DAILY_MULT}× used`}</span>` : ''}`;
@@ -238,7 +239,7 @@ function renderHero() {
   $('#hero-kicker').innerHTML = daily ? `Hold of the day ${mult}` : 'Random pick';
   // Kept short: the hold's page (Details) has the rest.
   $('#hero-meta').innerHTML = `
-    <span class="tag strong">${targetText(hero, lv.target)}</span>
+    <span class="tag strong">${targetText(hero, hs.level, lv.target)}</span>
     <span class="tag">${coinRate(hero, hs.level)}</span>
     ${pips(hs)}`;
   $('#back-daily').hidden = daily;
@@ -248,7 +249,7 @@ function renderHero() {
 // `long`: "30s each side", where "×2" could be read as sets.
 const targetShort = (h, level, { long = false } = {}) => {
   const t = h.levels[level - 1].target;
-  return h.flow ? `${t} cycles` : h.sides ? `${fmtLong(t / 2)} ${long ? 'each side' : '×2'}` : fmtLong(t);
+  return h.flow ? `${t} cycles` : sided(h, level) ? `${fmtLong(t / 2)} ${long ? 'each side' : '×2'}` : fmtLong(t);
 };
 
 const STAR = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg>';
@@ -532,7 +533,7 @@ function renderSheetLevel() {
   $('#hs-desc').textContent = mastering ? `${lv.desc} The mastery test: hold it ${hold.masteryTarget ? 'far' : `${MASTERY_MULT}×`} longer than level 4, with near-perfect form.` : lv.desc;
   const best = hs.best[shown];
   $('#hs-meta').innerHTML = `
-    <span class="tag strong">${targetText(hold, mastering ? masteryTarget(hold) : lv.target)}</span>
+    <span class="tag strong">${targetText(hold, shown, mastering ? masteryTarget(hold) : lv.target)}</span>
     ${mastering ? '' : `<span class="tag">${coinRate(hold, shown)}</span>`}
     ${P.isDaily(state, hold.id) ? `<span class="tag strong">${P.dailyAvailable(state, hold.id) ? `Hold of the day: ${DAILY_MULT}× coins on your first go` : `Hold of the day: ${DAILY_MULT}× used today`}</span>` : ''}
     ${boostTags()}
@@ -1031,7 +1032,7 @@ function renderSummary(hold, level, r, o, boost) {
 
   const hs = P.holdState(state, hold.id);
   let lvl = '';
-  if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${targetText(hold, hold.levels[o.newLevel - 1].target)}, ${coinRate(hold, o.newLevel)}. That’s a point towards your sash.</div>`;
+  if (o.levelUp) lvl = `<div class="banner">Next up: <b>${hold.levels[o.newLevel - 1].name}</b>. ${targetText(hold, o.newLevel, hold.levels[o.newLevel - 1].target)}, ${coinRate(hold, o.newLevel)}. That’s a point towards your sash.</div>`;
   else if (o.mastered) lvl = '<div class="banner">You’ve mastered every level of this hold: another point towards your sash.</div>';
   else if (level === hs.level && !hs.mastered && !o.testMode) {
     const need = P.qualifyDays(hs.level) - hs.qualDays.length, form = P.qualifyForm(hs.level);

@@ -103,11 +103,15 @@ export function visible(landmarks, indices, { eitherSide = false } = {}) {
   return indices.every(i => ok(i) || (eitherSide && PARTNER.has(i) && ok(PARTNER.get(i))));
 }
 
+// Whether a hold level is done one leg at a time, split between two sides. A one-sided
+// hold's `bothLegs` levels (an ankle bend on both feet, say) are done in one go instead.
+export const sided = (hold, level = 1) => !!hold.sides && !hold.bothLegs?.includes(level);
+
 // How a hold should read the camera: side-on holds only need the near side. Where
 // both sides match, the near side stands in for the far one; a hold's `uneven` levels
 // (one foot lifted, one arm reaching) need both, so only hidden points are filled.
 export const viewing = (hold, level = 1) => {
-  const sideOn = hold.view === 'side', even = sideOn && !hold.sides;
+  const sideOn = hold.view === 'side', even = sideOn && !sided(hold, level);
   const mirror = even && !hold.uneven?.includes(level);
   return { eitherSide: sideOn, mirror, fillHidden: even && !mirror };
 };
@@ -116,7 +120,7 @@ export const viewing = (hold, level = 1) => {
 // is tried and the best wins, so either leg can lead.
 export function scorePose(hold, level, body) {
   const criteria = hold.criteria(level);
-  const sides = hold.sides ? [{ key: 'L', main: body.legs.L, other: body.legs.R }, { key: 'R', main: body.legs.R, other: body.legs.L }] : [{ key: null }];
+  const sides = sided(hold, level) ? [{ key: 'L', main: body.legs.L, other: body.legs.R }, { key: 'R', main: body.legs.R, other: body.legs.L }] : [{ key: null }];
   let best = null;
   for (const side of sides) {
     const results = criteria.map(c => {

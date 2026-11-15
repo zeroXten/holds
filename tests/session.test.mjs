@@ -7,6 +7,7 @@ const { HOLDS } = await import('../js/holds.js');
 const { DemoSource } = await import('../js/pose.js');
 const { Session } = await import('../js/session.js');
 const { createSession, FlowSession } = await import('../js/flow.js');
+const { sided } = await import('../js/scoring.js');
 
 let failures = 0;
 for (const hold of HOLDS.filter(h => h.camera)) {
@@ -25,7 +26,7 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     }
     const r = s.result;
     // One-sided holds: each side reaches its own target and earns bonus time.
-    const sidesOk = !hold.sides || (r?.sides?.length === 2 && r.sides.every(t => t > target / 2));
+    const sidesOk = !sided(hold, level) || (r?.sides?.length === 2 && r.sides.every(t => t > target / 2));
     const ok = r && r.reached && r.held >= target && r.avgForm >= 70 && r.reason === 'complete' && sidesOk;
     if (!ok) failures++;
     const sides = r?.sides ? ` (${r.sides.map(t => t.toFixed(1)).join(' + ')})` : '';

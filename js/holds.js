@@ -225,43 +225,65 @@ export const HOLDS = [
   },
 
   {
-    id: 'cat', name: 'Empty Stance', native: 'Xū Bù', view: 'side', sides: true, camera: true,
+    id: 'cat', name: 'Empty Stance', native: 'Xū Bù', view: 'side', sides: true, bothLegs: [1], camera: true,
     areas: { legs: 0.7, balance: 0.3 }, style: 'hard',
     video: 'xu bu empty stance cat stance kung fu tutorial',
     hint: 'Stand side-on to the phone, front foot pointing across it',
-    about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly. Unlike horse stance, the depth comes from the back ankle: with your hips over the back heel, the only way down is for that shin to tip forward over the foot. If it won’t go, don’t force it by pushing your hips back (that’s when your back starts to stick out): take a little less depth, and build the ankle range with Deep Squat’s press and relax. The camera allows for the back knee pointing partly towards it.',
+    about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly. Unlike horse stance, the depth comes from the back ankle: with your hips over the back heel, the only way down is for that shin to tip forward over the foot. So the first level builds that ankle bend on both feet, before any weight goes onto one leg. If the back knee won’t go forward, don’t force it by pushing your hips back (that’s when your back starts to stick out): take a little less depth, and go back to the ankle bend. The camera allows for the back knee pointing partly towards it.',
     levels: [
+      { name: 'Ankle bend', target: 45, desc: 'Feet flat and side by side, hip width, toes forward. Keeping your back upright and your heels heavy on the floor, let your knees sink forward and down over your toes. Your hips stay over your feet rather than sitting back: you should feel it low in the calves and the Achilles.' },
       { name: 'High cat', target: 30, desc: 'Almost all your weight on the back leg: knee bent, foot flat and turned out about 45°, and the knee pointing the same way as those toes, not straight ahead. Front foot forward with just the toes resting lightly, knee slightly bent. Hips square. Then switch legs.' },
-      { name: 'Cat', target: 45, desc: 'Sit lower on the back leg: sit down, not back, as if onto a high stool right under you, tailbone tucked. Let the back knee travel forward and out over its toes. If your back starts to stick out, slide the front foot a little further forward rather than forcing the knee. Front foot light enough to lift at any moment.' },
+      { name: 'Cat', target: 45, desc: 'Sit lower on the back leg: sit down, not back, as if onto a high stool right under you, tailbone tucked. Let the back knee travel forward and out over its toes, heel heavy, as in the ankle bend. If your back starts to stick out, slide the front foot a little further forward rather than forcing the knee. Front foot light enough to lift at any moment.' },
       { name: 'Low cat', target: 60, desc: 'Back thigh sinking towards level. Hips over the back heel, which stays heavy on the floor while the knee travels forward over the toes: a stretch for the Achilles.' },
-      { name: 'Deep cat', target: 75, desc: 'As low as you can while staying upright, front leg long and light.' },
     ],
-    criteria: level => [
-      {
-        id: 'sit', label: 'Back knee bend', cue: 'Sit lower on your back leg', weight: 2,
-        joints: s => s.main.idx, value: (b, s) => turnedKnee(s.main, s.other), max: by(level, [150, 135, 120, 110]), soft: 20,
-      },
-      {
-        id: 'weight', label: 'Weight back', cue: 'Shift your weight onto the back leg', joints: s => [23, 24, s.main.idx[2]],
-        value: (b, s) => Math.abs(b.hip.x - s.main.c.x) / s.main.len, max: 0.2, soft: 0.2,
-      },
-      {
-        id: 'reach', label: 'Front foot out', cue: 'Reach your front foot further out', joints: [27, 28],
-        value: (b, s) => Math.abs(s.other.c.x - s.main.c.x) / s.main.len, min: by(level, [0.2, 0.25, 0.3, 0.35]), soft: 0.2,
-      },
-      {
-        id: 'long', label: 'Long front leg', cue: 'Keep the front leg long', joints: s => s.other.idx,
-        value: (b, s) => s.other.angle, min: 130, soft: 30,
-      },
-      upright(15),
-    ],
+    criteria: level => {
+      if (level === 1) {
+        const raise = f => (f.toe.y - f.heel.y) / (dist(f.heel, f.toe) || 1);  // ~0 flat, positive with the heel up
+        return [
+          {
+            id: 'bend', label: 'Knees forward', cue: 'Let your knees sink forward over your toes', weight: 2, joints: [25, 26, 27, 28],
+            value: b => Math.max(b.legs.L.angle, b.legs.R.angle), max: 140, soft: 20,
+          },
+          {
+            id: 'heels', label: 'Heels down', cue: 'Keep your heels on the floor', joints: [27, 28, 29, 30, 31, 32],
+            value: b => Math.max(raise(b.feet.L), raise(b.feet.R)), max: 0.15, soft: 0.2,
+          },
+          {
+            id: 'over', label: 'Hips over feet', cue: 'Keep your hips over your feet: knees forward, not hips back', joints: [23, 24, 27, 28],
+            value: b => Math.abs(b.hip.x - anklesMid(b).x) / ((b.legs.L.len + b.legs.R.len) / 2), max: 0.15, soft: 0.2,
+          },
+          upright(15),
+        ];
+      }
+      return [
+        {
+          id: 'sit', label: 'Back knee bend', cue: 'Sit lower on your back leg', weight: 2,
+          joints: s => s.main.idx, value: (b, s) => turnedKnee(s.main, s.other), max: by(level, [0, 150, 135, 120]), soft: 20,
+        },
+        {
+          id: 'weight', label: 'Weight back', cue: 'Shift your weight onto the back leg', joints: s => [23, 24, s.main.idx[2]],
+          value: (b, s) => Math.abs(b.hip.x - s.main.c.x) / s.main.len, max: 0.2, soft: 0.2,
+        },
+        {
+          id: 'reach', label: 'Front foot out', cue: 'Reach your front foot further out', joints: [27, 28],
+          value: (b, s) => Math.abs(s.other.c.x - s.main.c.x) / s.main.len, min: by(level, [0, 0.2, 0.25, 0.3]), soft: 0.2,
+        },
+        {
+          id: 'long', label: 'Long front leg', cue: 'Keep the front leg long', joints: s => s.other.idx,
+          value: (b, s) => s.other.angle, min: 130, soft: 30,
+        },
+        upright(15),
+      ];
+    },
     figure: level => {
-      const knee = by(level, [145, 130, 115, 105]);
+      // The ankle bend: both shins tipped forward over flat feet, hips straight above them.
+      if (level === 1) return { view: 'side', torso: 180, legs: { L: [32, -32], R: [32, -32] }, feet: { L: 0, R: 0 }, arms: { L: [80, 85], R: [77, 82] } };
+      const knee = by(level, [0, 145, 130, 115]);
       const t = (180 - knee) / 2;
       const h = 44 * Math.cos(t * Math.PI / 180);
       return {
         view: 'side', torso: 180,
-        legs: { R: [t, -t], L: legReaching(h, by(level, [10, 20, 30, 40])) },
+        legs: { R: [t, -t], L: legReaching(h, by(level, [0, 10, 20, 30])) },
         arms: { L: [60, 120], R: [35, 150] },
       };
     },
