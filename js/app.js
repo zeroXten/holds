@@ -123,10 +123,8 @@ function renderHome() {
   renderHomeCards();
   drawScenes(true);
   const daily = P.dailyHold(state);
-  const { next } = planNow();
-  if (heroPlan && next) hero = holdById(next.holdId);
-  else if (heroPlan || !hero || !P.isOpen(state, hero.id)) hero = daily;
-  renderHero();
+  if (!hero || !P.isOpen(state, hero.id)) hero = daily;
+  renderHeroCards();
   if (P.hasPlan(state) && state.plan.done && !state.plan.done.seen) celebratePlan();
   renderGrid();
   renderDayStats();
@@ -145,44 +143,105 @@ function renderDayStats() {
   </div>`;
 }
 
-// The hero card: the next hold in today's plan, or (once it's done, or you pick something
-// else) the hold of the day or a shuffled pick.
-function renderHero() {
+// ---------- Swipe cards ----------
+
+// A row of cards you swipe between (`.swipe` > `.swipe-track` > cards, plus `.swipe-dots`),
+// with a dot for each card that's showing (tap a dot to go to its card; each card's
+// `data-label` names it). `start`: the card to open on. `onChange(card)`: after you swipe.
+function setupSwipe(root, { start = 0, onChange } = {}) {
+  const track = root.querySelector('.swipe-track'), dots = root.querySelector('.swipe-dots');
+  const items = [...track.children].filter(el => !el.hidden);
+  root.classList.toggle('multi', items.length > 1);
+  dots.innerHTML = items.length > 1
+    ? items.map((el, i) => `<button type="button" data-i="${i}" aria-label="${el.dataset.label ?? `Card ${i + 1}`}"></button>`).join('') : '';
+  const at = () => {
+    const step = items.length > 1 ? items[1].offsetLeft - items[0].offsetLeft : 1;
+    return Math.max(0, Math.min(items.length - 1, Math.round(track.scrollLeft / step)));
+  };
+  const mark = () => { const i = at(); [...dots.children].forEach((d, k) => d.setAttribute('aria-current', String(k === i))); return i; };
+  const go = (i, smooth) => track.scrollTo({ left: items[i].offsetLeft - items[0].offsetLeft, behavior: smooth ? 'smooth' : 'instant' });
+  if (items.length) go(Math.max(0, Math.min(start, items.length - 1)), false);
+  mark();
+  let quiet = true;  // the scroll from opening on `start` isn't a swipe
+  requestAnimationFrame(() => { quiet = false; });
+  track.onscroll = () => {
+    const i = mark();
+    if (quiet || !onChange) return;
+    clearTimeout(root.swipeTimer);
+    root.swipeTimer = setTimeout(() => onChange(items[i]), 150);
+  };
+  dots.onclick = e => { const d = e.target.closest('[data-i]'); if (d) go(+d.dataset.i, true); };
+}
+
+// The two hero cards: today's plan (with a plan) and the hold of the day, side by side to
+// swipe between. It opens on the plan while today's plan has holds to do, or on the card
+// you last swiped to.
+let heroSlide = null;
+function renderHeroCards() {
+  renderPlanCard();
+  renderHero();
+  const { next } = planNow();
+  const want = heroSlide ?? (next ? 'plan' : 'hold');
+  const cards = [$('#plan-card'), $('#hero')].filter(el => !el.hidden);
+  setupSwipe($('#hero-swipe'), {
+    start: Math.max(0, cards.findIndex(el => (el.id === 'plan-card') === (want === 'plan'))),
+    onChange: card => { heroSlide = card.id === 'plan-card' ? 'plan' : 'hold'; },
+  });
+}
+
+// Today's plan: its next hold, with time today against the plan's; or, once it's all done,
+// what's next.
+function renderPlanCard() {
   const { p, next } = planNow();
-  const inPlan = heroPlan && next?.holdId === hero.id;
+  const card = $('#plan-card');
+  card.hidden = !p || !!p.done;
+  if (card.hidden) return;
+  const planned = P.planSeconds(state, p.picks), held = state.days[P.dayKey()]?.time ?? 0;
+  $('#pc-kicker').textContent = `Today’s plan · ${dayType(p).name}`;
+  $('#pc-where').textContent = p.weeks > 1 ? `Week ${Math.floor(p.step / 7) + 1} of ${p.weeks}` : `Day ${p.step % 7 + 1} of 7`;
+  $('#pc-progress').innerHTML = `<div class="hp-top"><span><b>${fmt(held)}</b> of ${fmt(planned)} today</span><small>${
+    !next ? 'Done for today' : held < planned ? `about ${minText(planned - held)} to go` : 'Time’s in: finish the list'}</small></div>
+    <div class="progress"><i style="width:${next ? Math.min(100, Math.round(100 * held / Math.max(1, planned))) : 100}%"></i></div>`;
+  card.classList.toggle('done', !next);
+  $('#pc-more').hidden = !next;
+  if (!next) {
+    $('#pc-fig').innerHTML = '<span class="pc-tick" aria-hidden="true">✓</span>';
+    $('#pc-name').textContent = 'Today’s plan is done';
+    $('#pc-level').textContent = p.step + 1 < p.weeks * 7 ? `Next: ${dayType(p, p.step + 1).name.toLowerCase()}` : 'That was the last day of the plan';
+    $('#pc-meta').innerHTML = '';
+    $('#pc-start').textContent = 'See the plan';
+    return;
+  }
+  const h = holdById(next.holdId), hs = P.holdState(state, h.id), lv = h.levels[hs.level - 1];
+  const n = p.picks.indexOf(next), done = P.setsDone(state, h.id);
+  $('#pc-fig').innerHTML = figureSVG(h.figure(hs.level));
+  $('#pc-name').textContent = h.name;
+  $('#pc-level').textContent = `Level ${hs.level} · ${lv.name}`;
+  $('#pc-meta').innerHTML = `
+    <span class="tag strong">${targetText(h, lv.target)}</span>
+    <span class="tag">${next.sets > 1 ? `Set ${done + 1} of ${next.sets}` : '1 set'}</span>
+    <span class="tag">Hold ${n + 1} of ${p.picks.length}</span>
+    ${P.isDaily(state, h.id) ? `<span class="tag gold">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× coins` : `${DAILY_MULT}× used`}</span>` : ''}`;
+  $('#pc-start').textContent = 'Start';
+}
+
+// The hold of the day card (or a shuffled pick).
+function renderHero() {
   const hs = P.holdState(state, hero.id);
   const daily = P.isDaily(state, hero.id);
   const mult = daily ? `<span class="mult">${P.dailyAvailable(state, hero.id) ? `${DAILY_MULT}× coins` : `${DAILY_MULT}× used today`}</span>` : '';
-  $('#hero').classList.toggle('daily', daily && !inPlan);
-  $('#hero').classList.toggle('plan', inPlan);
-  $('#shuffle').hidden = inPlan;
+  $('#hero').classList.toggle('daily', daily);
   const lv = hero.levels[hs.level - 1];
   $('#hero-fig').innerHTML = figureSVG(hero.figure(hs.level));
   $('#hero-name').textContent = hero.name;
   $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name}`;
-  if (inPlan) {
-    const n = p.picks.indexOf(next), done = P.setsDone(state, hero.id);
-    const planned = P.planSeconds(state, p.picks), held = state.days[P.dayKey()]?.time ?? 0;
-    $('#hero-kicker').innerHTML = `Today’s plan · ${dayType(p).name}${mult}`;
-    $('#hero-meta').innerHTML = `
-      <span class="tag strong">${targetText(hero, lv.target)}</span>
-      <span class="tag">${next.sets > 1 ? `Set ${done + 1} of ${next.sets}` : '1 set'}</span>
-      <span class="tag">Hold ${n + 1} of ${p.picks.length}</span>`;
-    $('#hero-plan').innerHTML = `<div class="hp-top"><span><b>${fmt(held)}</b> of ${fmt(planned)} today</span><small>${
-      held < planned ? `about ${minText(planned - held)} to go` : 'Time’s in: finish the list'}</small></div>
-      <div class="progress"><i style="width:${Math.min(100, Math.round(100 * held / Math.max(1, planned)))}%"></i></div>`;
-  } else {
-    $('#hero-kicker').innerHTML = daily ? `Hold of the day ${mult}` : 'Random pick';
-    // Kept short: the hold's page (Details) has the rest.
-    $('#hero-meta').innerHTML = `
-      <span class="tag strong">${targetText(hero, lv.target)}</span>
-      <span class="tag">${coinRate(hero, hs.level)}</span>
-      ${pips(hs)}`;
-  }
-  $('#hero-plan').hidden = !inPlan;
-  const back = inPlan ? 'Train something else' : next ? 'Back to today’s plan' : daily ? '' : 'Back to the hold of the day';
-  $('#back-daily').hidden = !back;
-  $('#back-daily').textContent = back;
+  $('#hero-kicker').innerHTML = daily ? `Hold of the day ${mult}` : 'Random pick';
+  // Kept short: the hold's page (Details) has the rest.
+  $('#hero-meta').innerHTML = `
+    <span class="tag strong">${targetText(hero, lv.target)}</span>
+    <span class="tag">${coinRate(hero, hs.level)}</span>
+    ${pips(hs)}`;
+  $('#back-daily').hidden = daily;
 }
 
 // A level's target in a few characters: "45s", "30s ×2" (each side), "8 cycles".
@@ -241,8 +300,6 @@ function renderGrid() {
 
 // ---------- Plan ----------
 
-// Whether the hero shows the plan's next hold (until you shuffle or pick something else).
-let heroPlan = true;
 
 // Today's plan, and its next hold with sets still to do (null once it's all done).
 function planNow() {
@@ -378,7 +435,7 @@ $('#builder-body').onclick = e => {
     P.startPlan(state, choice);
     state.settings.holdList = 'plan';
     P.save(state);
-    heroPlan = true;
+    heroSlide = 'plan';
     audio.unlock();
     audio.play('point');
     show('home');
@@ -388,7 +445,7 @@ $('#builder-body').onclick = e => {
   }
   if (e.target.closest('#builder-end')) {
     P.endPlan(state);
-    heroPlan = true;
+    heroSlide = 'plan';
     show('home');
     renderHome();
     toast('Plan ended');
@@ -1344,8 +1401,12 @@ function renderHomeCards() {
       <div class="row"><button class="btn" data-act="plan-invite-off">Not now</button><button class="btn primary" data-act="plan-builder">Build a plan</button></div>
     </div>`);
   }
-  for (const slot of ['bet', 'weekBet']) { const bp = P.betProgress(state, slot); if (bp) cards.push(betCard(bp)); }
+  // Bets: the day's, then the week's; with both, side by side to swipe between.
+  const bets = ['bet', 'weekBet'].map(slot => P.betProgress(state, slot)).filter(Boolean);
+  if (bets.length > 1) cards.push(`<div class="swipe" id="bet-swipe"><div class="swipe-track">${bets.map(betCard).join('')}</div><div class="swipe-dots"></div></div>`);
+  else cards.push(...bets.map(betCard));
   $('#home-cards').innerHTML = cards.join('');
+  if ($('#bet-swipe')) setupSwipe($('#bet-swipe'));
 }
 
 // Settled bets, newest first.
@@ -1362,7 +1423,7 @@ function betLogHTML(limit = 30) {
 
 function betCard(bp) {
   const ends = bp.end === P.dayKey() ? 'ends tonight' : `ends ${new Date(bp.end + 'T12:00').toLocaleDateString(undefined, { weekday: 'long' })}`;
-  return `<div class="home-card bet">
+  return `<div class="home-card bet" data-label="Bet: ${bp.def.name}">
     <p><b>Bet: ${bp.def.name}</b> · win ${bp.def.payout} coins · ${ends}</p>
     <div class="progress"><i style="width:${Math.round(bp.frac * 100)}%"></i></div>
     <small>${bp.text}</small>
@@ -1542,7 +1603,7 @@ document.addEventListener('click', e => {
     'test-mode-off': () => { P.setTestMode(state, false); return 'Test mode off'; },
     bet: () => P.placeBet(state, id) && 'Bet placed. Good luck!',
     'plan-builder': () => { openBuilder(); },
-    'plan-again': () => { const { minutes, focus, weeks } = state.plan; P.startPlan(state, { minutes, focus, weeks }); heroPlan = true; return 'New plan started'; },
+    'plan-again': () => { const { minutes, focus, weeks } = state.plan; P.startPlan(state, { minutes, focus, weeks }); heroSlide = 'plan'; return 'New plan started'; },
     'plan-end': () => { P.endPlan(state); return 'Plan ended'; },
     'plan-invite-off': () => { P.dismissPlanInvite(state); return ''; },
   };
@@ -1649,14 +1710,18 @@ $('#temple-banner').onclick = openTempleView;
 $('#wallet-chip').onclick = () => openShop('temple');
 $('#streak-strip').onclick = () => openShop('streak');
 
-$('#shuffle').onclick = () => { heroPlan = false; hero = P.pickHold(state, hero.id); renderHero(); };
-$('#back-daily').onclick = () => {
+$('#shuffle').onclick = () => { hero = P.pickHold(state, hero.id); renderHero(); };
+$('#back-daily').onclick = () => { hero = P.dailyHold(state); renderHero(); };
+// The plan card: start its next hold, or once today's is done, show the plan.
+$('#pc-start').onclick = () => {
   const { next } = planNow();
-  if (heroPlan && next) { heroPlan = false; hero = P.dailyHold(state); }  // train something else
-  else if (next) { heroPlan = true; hero = holdById(next.holdId); }       // back to the plan
-  else hero = P.dailyHold(state);
-  renderHero();
+  if (!next) { state.settings.holdList = 'plan'; P.save(state); renderGrid(); $('#list-tabs').scrollIntoView({ behavior: 'smooth' }); return; }
+  const h = holdById(next.holdId);
+  startSession(h, P.holdState(state, h.id).level, h.camera && state.settings.camera);
 };
+const planHold = () => { const { next } = planNow(); return next && holdById(next.holdId); };
+$('#pc-fig').onclick = () => { const h = planHold(); if (h) openHold(h); };
+$('#pc-more').onclick = () => { const h = planHold(); if (h) openHold(h); };
 $('#hero-start').onclick = () => {
   const hs = P.holdState(state, hero.id);
   startSession(hero, hs.level, hero.camera && state.settings.camera);
@@ -1709,7 +1774,7 @@ $('#sum-next').onclick = () => {
   const { next } = planNow();
   if (!next) return;
   const h = holdById(next.holdId);
-  heroPlan = true;
+  heroSlide = 'plan';
   startSession(h, P.holdState(state, h.id).level, h.camera && state.settings.camera);
 };
 document.addEventListener('click', e => {
