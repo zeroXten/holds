@@ -1774,8 +1774,12 @@ $('#sum-next').onclick = () => {
   const { next } = planNow();
   if (!next) return;
   const h = holdById(next.holdId);
+  // Back home with the hold's sheet open, so you read this level's instructions before starting.
   heroSlide = 'plan';
-  startSession(h, P.holdState(state, h.id).level, h.camera && state.settings.camera);
+  stopRun();
+  show('home');
+  renderHome();
+  openHold(h);
 };
 document.addEventListener('click', e => {
   if (e.target.closest('[data-home]')) { stopRun(); show('home'); renderHome(); }
