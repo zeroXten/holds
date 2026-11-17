@@ -19,7 +19,7 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     src.now = () => t;
     const s = createSession({ hold, level, camera: true, now: 0 });
     const states = new Set();
-    while (s.state !== 'done' && t < (hold.flow ? 400 : target + 120)) {
+    while (s.state !== 'done' && t < (hold.flow ? src.period * src.cycles + 120 : target + 120)) {
       t += 1 / 30;
       s.tick(t, src.next());
       states.add(s.state);
@@ -42,12 +42,12 @@ for (const hold of HOLDS.filter(h => h.camera)) {
   const s = new Session({ hold, level: 1, camera: false, now: 0 });
   let t = 0;
   const run = secs => { for (const end = t + secs; t < end;) { t += 1 / 30; s.tick(t, null); } };
-  run(5 + 19);             // countdown, then 19s on side one (target 15s)
+  run(5 + 24);             // countdown, then 24s on side one (target 20s)
   const bonusOne = s.view().sideReached;
   s.switchNow();
-  run(5 + 17);             // switch countdown, then 17s on side two
+  run(5 + 22);             // switch countdown, then 22s on side two
   const r = s.finish('stopped');
-  const ok = bonusOne && r.reached && r.sides[0] > 18 && r.sides[1] > 16;
+  const ok = bonusOne && r.reached && r.sides[0] > 23 && r.sides[1] > 21;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} honour rest L1: sides ${r.sides.map(x => x.toFixed(1)).join(' + ')}, reached ${r.reached}`);
 }

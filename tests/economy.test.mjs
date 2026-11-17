@@ -33,24 +33,25 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
 // target (here in honour mode, form factor 0.75): 80% over the target's length, 20% on reaching it.
 {
   const at = (id, level) => coinsAtTarget(HOLDS.find(h => h.id === id), level);
-  const c1 = at('tray', 1);  // Carrying the Tray is rated 1: the plain base, one side, 45s
-  const r = honour('tray', 1, 45.05);
-  check('45s at target', near(r.coins, c1 * 0.75, 0.1), `${r.coins.toFixed(2)} coins`);
-  const t2 = honour('tray', 1, 90.05);  // tray: rated 1, 45s target, one side
-  // Base 4 coins / 45s. 45–67.5s at ×1.5 = 3, 67.5–90s at ×2 = 4 → (4 + 3 + 4 + 1 target) × 0.75
+  const c1 = at('tray', 1);  // Carrying the Tray is rated 1: the plain base, one side, 60s
+  const r = honour('tray', 1, 60.05);
+  check('60s at target', near(r.coins, c1 * 0.75, 0.1), `${r.coins.toFixed(2)} coins`);
+  const t2 = honour('tray', 1, 120.05);  // tray: rated 1, 60s target, one side
+  // Base 4 coins / 60s. 60–90s at ×1.5 = 3, 90–120s at ×2 = 4 → (4 + 3 + 4 + 1 target) × 0.75
   check('bonus tiers multiply the base rate', near(t2.coins, (4 + 3 + 4 + 1) * 0.75, 0.15), `${t2.coins.toFixed(2)} coins`);
-  const daily = honour('tray', 1, 45.05, { daily: true });
+  const daily = honour('tray', 1, 60.05, { daily: true });
   check('hold of the day', near(daily.coins, r.coins * DAILY_MULT, 0.3), `${daily.coins.toFixed(2)} vs ${(r.coins * DAILY_MULT).toFixed(2)}`);
   const b45 = honour('horse', 1, 45), side = honour('bow', 1, 40);
   check('bonus as a fraction of the target', near(b45.bonus, 0.5, 0.02), b45.bonus.toFixed(2));
-  check('two-sided bonus measured against the whole target', near(side.bonus, 25 / 30, 0.03), side.bonus.toFixed(2));  // 40s on side one of a 15s-per-side hold
+  check('two-sided bonus measured against the whole target', near(side.bonus, 10 / 60, 0.03), side.bonus.toFixed(2));  // 40s on side one of a 30s-per-side hold
   // However long the target, a hold pays its own rating at it: a 30s stance, a 60s soft hold
   // and 5 minutes of meditation.
   const horse = honour('horse', 1, 30.05), soft = honour('weituo', 1, 60.05), sit = honour('zuochan', 1, 300.05);
   check('coins at target follow each hold\'s rating', near(horse.coins, at('horse', 1) * 0.75, 0.1) && near(soft.coins, at('weituo', 1) * 0.75, 0.1) && near(sit.coins, at('zuochan', 1) * 0.75, 0.1),
     `horse ${horse.coins.toFixed(2)}, wei tuo ${soft.coins.toFixed(2)}, meditation ${sit.coins.toFixed(2)}`);
-  const lvl4 = honour('horse', 4, 90.05);
-  check('level 4 pays the same at target', near(lvl4.coins, at('horse', 4) * 0.75, 0.15), `${lvl4.coins.toFixed(2)} coins`);
+  // Higher levels pay more per target, as their targets are far longer.
+  const lvl4 = honour('horse', 4, 300.05);
+  check('level 4 pays three times level 1 at target', near(lvl4.coins, at('horse', 1) * 3 * 0.75, 0.15), `${lvl4.coins.toFixed(2)} coins`);
 }
 
 

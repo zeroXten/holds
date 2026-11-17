@@ -1,23 +1,25 @@
 // The coin economy: how fast coins are earned and what things cost.
 // Kept in one place so it's easy to rebalance.
 
-// Every hold pays the same for reaching its target, at any level and however long the
-// target is: 15 seconds of a hard stance and five minutes of meditation are worth the same.
-// Higher levels don't pay faster; they earn points towards your sash (see progress.js).
-// Of those coins, TARGET_SHARE is paid on reaching the target and the rest builds up evenly
+// Every hold pays the same for reaching its target at a level, however long the target
+// is: 30 seconds of a hard stance and five minutes of meditation are worth the same.
+// Higher levels pay more per target (LEVEL_COINS), as their targets are far longer (each
+// about double the last), though less per minute: they earn points towards your sash
+// instead (see progress.js). Of those coins, TARGET_SHARE is paid on reaching the target and the rest builds up evenly
 // over the target's length; bonus time past it carries on at that same base rate, times
 // the bonus tier. Everything scales from the base, so form, hold of the day and streaks
 // multiply it all alike.
 export const TARGET_COINS = 5;               // at good form, before the hold's own rating
 export const TARGET_SHARE = 0.2;
 export const LEVEL_MULT = [1, 1.25, 1.5, 2]; // how hard each level is (for body-area load)
+export const LEVEL_COINS = [1, 1.5, 2, 3];   // coins at target, by level
 // Seconds a level's target takes (for flowing holds: cycles × the slowest cycle allowed).
 export const targetSeconds = (hold, level) => hold.levels[level - 1].target * (hold.flow ? hold.flow.minCycle[level - 1] : 1);
 // Each hold can tweak the base for how hard it is: `coins` is a multiplier (about 0.8 for
 // the gentlest holds up to 1.3 for the hardest), or one per level.
 const holdMult = (hold, level) => (Array.isArray(hold.coins) ? hold.coins[level - 1] : hold.coins ?? 1);
 // Coins for reaching a hold's target at good form, before boosts.
-export const coinsAtTarget = (hold, level) => TARGET_COINS * holdMult(hold, level);
+export const coinsAtTarget = (hold, level) => TARGET_COINS * holdMult(hold, level) * LEVEL_COINS[level - 1];
 // Base coins per second while holding, before form, bonus time and boosts.
 export const coinRateFor = (hold, level) => coinsAtTarget(hold, level) * (1 - TARGET_SHARE) / targetSeconds(hold, level);
 // Coins for reaching the target, before form and boosts.
@@ -86,8 +88,9 @@ export const LEVEL_UP_COINS = { 2: 10, 3: 15, 4: 20, mastered: 100 };
 // A level test is free to pass; not passing costs this (by the level tested, the
 // mastery test counting as level 5).
 export const testPrice = level => 50 * (level - 1);
-// The mastery test: level 4's position held for this many times its target (or a
-// hold's own `masteryTarget`), on camera with 90+ form.
+// The mastery test: level 4's position held for the hold's `masteryTarget` (a master's
+// time: the top of what a trained athlete or martial artist can do), on camera with 90+
+// form. Without one, this many times level 4's target.
 export const MASTERY_MULT = 3;
 export const masteryTarget = hold => hold.masteryTarget ?? hold.levels[3].target * MASTERY_MULT;
 

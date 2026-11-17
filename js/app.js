@@ -2,7 +2,7 @@ import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, mainArea
 import {
   coinsAtTarget, shownTheme, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FRAMES, FREEZE_PRICE, FREEZE_MAX,
-  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, MILESTONE_DAY_MULT, testPrice, masteryTarget, MASTERY_MULT,
+  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, MILESTONE_DAY_MULT, testPrice, masteryTarget, MASTERY_MULT, LEVEL_UP_COINS,
 } from './economy.js';
 import { drawTemple, SCENE_H } from './temple.js';
 import { renderAvatar } from './avatar.js';
@@ -97,7 +97,7 @@ function flushNotices() {
 // Days that counted towards the next level's test (target reached on camera with good
 // form), as a small bar; with `label`, also in words.
 function pips(hs, { label = false } = {}) {
-  if (hs.mastered) return '<span class="pips mastered">Mastered</span>';
+  if (hs.mastered) return `<span class="pips mastered">${STAR}Mastered</span>`;
   if (P.readyForTest(hs)) return `<span class="pips ready"><b class="lvl-bar"><i style="width:100%"></i></b><em>Test ready</em>${label ? `<small>All ${P.qualifyDays(hs.level)} days in · ${hs.level < 4 ? `level ${hs.level + 1}` : 'mastery'} test open</small>` : ''}</span>`;
   const next = hs.level < 4 ? `the level ${hs.level + 1} test` : 'the mastery test', need = P.qualifyDays(hs.level);
   // Whether today is done (a day counted, or a level test passed): if not, there's a day to earn today.
@@ -217,7 +217,7 @@ function renderPlanCard() {
   const n = p.picks.indexOf(next), done = P.setsDone(state, h.id);
   $('#pc-fig').innerHTML = figureSVG(h.figure(hs.level));
   $('#pc-name').textContent = h.name;
-  $('#pc-level').textContent = `Level ${hs.level} · ${lv.name}`;
+  $('#pc-level').textContent = `Level ${hs.level} · ${lv.name}${hs.mastered ? ' · Mastered' : ''}`;
   $('#pc-meta').innerHTML = `
     <span class="tag strong">${targetText(h, hs.level, lv.target)}</span>
     <span class="tag">${next.sets > 1 ? `Set ${done + 1} of ${next.sets}` : '1 set'}</span>
@@ -235,7 +235,7 @@ function renderHero() {
   const lv = hero.levels[hs.level - 1];
   $('#hero-fig').innerHTML = figureSVG(hero.figure(hs.level));
   $('#hero-name').textContent = hero.name;
-  $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name}`;
+  $('#hero-level').innerHTML = `Level ${hs.level} · ${lv.name}${hs.mastered ? ' · <b class="mastered-word">Mastered</b>' : ''}`;
   $('#hero-kicker').innerHTML = daily ? `Hold of the day ${mult}` : 'Random pick';
   // Kept short: the hold's page (Details) has the rest.
   $('#hero-meta').innerHTML = `
@@ -247,10 +247,10 @@ function renderHero() {
 
 // A level's target in a few characters: "45s", "30s ×2" (each side), "8 cycles".
 // `long`: "30s each side", where "×2" could be read as sets.
-const targetShort = (h, level, { long = false } = {}) => {
-  const t = h.levels[level - 1].target;
-  return h.flow ? (sided(h, level) ? `${t / 2} cycles ×2` : `${t} cycles`) : sided(h, level) ? `${fmtLong(t / 2)} ${long ? 'each side' : '×2'}` : fmtLong(t);
-};
+const targetShort = (h, level, { long = false, t = h.levels[level - 1].target } = {}) =>
+  h.flow ? (sided(h, level) ? `${t / 2} cycles ×2` : `${t} cycles`) : sided(h, level) ? `${fmtLong(t / 2)} ${long ? 'each side' : '×2'}` : fmtLong(t);
+// A mastered hold is practised at the master's time, in level 4's position.
+const masterShort = (h, opts = {}) => targetShort(h, 4, { ...opts, t: masteryTarget(h) });
 
 const STAR = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg>';
 const star = h => (P.isStarred(state, h.id) ? `<span class="card-star" aria-label="Starred">${STAR}</span>` : '');
@@ -270,12 +270,12 @@ function renderGrid() {
         <span class="card-sub price">${LOCK} ${need || `${COIN} ${price}`}</span>
       </button>`;
     }
-    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''}" data-hold="${h.id}">${star(h)}
+    return `<button class="card ${P.isDaily(state, h.id) ? 'daily' : ''} ${hs.mastered ? 'mastered' : ''}" data-hold="${h.id}">${star(h)}
       ${P.isDaily(state, h.id) ? `<span class="card-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : ''}
       ${figureSVG(h.figure(hs.level))}
       <span class="card-name">${h.name}</span>
       ${kind}
-      <span class="card-sub">Lv ${hs.level} · ${targetShort(h, hs.level)}${best ? ` · best ${amount(h, best)}` : ''}</span>
+      <span class="card-sub">${hs.mastered ? `Master · ${masterShort(h)}` : `Lv ${hs.level} · ${targetShort(h, hs.level)}`}${best ? ` · best ${amount(h, best)}` : ''}</span>
       ${pips(hs)}
     </button>`;
   };
@@ -465,7 +465,8 @@ function openHold(hold) {
   sheetHold = hold;
   const hs = P.holdState(state, hold.id);
   // With a level test waiting (and not yet tried today), the sheet opens on it.
-  sheetLevel = P.readyForTest(hs) && !P.testedToday(state, hold.id) && !state.testMode ? hs.level + 1 : hs.level;
+  // A mastered hold opens on its master tab: level 4's position at a master's time.
+  sheetLevel = hs.mastered && !state.testMode ? 5 : P.readyForTest(hs) && !P.testedToday(state, hold.id) && !state.testMode ? hs.level + 1 : hs.level;
   $('#hs-name').textContent = hold.name;
   $('#hs-native').textContent = hold.native;
   $('#hs-about').textContent = hold.about;
@@ -507,15 +508,15 @@ function renderSheetLevel() {
   const testLevel = !locked && !state.testMode && P.readyForTest(hs) ? hs.level + 1 : null;
   // Levels 1–4, then the mastery test (as level 5), shown as a star.
   $('#hs-levels').innerHTML = [1, 2, 3, 4, 5].map(n => {
-    const closed = n === 5 ? !(n === testLevel || state.testMode) : n > unlocked && n !== testLevel;
+    const closed = n === 5 ? !(n === testLevel || state.testMode || hs.mastered) : n > unlocked && n !== testLevel;
     const label = n === 5 ? `<span class="lv-star ${hs.mastered ? 'won' : ''}">${STAR}</span>` : closed ? LOCK : n;
-    return `<button type="button" role="tab" class="lv ${n === 5 ? 'mastery' : ''} ${n === sheetLevel ? 'on' : ''} ${n === testLevel ? 'test' : ''}" data-level="${n}" ${closed ? 'disabled' : ''} aria-selected="${n === sheetLevel}" ${n === 5 ? `aria-label="Mastery test${hs.mastered ? ' (mastered)' : ''}"` : ''}>
+    return `<button type="button" role="tab" class="lv ${n === 5 ? 'mastery' : ''} ${n === sheetLevel ? 'on' : ''} ${n === testLevel ? 'test' : ''}" data-level="${n}" ${closed ? 'disabled' : ''} aria-selected="${n === sheetLevel}" ${n === 5 ? `aria-label="${hs.mastered ? 'Master (mastered)' : 'Mastery test'}"` : ''}>
       ${label}</button>`;
   }).join('');
   const testing = sheetLevel === testLevel;
   $('#hs-test-msg').hidden = !testing;
   const mastering = sheetLevel === 5;
-  $('#hs-start').textContent = mastering && !state.testMode ? 'Take the mastery test' : testing ? 'Take the level test' : 'Start';
+  $('#hs-start').textContent = mastering && !state.testMode && !hs.mastered ? 'Take the mastery test' : testing ? 'Take the level test' : 'Start';
   if (testing) {
     const done = P.testedToday(state, hold.id), price = testPrice(sheetLevel), short = state.coins < price;
     $('#hs-test-msg').innerHTML = done
@@ -529,10 +530,13 @@ function renderSheetLevel() {
   // The mastery test is level 4's position, held much longer.
   const shown = Math.min(sheetLevel, 4), lv = hold.levels[shown - 1];
   $('#hs-fig').innerHTML = figureSVG(hold.figure(shown));
-  $('#hs-lname').textContent = mastering ? `Mastery · ${lv.name}` : `Level ${sheetLevel} · ${lv.name}`;
-  $('#hs-desc').textContent = mastering ? `${lv.desc} The mastery test: hold it ${hold.masteryTarget ? 'far' : `${MASTERY_MULT}×`} longer than level 4, with near-perfect form.` : lv.desc;
+  $('#hs-lname').textContent = mastering ? `${hs.mastered ? 'Master' : 'Mastery test'} · ${lv.name}` : `Level ${sheetLevel} · ${lv.name}`;
+  $('#hs-desc').textContent = !mastering ? lv.desc : hs.mastered
+    ? `${lv.desc} You’ve mastered this hold. This is a master’s time: hold it here to keep it at that standard.`
+    : `${lv.desc} The mastery test: hold it for a master’s time, ${hold.masteryTarget ? 'far' : `${MASTERY_MULT}×`} longer than level 4, with near-perfect form.`;
   const best = hs.best[shown];
   $('#hs-meta').innerHTML = `
+    ${hs.mastered ? `<span class="tag mastered-tag">${STAR}Mastered</span>` : ''}
     <span class="tag strong">${targetText(hold, shown, mastering ? masteryTarget(hold) : lv.target)}</span>
     ${mastering ? '' : `<span class="tag">${coinRate(hold, shown)}</span>`}
     ${P.isDaily(state, hold.id) ? `<span class="tag strong">${P.dailyAvailable(state, hold.id) ? `Hold of the day: ${DAILY_MULT}× coins on your first go` : `Hold of the day: ${DAILY_MULT}× used today`}</span>` : ''}
@@ -708,7 +712,7 @@ function updateHud(v) {
   // One-sided holds show the current side's time against that side's target.
   $('#s-time').textContent = fmt(v.sideHeld);
   $('#s-target').textContent = ` / ${fmt(v.sideTarget)}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.mastery ? ' · Mastery test' : run.test ? ' · Level test' : ''}${state.testMode ? ' · Test mode' : ''}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name}${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.mastery ? (run.test ? ' · Mastery test' : ' · Master') : run.test ? ' · Level test' : ''}${state.testMode ? ' · Test mode' : ''}`;
   // Whole coins, plus a bar filling towards the next one; a chime and a pop as each lands.
   const whole = Math.floor(v.coins);
   $('#s-coins').textContent = whole.toLocaleString();
@@ -783,7 +787,7 @@ function flowStep(v) {
 function updateFlowHud(v) {
   $('#s-time').textContent = v.count;
   $('#s-target').textContent = ` / ${v.goal}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.mastery ? ' · Mastery test' : run.test ? ' · Level test' : ''}${state.testMode ? ' · Test mode' : ''}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.mastery ? (run.test ? ' · Mastery test' : ' · Master') : run.test ? ' · Level test' : ''}${state.testMode ? ' · Test mode' : ''}`;
   const whole = Math.floor(v.coins);
   $('#s-coins').textContent = whole.toLocaleString();
   $('#s-coin-next').style.width = `${Math.round((v.coins % 1) * 100)}%`;
@@ -1022,6 +1026,7 @@ function renderSummary(hold, level, r, o, boost) {
   if (o.test?.passed) setTimeout(() => audio.play('level'), 300);
   // The big moments get the full-screen treatment, once the summary has appeared.
   setTimeout(() => {
+    if (o.mastered) celebrateMastery(hold, r);
     o.betSteps.forEach(celebrateBetStep);
     o.bets.forEach(celebrateBet);
     o.milestones.forEach(celebrateMilestone);
@@ -1280,7 +1285,9 @@ function showCelebration() {
   const c = celebrations[0], el = $('#celebrate');
   if (!c) { el.hidden = true; return; }
   el.hidden = false;
-  el.className = `celebrate ${c.win ? 'win' : 'lose'}`;
+  el.className = `celebrate ${c.win ? 'win' : 'lose'} ${c.kind ?? ''}`;
+  $('#cel-icon').hidden = !c.icon;
+  $('#cel-icon').innerHTML = c.icon ?? '';
   $('#cel-kicker').textContent = c.kicker;
   $('#cel-title').textContent = c.title;
   $('#cel-msg').textContent = c.msg;
@@ -1291,7 +1298,7 @@ function showCelebration() {
   // A burst of coins flying out from the centre.
   $('#cel-burst').innerHTML = c.win ? Array.from({ length: 18 }, (_, i) => {
     const a = (i / 18) * Math.PI * 2, r = 110 + (i % 3) * 40;
-    return `<i style="--dx:${Math.round(Math.cos(a) * r)}px;--dy:${Math.round(Math.sin(a) * r)}px;--d:${(i % 4) * 60}ms">${COIN}</i>`;
+    return `<i style="--dx:${Math.round(Math.cos(a) * r)}px;--dy:${Math.round(Math.sin(a) * r)}px;--d:${(i % 4) * 60}ms">${c.burst ?? COIN}</i>`;
   }).join('') : '';
   if (c.coins) countUp($('#cel-coins'), c.coins, '+');
   audio.unlock();
@@ -1333,6 +1340,17 @@ function celebrateBetStep(st) {
     win: true, kicker: `Bonus time · step ${st.n} of ${st.of}`, title: `${st.name}!`, coins: st.coins,
     msg: st.n < st.of ? 'Paid into your wallet. Keep holding past your targets for the next step.' : 'The last step: paid into your wallet.',
     say: `${st.name}! Plus ${st.coins} coins`,
+  });
+}
+
+// Mastering a hold: the biggest moment for a hold, in gold, with its figure and the time held.
+function celebrateMastery(hold, r) {
+  const t = masteryTarget(hold);
+  celebrate({
+    win: true, kind: 'master', icon: `<span class="cel-star">${STAR}</span>${figureSVG(hold.figure(4))}`, burst: STAR,
+    kicker: 'Hold mastered', title: `${hold.name} mastered!`, coins: LEVEL_UP_COINS.mastered,
+    msg: `${hold.flow ? `${t} slow cycles` : fmtLong(t)} of ${hold.levels[3].name.toLowerCase()} at ${Math.round(r.avgForm)} form: a master’s time. It’s marked in gold from now on, and its page opens on the master’s time to keep it there.`,
+    say: `${hold.name} mastered!`, ok: 'Wonderful',
   });
 }
 
@@ -1748,7 +1766,8 @@ $('#hold-sheet').addEventListener('close', () => {
     const hs = P.holdState(state, sheetHold.id);
     // The fifth tab is the mastery test, at level 4.
     const mastery = sheetLevel === 5, level = Math.min(sheetLevel, 4);
-    const test = !state.testMode && sheetLevel > hs.level;  // in test mode every level is simply open
+    // In test mode every level is simply open; a mastered hold's master tab is practice.
+    const test = !state.testMode && sheetLevel > hs.level && !(mastery && hs.mastered);
     // Tests always use the camera when the hold supports it.
     startSession(sheetHold, level, sheetHold.camera && (test || $('#hs-cam').checked), { test, mastery });
   }

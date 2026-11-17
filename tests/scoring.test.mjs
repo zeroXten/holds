@@ -34,8 +34,9 @@ for (const hold of HOLDS.filter(h => h.camera)) {
 // Its limits still fall level by level; see below.)
 for (const id of ['bow', 'cat', 'crane', 'drop', 'swallow', 'kick', 'sideplank', 'hollow', 'squat', 'feet', 'nordic', 'backbend']) {
   const hold = HOLDS.find(h => h.id === id);
-  // (A hold that starts partway up its ladder holds the top position longer at level 4.)
-  for (let level = 1; level < (hold.startAt ? 3 : 4); level++) {
+  // (A hold that starts partway up its ladder holds the top position longer at level 4, as
+  // does Deep Squat: its last level is the prayer squat, held much longer.)
+  for (let level = 1; level < (hold.startAt || id === 'squat' ? 3 : 4); level++) {
     const r = score(hold, level + 1, hold.figure(level));
     const ok = r.score < 90;
     if (!ok) failures++;

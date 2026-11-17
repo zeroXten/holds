@@ -137,11 +137,12 @@ export const HOLDS = [
     areas: { legs: 1 }, style: 'hard', coins: 1.1,
     video: 'ma bu horse stance kung fu tutorial',
     about: 'The foundation stance. Builds leg strength, a stable root and patience.',
+    masteryTarget: 600,
     levels: [
       { name: 'High horse', target: 30, desc: 'Feet about twice shoulder width, toes forward or turned out slightly, knees pointing the same way as your toes. Fists at your hips. Sink until your thighs slope about 45° down from level.' },
-      { name: 'Mid horse', target: 45, desc: 'Sink lower: thighs about 30° from level. Knees pushed out over your toes.' },
-      { name: 'Low horse', target: 60, desc: 'Thighs within about 15° of level. Back upright, chest open.' },
-      { name: 'Full horse', target: 90, desc: 'Thighs level with the floor. Arms straight out to the sides at shoulder height.' },
+      { name: 'Mid horse', target: 60, desc: 'Sink lower: thighs about 30° from level. Knees pushed out over your toes.' },
+      { name: 'Low horse', target: 120, desc: 'Thighs within about 15° of level. Back upright, chest open.' },
+      { name: 'Full horse', target: 300, desc: 'Thighs level with the floor, fists at your hips. Back upright, knees pushed out, breathing slowly. Stay down to the end.' },
     ],
     criteria: level => [
       {
@@ -168,15 +169,10 @@ export const HOLDS = [
         id: 'knees', label: 'Knees out', cue: 'Push your knees out', joints: [25, 26],
         value: b => Math.abs(b.legs.L.b.x - b.legs.R.b.x) / (Math.abs(b.la.x - b.ra.x) || 1), min: 0.8, soft: 0.25,
       },
-      ...(level === 4 ? armsAtShoulders({ low: 'Raise your arms to shoulder height', high: 'Lower your arms to shoulder height' }) : []),
     ],
     figure: level => {
       const thigh = lerp4(level, 45, 90), shin = lerp4(level, 8, 4);  // thighs 45°, 30°, 15° below level, then level
-      return {
-        view: 'front', torso: 180,
-        legs: { L: [thigh, shin], R: [-thigh, -shin] },
-        arms: level === 4 ? { L: [90, 90], R: [-90, -90] } : chambered,
-      };
+      return { view: 'front', torso: 180, legs: { L: [thigh, shin], R: [-thigh, -shin] }, arms: chambered };
     },
   },
 
@@ -186,11 +182,12 @@ export const HOLDS = [
     hint: 'Stand side-on to the phone',
     video: 'gong bu bow stance kung fu tutorial',
     about: 'A long forward stance: front leg bent like a bow, back leg straight like the arrow.',
+    masteryTarget: 600,
     levels: [
-      { name: 'Short bow', target: 30, desc: 'Long step forward, front toes pointing ahead, back foot turned out about 45°. Bend the front knee, keep the back leg straight and both heels down. Then switch legs.' },
-      { name: 'Bow', target: 45, desc: 'Lower: front knee over the ankle, back leg locked straight. Press the back heel into the floor: you should feel it along the back of the calf.' },
-      { name: 'Deep bow', target: 60, desc: 'Front thigh nearly level. Hips square, back upright.' },
-      { name: 'Pushing bow', target: 90, desc: 'Front thigh level. Arms straight in front at shoulder height, palms pushing.' },
+      { name: 'Short bow', target: 60, desc: 'Long step forward, front toes pointing ahead, back foot turned out about 45°. Bend the front knee, keep the back leg straight and both heels down. Then switch legs.' },
+      { name: 'Bow', target: 120, desc: 'Lower: front knee over the ankle, back leg locked straight. Press the back heel into the floor: you should feel it along the back of the calf.' },
+      { name: 'Deep bow', target: 240, desc: 'Front thigh nearly level. Hips square, back upright.' },
+      { name: 'Pushing bow', target: 360, desc: 'Front thigh level. Arms straight in front at shoulder height, palms pushing.' },
     ],
     criteria: level => [
       {
@@ -230,11 +227,12 @@ export const HOLDS = [
     video: 'xu bu empty stance cat stance kung fu tutorial',
     hint: 'Stand side-on to the phone, front foot pointing across it',
     about: 'Also called cat stance. Nearly all your weight sits on the back leg; the front foot rests lightly. Unlike horse stance, the depth comes from the back ankle: with your hips over the back heel, the only way down is for that shin to tip forward over the foot. So the first level builds that ankle bend on both feet, before any weight goes onto one leg. If the back knee won’t go forward, don’t force it by pushing your hips back (that’s when your back starts to stick out): take a little less depth, and go back to the ankle bend. The camera allows for the back knee pointing partly towards it.',
+    masteryTarget: 360,
     levels: [
-      { name: 'Ankle bend', target: 45, desc: 'Feet flat and side by side, hip width, toes forward. Keeping your back upright and your heels heavy on the floor, let your knees sink forward and down over your toes. Your hips stay over your feet rather than sitting back: you should feel it low in the calves and the Achilles.' },
-      { name: 'High cat', target: 30, desc: 'Almost all your weight on the back leg: knee bent, foot flat and turned out about 45°, and the knee pointing the same way as those toes, not straight ahead. Front foot forward with just the toes resting lightly, knee slightly bent. Hips square. Then switch legs.' },
-      { name: 'Cat', target: 45, desc: 'Sit lower on the back leg: sit down, not back, as if onto a high stool right under you, tailbone tucked. Let the back knee travel forward and out over its toes, heel heavy, as in the ankle bend. If your back starts to stick out, slide the front foot a little further forward rather than forcing the knee. Front foot light enough to lift at any moment.' },
-      { name: 'Low cat', target: 60, desc: 'Back thigh sinking towards level. Hips over the back heel, which stays heavy on the floor while the knee travels forward over the toes: a stretch for the Achilles.' },
+      { name: 'Ankle bend', target: 60, desc: 'Feet flat and side by side, hip width, toes forward. Keeping your back upright and your heels heavy on the floor, let your knees sink forward and down over your toes. Your hips stay over your feet rather than sitting back: you should feel it low in the calves and the Achilles.' },
+      { name: 'High cat', target: 60, desc: 'Almost all your weight on the back leg: knee bent, foot flat and turned out about 45°, and the knee pointing the same way as those toes, not straight ahead. Front foot forward with just the toes resting lightly, knee slightly bent. Hips square. Then switch legs.' },
+      { name: 'Cat', target: 120, desc: 'Sit lower on the back leg: sit down, not back, as if onto a high stool right under you, tailbone tucked. Let the back knee travel forward and out over its toes, heel heavy, as in the ankle bend. If your back starts to stick out, slide the front foot a little further forward rather than forcing the knee. Front foot light enough to lift at any moment.' },
+      { name: 'Low cat', target: 240, desc: 'Back thigh sinking towards level. Hips over the back heel, which stays heavy on the floor while the knee travels forward over the toes: a stretch for the Achilles.' },
     ],
     criteria: level => {
       if (level === 1) {
@@ -294,11 +292,12 @@ export const HOLDS = [
     areas: { balance: 0.6, legs: 0.4 }, style: 'hard', sash: 'blue',
     video: 'du li bu crane stance kung fu',
     about: 'Standing on one leg with the other knee raised: balance, focus and hip strength.',
+    masteryTarget: 600,
     levels: [
-      { name: 'Crane', target: 45, desc: 'Stand on one leg, standing leg straight but not locked, and raise the other knee until the thigh is level with the floor, lower leg tucked in under the knee, toes pointing down. Then switch legs.' },
-      { name: 'High crane', target: 60, desc: 'Raised thigh level or higher. Hands together at the chest.' },
-      { name: 'Golden rooster', target: 60, desc: 'Knee above the hip and one hand raised high overhead.' },
-      { name: 'Long golden rooster', target: 90, desc: 'The golden rooster for a minute and a half, 45 seconds a leg. Still and tall.' },
+      { name: 'Crane', target: 60, desc: 'Stand on one leg, standing leg straight but not locked, and raise the other knee until the thigh is level with the floor, lower leg tucked in under the knee, toes pointing down. Then switch legs.' },
+      { name: 'High crane', target: 120, desc: 'Raised thigh level or higher. Hands together at the chest.' },
+      { name: 'Golden rooster', target: 180, desc: 'Knee above the hip and one hand raised high overhead.' },
+      { name: 'Long golden rooster', target: 360, desc: 'The golden rooster, held long on each leg. Still and tall.' },
     ],
     criteria: level => [
       {
@@ -332,11 +331,12 @@ export const HOLDS = [
     video: 'pu bu drop stance kung fu tutorial',
     about: 'One leg folded deep, the other stretched out along the floor. Strength and flexibility together. From level 2, every 15 seconds you’re told to press the straight leg’s heel into the floor and squeeze it towards you for 5 seconds, then relax and sink lower: the inner thigh gets strong where it’s stretched.',
     press: { levels: [2, 3, 4], press: 'Press: heel down, squeeze the straight leg in', relax: 'Relax, and sink a little lower' },
+    masteryTarget: 360,
     levels: [
       { name: 'Drop', target: 30, desc: 'Very wide stance, feet parallel and flat, toes forward. Sink low onto one bent leg with the other straight out to the side. Fists at your hips. Then switch legs.' },
-      { name: 'Low drop', target: 45, desc: 'Hips close to the heel of the bent leg. Chest up, looking along the straight leg.' },
-      { name: 'Full drop', target: 45, desc: 'Fully folded, hips just above the floor, extended leg straight and low.' },
-      { name: 'Long full drop', target: 75, desc: 'The full drop for 75 seconds, both feet still flat. Press and relax when told, sinking a little lower each time.' },
+      { name: 'Low drop', target: 60, desc: 'Hips close to the heel of the bent leg. Chest up, looking along the straight leg.' },
+      { name: 'Full drop', target: 120, desc: 'Fully folded, hips just above the floor, extended leg straight and low.' },
+      { name: 'Long full drop', target: 240, desc: 'The full drop, held long, both feet still flat. Press and relax when told, sinking a little lower each time.' },
     ],
     criteria: level => [
       {
@@ -370,11 +370,12 @@ export const HOLDS = [
     areas: { legs: 0.4, upper: 0.6 }, style: 'soft', coins: 0.9,
     video: 'zhan zhuang standing post holding the ball',
     about: '"Holding the ball". A quiet standing meditation that slowly builds deep endurance in the legs and shoulders.',
+    masteryTarget: 3600,
     levels: [
-      { name: 'Wuji', target: 60, desc: 'Feet shoulder width, knees softly bent. Hands rounded in front of your belly.' },
-      { name: 'Holding the ball', target: 120, desc: 'Raise the rounded arms to chest height, as if hugging a large ball. Elbows out.' },
-      { name: 'Long post', target: 180, desc: 'Same posture, longer. Sink a little lower; relax the shoulders.' },
-      { name: 'Deep post', target: 300, desc: 'Five minutes. Stay still, breathe slowly, keep the arms up.' },
+      { name: 'Wuji', target: 120, desc: 'Feet shoulder width, knees softly bent. Hands rounded in front of your belly.' },
+      { name: 'Holding the ball', target: 300, desc: 'Raise the rounded arms to chest height, as if hugging a large ball. Elbows out.' },
+      { name: 'Long post', target: 600, desc: 'Same posture, longer. Sink a little lower; relax the shoulders.' },
+      { name: 'Deep post', target: 1200, desc: 'Lower again, and stay: still, breathing slowly, the arms up to the end.' },
     ],
     criteria: level => [
       {
@@ -411,11 +412,12 @@ export const HOLDS = [
     areas: { upper: 0.8, balance: 0.2 }, style: 'soft', coins: 0.8,
     video: 'yi jin jing wei tuo presents the pestle',
     about: 'The first three postures of the Yi Jin Jing, the Shaolin “muscle-tendon changing” classic. Gentle on the legs; the work is in the arms, shoulders and slow breathing.',
+    masteryTarget: 600,
     levels: [
       { name: 'Frontways', target: 60, desc: 'Stand tall, feet about a fist apart, knees soft. Palms together (or one hand cupped in the other) in front of your chest. Breathe slowly through the nose.' },
-      { name: 'Sideways', target: 45, desc: 'Weight onto the balls of your feet. Arms straight out to the sides at shoulder height, palms up.' },
-      { name: 'Upwards', target: 45, desc: 'Arms straight overhead, palms up as if holding up the sky, fingertips about a fist apart. Look up at your hands.' },
-      { name: 'Upwards on tiptoe', target: 60, desc: 'Palms up overhead and rise onto your toes, knees straight. Hold steady and keep breathing slowly.' },
+      { name: 'Sideways', target: 120, desc: 'Weight onto the balls of your feet. Arms straight out to the sides at shoulder height, palms up.' },
+      { name: 'Upwards', target: 180, desc: 'Arms straight overhead, palms up as if holding up the sky, fingertips about a fist apart. Look up at your hands.' },
+      { name: 'Upwards on tiptoe', target: 240, desc: 'Palms up overhead and rise onto your toes, knees straight. Hold steady and keep breathing slowly.' },
     ],
     criteria: level => [
       ...(level === 1 ? [
@@ -457,11 +459,12 @@ export const HOLDS = [
     areas: { upper: 0.6, mobility: 0.4 }, style: 'soft', coins: 0.8, sash: 'yellow',
     video: 'yi jin jing plucking stars posture',
     about: 'A Yi Jin Jing posture: one hand reaches up above your head, the other rests behind your back. Opens the shoulders and sides gently.',
+    masteryTarget: 600,
     levels: [
-      { name: 'Reaching up', target: 30, desc: 'Feet hip width, knees soft. Raise one hand above your head, palm facing down towards it. Bend the other arm and rest the back of that hand on your lower back. Then switch sides.' },
-      { name: 'Plucking the stars', target: 60, desc: 'Reach the top hand higher, elbow gently rounded, and look up at your palm. Turn your chest slightly towards the arm behind your back.' },
-      { name: 'Long reach', target: 90, desc: 'The same, held longer. Breathe slowly and let the shoulders soften.' },
-      { name: 'Still as the night', target: 120, desc: 'Two minutes, one per side. Completely still, gaze on the raised palm.' },
+      { name: 'Reaching up', target: 60, desc: 'Feet hip width, knees soft. Raise one hand above your head, palm facing down towards it. Bend the other arm and rest the back of that hand on your lower back. Then switch sides.' },
+      { name: 'Plucking the stars', target: 120, desc: 'Reach the top hand higher, elbow gently rounded, and look up at your palm. Turn your chest slightly towards the arm behind your back.' },
+      { name: 'Long reach', target: 240, desc: 'The same, held longer. Breathe slowly and let the shoulders soften.' },
+      { name: 'Still as the night', target: 360, desc: 'Completely still, gaze on the raised palm, held long on each side.' },
     ],
     criteria: level => {
       // Only the raised arm: the hand behind your back is hidden from the camera.
@@ -495,11 +498,12 @@ export const HOLDS = [
     video: 'ba duan jin two hands hold the feet',
     about: 'From the Ba Duan Jin (Eight Brocades): a slow forward fold, said to strengthen the kidneys and waist. In plain terms, it stretches the back and hamstrings. Roll down and up slowly, one bone at a time, so the bend is shared along the whole spine rather than a few joints. From level 2 it becomes an active stretch: every 15 seconds you’re told to press (tense the backs of your legs as if to stand up, for 5 seconds) and then to relax and fold a little deeper. Getting strong at the end of your range is what lets your body allow more of it. If bending forward hurts during a back flare-up, leave this one until it settles.',
     press: { levels: [2, 3, 4], press: 'Press: tense the backs of your legs, as if to stand up', relax: 'Relax, and fold a little deeper' },
+    masteryTarget: 300,
     levels: [
       { name: 'Hands to knees', target: 30, desc: 'Feet hip width. Roll down from the top: drop your chin to your chest and let the weight of your head take you down one bone at a time, arms hanging, legs as straight as is comfortable, until your hands reach your knees. Let your head hang. Come up the same way, head last.' },
-      { name: 'Hands to shins', target: 45, desc: 'Fold further, hands down to your shins. Fold at the hips, belly towards your thighs. When you’re told to press, tense your hamstrings and calves hard for 5 seconds as if to stand up, without moving; then relax, breathe out and sink a little further.' },
-      { name: 'Hands to ankles', target: 60, desc: 'Hands round your ankles, legs straight, back long. Use your arms to draw yourself gently into the fold, and on each press, pull against them with the backs of your legs.' },
-      { name: 'Holding the feet', target: 60, desc: 'Hold your toes or put your palms by your feet, and press and relax as before. Press firmly but not all-out: build up the effort over weeks.' },
+      { name: 'Hands to shins', target: 60, desc: 'Fold further, hands down to your shins. Fold at the hips, belly towards your thighs. When you’re told to press, tense your hamstrings and calves hard for 5 seconds as if to stand up, without moving; then relax, breathe out and sink a little further.' },
+      { name: 'Hands to ankles', target: 120, desc: 'Hands round your ankles, legs straight, back long. Use your arms to draw yourself gently into the fold, and on each press, pull against them with the backs of your legs.' },
+      { name: 'Holding the feet', target: 180, desc: 'Hold your toes or put your palms by your feet, and press and relax as before. Press firmly but not all-out: build up the effort over weeks.' },
     ],
     criteria: level => [
       {
@@ -576,11 +580,12 @@ export const HOLDS = [
       ],
       lowFigure: () => ({ view: 'front', torso: 180, legs: { L: [3, 0], R: [-3, 0] }, arms: { L: [20, -75], R: [-20, 75] } }),
     },
+    masteryTarget: 50,
     levels: [
-      { name: 'Gentle lift', target: 4, desc: 'Feet hip width. Hands together in front of your belly, fingers linked, palms up. Lift them up the front of your body; at your chest, turn the palms over and push them up overhead. Let go and float your arms down the sides back to your belly. At least 5 seconds each cycle.' },
-      { name: 'Holding up the sky', target: 6, desc: 'Pause for a moment at the top, arms straight but not locked, stretching up through the palms. At least 6 seconds each.' },
-      { name: 'Slow and full', target: 8, desc: 'Pause for two seconds at the top and look up at your hands. Let each cycle take 8 seconds or more.' },
-      { name: 'On tiptoe', target: 10, desc: 'As you push up, rise onto your toes; lower your heels as your hands come down. Ten slow cycles.' },
+      { name: 'Gentle lift', target: 6, desc: 'Feet hip width. Hands together in front of your belly, fingers linked, palms up. Lift them up the front of your body; at your chest, turn the palms over and push them up overhead. Let go and float your arms down the sides back to your belly. At least 5 seconds each cycle.' },
+      { name: 'Holding up the sky', target: 10, desc: 'Pause for a moment at the top, arms straight but not locked, stretching up through the palms. At least 6 seconds each.' },
+      { name: 'Slow and full', target: 20, desc: 'Pause for two seconds at the top and look up at your hands. Let each cycle take 8 seconds or more.' },
+      { name: 'On tiptoe', target: 30, desc: 'As you push up, rise onto your toes; lower your heels as your hands come down. Slow, unbroken cycles.' },
     ],
     // The high position (palms overhead); the low one is in flow.low.
     criteria: () => [
@@ -611,11 +616,12 @@ export const HOLDS = [
     video: 'side plank progression tutorial',
     hint: 'Phone low to the ground, with your front facing it',
     about: 'Not strictly Shaolin, but one of the best holds for the sides of the core and a stable spine.',
+    masteryTarget: 240,
     levels: [
       { name: 'Side plank', target: 60, desc: 'On one forearm, elbow under the shoulder, legs straight and feet stacked. Lift your hips so shoulders, hips and feet make one straight line. Then switch sides.' },
-      { name: 'Straight-arm side plank', target: 60, desc: 'Up on your hand with the arm locked straight, hand under the shoulder.' },
-      { name: 'Star side plank', target: 40, desc: 'Straight-arm side plank with the top leg lifted high and the top arm reaching to the sky.' },
-      { name: 'Long star', target: 60, desc: 'The star for 30 seconds each side. Keep the hips high and the top leg up.' },
+      { name: 'Straight-arm side plank', target: 120, desc: 'Up on your hand with the arm locked straight, hand under the shoulder.' },
+      { name: 'Star side plank', target: 60, desc: 'Straight-arm side plank with the top leg lifted high and the top arm reaching to the sky.' },
+      { name: 'Long star', target: 120, desc: 'The star, held long on each side. Keep the hips high and the top leg up.' },
     ],
     criteria: level => {
       const end = level === 1 ? kneesMid : level === 4 ? b => (b.la.y > b.ra.y ? b.la : b.ra) : anklesMid;
@@ -669,11 +675,12 @@ export const HOLDS = [
     video: 'bird dog exercise how to',
     hint: 'Phone low to the ground, side-on to you',
     about: 'Not strictly Shaolin, but a gentle, highly rated hold for the lower back and a core that resists twisting.',
+    masteryTarget: 180,
     levels: [
-      { name: 'Leg reach', target: 30, desc: 'On hands and knees, hands under shoulders. Reach one leg straight back, level with your back. Then switch legs.' },
-      { name: 'Bird dog', target: 40, desc: 'Reach the opposite arm forward too, so arm, back and leg make one long level line.' },
-      { name: 'Long bird dog', target: 60, desc: 'The same, held longer. Keep your hips square and your back flat.' },
-      { name: 'Plank bird dog', target: 40, desc: 'From a high plank on hands and toes, lift one leg and the opposite arm level. Supporting leg straight.' },
+      { name: 'Leg reach', target: 40, desc: 'On hands and knees, hands under shoulders. Reach one leg straight back, level with your back. Then switch legs.' },
+      { name: 'Bird dog', target: 90, desc: 'Reach the opposite arm forward too, so arm, back and leg make one long level line.' },
+      { name: 'Long bird dog', target: 180, desc: 'The same, held longer. Keep your hips square and your back flat.' },
+      { name: 'Plank bird dog', target: 90, desc: 'From a high plank on hands and toes, lift one leg and the opposite arm level. Supporting leg straight.' },
     ],
     criteria: level => {
       const reachArm = b => (lean(b.arms.L.a, b.arms.L.c) > lean(b.arms.R.a, b.arms.R.c) ? b.arms.L : b.arms.R);
@@ -726,11 +733,12 @@ export const HOLDS = [
     video: 'hollow body hold progression',
     hint: 'Phone low to the ground, side-on to you',
     about: 'Borrowed from gymnastics: lower back pressed into the floor, shoulders and legs lifted. Builds the front of the core.',
+    masteryTarget: 180,
     levels: [
-      { name: 'High hollow', target: 40, desc: 'On your back, legs straight with your feet high (about 45°). Lift your shoulders, reach your arms towards your feet, and press your lower back into the floor.' },
+      { name: 'High hollow', target: 30, desc: 'On your back, legs straight with your feet high (about 45°). Lift your shoulders, reach your arms towards your feet, and press your lower back into the floor.' },
       { name: 'Hollow hold', target: 45, desc: 'Lower your straight legs until your feet hover just off the floor. Lower back stays pressed down.' },
-      { name: 'Full hollow', target: 45, desc: 'Low legs, with your arms reaching overhead past your ears.' },
-      { name: 'Long full hollow', target: 60, desc: 'A full minute in the full hollow. If your lower back starts to lift, raise your legs a little rather than arch.' },
+      { name: 'Full hollow', target: 60, desc: 'Low legs, with your arms reaching overhead past your ears.' },
+      { name: 'Long full hollow', target: 120, desc: 'The full hollow, held long. If your lower back starts to lift, raise your legs a little rather than arch.' },
     ],
     criteria: level => [
       {
@@ -774,11 +782,12 @@ export const HOLDS = [
     video: 'deep squat hold mobility how to',
     about: 'Not strictly Shaolin, but resting in a deep squat restores hip and ankle mobility, and makes every low stance easier. From level 2, every 15 seconds you’re told to press (push the floor away as if to stand, without rising, for 5 seconds), then relax and sink deeper with your heels heavy.',
     press: { levels: [2, 3, 4], press: 'Press: push the floor away, as if to stand', relax: 'Relax, sink deeper, heels heavy' },
+    masteryTarget: 600,
     levels: [
       { name: 'Supported squat', target: 30, desc: 'Feet a little wider than your hips, toes slightly out. Hold a door frame or post and sink until your thighs are level. If your heels lift, rest them on a rolled towel; over a few weeks they’ll come down on their own.' },
-      { name: 'Deep squat', target: 45, desc: 'Let go and sink all the way: hips below your knees, heels flat on the floor. Let your knees travel forward over your toes and keep your heels heavy: you should feel it in the ankles and low in the calves.' },
-      { name: 'Prayer squat', target: 60, desc: 'Deep squat with your palms together at your chest, elbows pressing your knees out. Chest up.' },
-      { name: 'Overhead squat', target: 60, desc: 'Deep squat with both arms straight overhead. Heels down, chest proud.' },
+      { name: 'Deep squat', target: 60, desc: 'Let go and sink all the way: hips below your knees, heels flat on the floor. Let your knees travel forward over your toes and keep your heels heavy: you should feel it in the ankles and low in the calves.' },
+      { name: 'Prayer squat', target: 120, desc: 'Deep squat with your palms together at your chest, elbows pressing your knees out. Chest up.' },
+      { name: 'Long prayer squat', target: 300, desc: 'The prayer squat, held long: palms together at your chest, elbows pressing your knees out, heels down, chest up. At this length it becomes a place to rest, as it is for much of the world.' },
     ],
     criteria: level => [
       {
@@ -790,7 +799,7 @@ export const HOLDS = [
         value: b => Math.max(b.P[31].y - b.P[29].y, b.P[32].y - b.P[30].y) / ((b.legs.L.lowerLen + b.legs.R.lowerLen) / 2), max: 0.12, soft: 0.15,
       },
       upright(by(level, [55, 45, 45, 45]), 'Lift your chest', 20),
-      ...(level === 3 ? [
+      ...(level >= 3 ? [
         {
           id: 'hands', label: 'Hands at chest', cue: 'Bring your palms together at your chest', joints: [15, 16],
           value: b => (mid(b.arms.L.c, b.arms.R.c).y - b.sh.y) / b.torsoLen, min: -0.2, max: 0.6, soft: 0.25,
@@ -800,21 +809,11 @@ export const HOLDS = [
           value: b => Math.max(b.arms.L.angle, b.arms.R.angle), max: 120, soft: 30,
         },
       ] : []),
-      ...(level === 4 ? [
-        {
-          id: 'overhead', label: 'Arms overhead', cue: 'Reach your arms straight overhead', joints: [15, 16],
-          value: b => (b.nose.y - Math.min(b.arms.L.c.y, b.arms.R.c.y)) / b.torsoLen, min: 0.3, soft: 0.3,
-        },
-        {
-          id: 'armStraight', label: 'Straight arms', cue: 'Straighten your arms', joints: [13, 14],
-          value: b => Math.min(b.arms.L.angle, b.arms.R.angle), min: 150, soft: 30,
-        },
-      ] : []),
     ],
     figure: level => {
       // Side-on, facing right: knees forward over the toes, hips sitting back and low.
       const thigh = level === 1 ? 85 : 100;
-      const arms = by(level, [[90, 90], [80, 85], [40, 150], [175, 178]]);
+      const arms = by(level, [[90, 90], [80, 85], [40, 150], [40, 150]]);
       return {
         view: 'side', torso: 145,
         legs: { L: [thigh, -25], R: [thigh, -25] },
@@ -829,11 +828,12 @@ export const HOLDS = [
     video: 'iron bridge between two chairs bodyweight hold',
     hint: 'Phone low to the ground; lie side-on to it',
     about: 'The body held rigid as an iron plank, built up from a floor bridge to the strongman-style demonstration of lying stiff between two chairs. A demonstration feat rather than a classical stance.',
+    masteryTarget: 300,
     levels: [
-      { name: 'Reverse plank', target: 45, desc: 'Sit with your legs straight, hands under your shoulders, fingers towards your feet. Lift your hips into a straight board from shoulders to heels.' },
+      { name: 'Reverse plank', target: 30, desc: 'Sit with your legs straight, hands under your shoulders, fingers towards your feet. Lift your hips into a straight board from shoulders to heels.' },
       { name: 'Bench bridge', target: 60, desc: 'Upper back on a sturdy bench or chair, heels on the floor, legs straight, arms folded. Hold shoulders, hips and heels in one line.' },
-      { name: 'Iron bridge', target: 30, desc: 'Upper back on one chair, heels on another, nothing underneath, body level and rigid. Use solid chairs and have a spotter the first few times.' },
-      { name: 'Long iron bridge', target: 60, desc: 'A full minute between the chairs, body level and rigid. Keep a spotter close.' },
+      { name: 'Iron bridge', target: 60, desc: 'Upper back on one chair, heels on another, nothing underneath, body level and rigid. Use solid chairs and have a spotter the first few times.' },
+      { name: 'Long iron bridge', target: 180, desc: 'Long between the chairs, body level and rigid. Keep a spotter close.' },
     ],
     criteria: level => {
       const end = level === 1 ? kneesMid : anklesMid;
@@ -883,11 +883,12 @@ export const HOLDS = [
     hint: 'Stand side-on to the phone',
     video: 'yan shi ping heng swallow balance wushu',
     about: 'Balance on one leg with the body tipped forward and the other leg reaching back, like a swallow in flight.',
+    masteryTarget: 240,
     levels: [
       { name: 'Half swallow', target: 30, desc: 'Stand on one leg and tip forward, lifting the other leg straight behind you, torso and back leg about 30° from level. Both legs straight. Then switch legs.' },
-      { name: 'Swallow', target: 45, desc: 'Torso and back leg level with the floor, arms spread out to the sides like wings.' },
-      { name: 'Flying swallow', target: 45, desc: 'Fully level, back leg as high as your head, arms reaching forward in line with your body.' },
-      { name: 'Long flying swallow', target: 60, desc: 'The flying swallow for 30 seconds each leg, steady to the end.' },
+      { name: 'Swallow', target: 60, desc: 'Torso and back leg level with the floor, arms spread out to the sides like wings.' },
+      { name: 'Flying swallow', target: 90, desc: 'Fully level, back leg as high as your head, arms reaching forward in line with your body.' },
+      { name: 'Long flying swallow', target: 120, desc: 'The flying swallow, held long on each leg, steady to the end.' },
     ],
     criteria: level => [
       {
@@ -928,11 +929,12 @@ export const HOLDS = [
     hint: 'Stand side-on to the phone',
     video: 'deng tui heel kick kung fu',
     about: 'Hold a front heel kick out in the air: hip strength, hamstring flexibility and balance.',
+    masteryTarget: 120,
     levels: [
-      { name: 'Knee kick', target: 30, desc: 'Kick one leg forward and hold it there, straight, heel pushing out, foot at about knee height or higher. Fists up in guard, both legs straight. Then switch legs.' },
-      { name: 'Waist kick', target: 30, desc: 'Kicking leg level with the floor, at waist height. Stay tall.' },
-      { name: 'High kick', target: 30, desc: 'Foot above waist height, towards your chest. Both legs locked straight.' },
-      { name: 'Long high kick', target: 45, desc: 'The high kick for about 22 seconds a leg. Stay tall; don’t lean back to find the height.' },
+      { name: 'Knee kick', target: 20, desc: 'Kick one leg forward and hold it there, straight, heel pushing out, foot at about knee height or higher. Fists up in guard, both legs straight. Then switch legs.' },
+      { name: 'Waist kick', target: 40, desc: 'Kicking leg level with the floor, at waist height. Stay tall.' },
+      { name: 'High kick', target: 60, desc: 'Foot above waist height, towards your chest. Both legs locked straight.' },
+      { name: 'Long high kick', target: 90, desc: 'The high kick, held long on each leg. Stay tall; don’t lean back to find the height.' },
     ],
     criteria: level => [
       {
@@ -965,11 +967,12 @@ export const HOLDS = [
     video: 'knuckle plank fist plank',
     hint: 'Phone low to the ground, side-on to you',
     about: 'The top of a knuckle push-up, held. Builds the core, wrists and shoulders that strikes come from.',
+    masteryTarget: 120,
     levels: [
-      { name: 'Kneeling plank', target: 30, desc: 'On your fists and knees, fists under your shoulders. Hold shoulders, hips and knees in one straight line.' },
-      { name: 'Fist plank', target: 45, desc: 'On fists and toes, arms straight. One straight line from shoulders to heels.' },
-      { name: 'One-leg plank', target: 45, desc: 'Fist plank with one foot lifted off the floor. Switch feet halfway.' },
-      { name: 'Low plank', target: 30, desc: 'Lower halfway into a push-up, elbows bent to 90° and tucked in, body straight. Hold.' },
+      { name: 'Kneeling plank', target: 45, desc: 'On your fists and knees, fists under your shoulders. Hold shoulders, hips and knees in one straight line.' },
+      { name: 'Fist plank', target: 90, desc: 'On fists and toes, arms straight. One straight line from shoulders to heels.' },
+      { name: 'One-leg plank', target: 90, desc: 'Fist plank with one foot lifted off the floor. Switch feet halfway.' },
+      { name: 'Low plank', target: 60, desc: 'Lower halfway into a push-up, elbows bent to 90° and tucked in, body straight. Hold.' },
     ],
     criteria: level => {
       // Measure to the supporting foot, so a lifted foot (level 3) doesn't bend the line.
@@ -1026,11 +1029,12 @@ export const HOLDS = [
     video: 'forearm plank form tutorial',
     hint: 'Phone low to the ground, side-on to you',
     about: 'Not strictly Shaolin. With your weight on the forearms, the shoulders and wrists do little and the stomach does nearly all the work, so it trains the core for longer than the Fist Plank can.',
+    masteryTarget: 180,
     levels: [
-      { name: 'Kneeling forearm plank', target: 45, desc: 'On your forearms and knees, elbows under your shoulders, forearms flat and pointing forward. Hold shoulders, hips and knees in one straight line.' },
-      { name: 'Forearm plank', target: 60, desc: 'On forearms and toes, elbows under your shoulders. One straight line from shoulders to heels; don’t let the hips sag or lift.' },
-      { name: 'One-leg forearm plank', target: 60, desc: 'Forearm plank with one foot lifted off the floor, hips level. Switch feet halfway.' },
-      { name: 'Long-lever plank', target: 45, desc: 'Walk your elbows forward a hand’s width past your shoulders, body still straight. The longer lever makes the stomach work much harder.' },
+      { name: 'Kneeling forearm plank', target: 60, desc: 'On your forearms and knees, elbows under your shoulders, forearms flat and pointing forward. Hold shoulders, hips and knees in one straight line.' },
+      { name: 'Forearm plank', target: 120, desc: 'On forearms and toes, elbows under your shoulders. One straight line from shoulders to heels; don’t let the hips sag or lift.' },
+      { name: 'One-leg forearm plank', target: 120, desc: 'Forearm plank with one foot lifted off the floor, hips level. Switch feet halfway.' },
+      { name: 'Long-lever plank', target: 90, desc: 'Walk your elbows forward a hand’s width past your shoulders, body still straight. The longer lever makes the stomach work much harder.' },
     ],
     criteria: level => {
       // Measure to the supporting foot, so a lifted foot (level 3) doesn't bend the line.
@@ -1091,11 +1095,12 @@ export const HOLDS = [
     areas: { legs: 0.7, mobility: 0.3 }, style: 'hard', sash: 'green',
     video: 'xie bu rest stance kung fu tutorial',
     about: 'A low, cross-legged “resting” stance, like sitting down with your legs crossed while standing. Used for turning and coiling between moves. The camera checks that you’re low with both knees bent; it can’t see the legs cross, so keep that part honest.',
+    masteryTarget: 360,
     levels: [
-      { name: 'High rest', target: 30, desc: 'Turn your front foot out and step the other foot behind it so your legs cross. Both feet stay on the floor: front foot flat, back foot on its toes with the heel up. Bend both knees a little. Then switch sides.' },
-      { name: 'Rest', target: 45, desc: 'Sink to about half-squat: your back knee tucks in behind your front calf. Front foot flat, back heel up, chest upright.' },
-      { name: 'Low rest', target: 60, desc: 'Sit low, almost onto your back heel, thighs pressed together. Twist your chest towards the front foot.' },
-      { name: 'Deep rest', target: 75, desc: 'Fully seated on your back heel, back knee just off the floor. Upright and still.' },
+      { name: 'High rest', target: 40, desc: 'Turn your front foot out and step the other foot behind it so your legs cross. Both feet stay on the floor: front foot flat, back foot on its toes with the heel up. Bend both knees a little. Then switch sides.' },
+      { name: 'Rest', target: 90, desc: 'Sink to about half-squat: your back knee tucks in behind your front calf. Front foot flat, back heel up, chest upright.' },
+      { name: 'Low rest', target: 180, desc: 'Sit low, almost onto your back heel, thighs pressed together. Twist your chest towards the front foot.' },
+      { name: 'Deep rest', target: 240, desc: 'Fully seated on your back heel, back knee just off the floor. Upright and still.' },
     ],
     // Only what the camera can see reliably: how low you sit, both knees bent, chest up.
     criteria: level => [
@@ -1134,11 +1139,12 @@ export const HOLDS = [
     hint: 'Stand side-on to the phone',
     video: 'isometric bicep hold 90 degrees',
     about: 'An isometric hold for the biceps and forearms: elbows bent to a right angle at your sides, palms up, as if carrying a heavy tray. Empty hands is gentle; something in each hand (water bottles, tins, a bag of books) makes it real work.',
+    masteryTarget: 360,
     levels: [
-      { name: 'Empty tray', target: 45, desc: 'Stand tall, upper arms against your sides. Bend your elbows to 90° so your forearms point straight ahead, palms up. Squeeze your arms as if a heavy tray rests on your palms.' },
-      { name: 'Loaded tray', target: 45, desc: 'The same, holding something in each hand: a full water bottle or a tin. Elbows stay tucked in; don’t lean back.' },
-      { name: 'Heavy tray', target: 60, desc: 'Something heavier in each hand (2 litre bottles, or a bag of books across both palms). Shoulders down, elbows still at 90°.' },
-      { name: 'Iron tray', target: 90, desc: 'Your heaviest load, held for a minute and a half. Keep breathing; the forearms stay level to the end.' },
+      { name: 'Empty tray', target: 60, desc: 'Stand tall, upper arms against your sides. Bend your elbows to 90° so your forearms point straight ahead, palms up. Squeeze your arms as if a heavy tray rests on your palms.' },
+      { name: 'Loaded tray', target: 90, desc: 'The same, holding something in each hand: a full water bottle or a tin. Elbows stay tucked in; don’t lean back.' },
+      { name: 'Heavy tray', target: 120, desc: 'Something heavier in each hand (2 litre bottles, or a bag of books across both palms). Shoulders down, elbows still at 90°.' },
+      { name: 'Iron tray', target: 240, desc: 'Your heaviest load, held long. Keep breathing; the forearms stay level to the end.' },
     ],
     criteria: () => [
       {
@@ -1165,11 +1171,12 @@ export const HOLDS = [
     hint: 'Stand side-on to the phone',
     video: 'yi jin jing show claws spread wings',
     about: 'A Yi Jin Jing posture: the palms push slowly forward from the chest until the arms are straight in front at shoulder height, fingers up and spread. Works the fronts of the shoulders and the arms.',
+    masteryTarget: 600,
     levels: [
-      { name: 'Pushing palms', target: 45, desc: 'Feet hip width, knees soft. From your chest, push your palms slowly forward until your arms are straight in front at shoulder height, palms facing away, fingers pointing up.' },
-      { name: 'Spreading wings', target: 60, desc: 'Spread your fingers wide and press out through the heels of the hands, as if pushing a wall away. Shoulders down.' },
-      { name: 'Long push', target: 90, desc: 'The same for a minute and a half, breathing slowly. Arms stay level.' },
-      { name: 'Unmoving claws', target: 120, desc: 'Two minutes, completely still. Press forward a little more with every out-breath.' },
+      { name: 'Pushing palms', target: 60, desc: 'Feet hip width, knees soft. From your chest, push your palms slowly forward until your arms are straight in front at shoulder height, palms facing away, fingers pointing up.' },
+      { name: 'Spreading wings', target: 120, desc: 'Spread your fingers wide and press out through the heels of the hands, as if pushing a wall away. Shoulders down.' },
+      { name: 'Long push', target: 240, desc: 'The same, held longer, breathing slowly. Arms stay level.' },
+      { name: 'Unmoving claws', target: 360, desc: 'Completely still, for longer again. Press forward a little more with every out-breath.' },
     ],
     criteria: () => [
       ...armsAtShoulders({ low: 'Raise your arms to shoulder height', high: 'Lower your arms to shoulder height' }),
@@ -1187,11 +1194,12 @@ export const HOLDS = [
     areas: { upper: 1 }, style: 'hard',
     video: 'isometric arms out to the sides hold',
     about: 'Arms held straight out to the sides at shoulder height: a classic kung fu shoulder endurance drill. Simple, and much harder than it looks after the first minute.',
+    masteryTarget: 600,
     levels: [
       { name: 'Palms down', target: 60, desc: 'Feet together, standing tall. Arms straight out to the sides at shoulder height, palms down, fingers together.' },
-      { name: 'Palms up', target: 60, desc: 'The same with the palms turned up. Shoulders stay down, away from your ears.' },
-      { name: 'Iron fists', target: 90, desc: 'Make fists, palms down, and squeeze them. Arms level for a minute and a half.' },
-      { name: 'Weighted wings', target: 60, desc: 'Hold something in each hand (a water bottle or a tin), arms straight and level.' },
+      { name: 'Palms up', target: 120, desc: 'The same with the palms turned up. Shoulders stay down, away from your ears.' },
+      { name: 'Iron fists', target: 180, desc: 'Make fists, palms down, and squeeze them. Arms level to the end.' },
+      { name: 'Weighted wings', target: 300, desc: 'Hold something in each hand (a water bottle or a tin), arms straight and level.' },
     ],
     criteria: () => [
       ...armsAtShoulders({ low: 'Raise your arms to shoulder height', high: 'Lower your arms to shoulder height' }),
@@ -1209,11 +1217,12 @@ export const HOLDS = [
     hint: 'Face the phone',
     video: 'kung fu jar training grip strength',
     about: 'Traditional kung fu grip training: holding a jar by its rim with the fingertips, arm out from the body. It loads the tendons of the fingers, hand and forearm, which few other holds reach. Use something wide and unbreakable you can pinch with your fingertips, 7 cm or more across: a plastic jar or tub by its rim, or a wide reusable bottle by its base. Fill it with sand, rice, dried beans or water, so you can set the weight, and train over carpet or a mat so a drop doesn’t matter. How heavy: fill it until the last 10 seconds of each hold are hard, and add more when they aren’t. For most people that’s 1.5–3 kg; a kilo or less does very little. The camera checks your arm; the grip is on your honour: fingertips on one side, thumb on the other, palm off.',
+    masteryTarget: 120,
     levels: [
-      { name: 'Shoulder height', target: 60, desc: 'Pinch the jar with your fingertips, thumb on the other side, palm off. Arm straight out to the side at shoulder height, wrist level. Fill it so the last 10 seconds are hard. 30 seconds each hand: switch halfway.' },
-      { name: 'Long hold', target: 90, desc: '45 seconds each hand at shoulder height. Same rule: the last 10 seconds should be hard, so add weight when they aren’t.' },
-      { name: 'Heavy jar', target: 60, desc: 'Fill it heavier, until your grip only just lasts 30 seconds each hand. If it starts to slip, set it down: that’s the end of the set, not a failure.' },
-      { name: 'Two jars', target: 40, desc: 'A jar in each hand, both arms straight out to the sides at shoulder height, filled so the end is hard. Shoulders down, wrists level.' },
+      { name: 'Shoulder height', target: 60, desc: 'Pinch the jar with your fingertips, thumb on the other side, palm off. Arm straight out to the side at shoulder height, wrist level. Fill it so the last 10 seconds are hard. One hand, then switch halfway.' },
+      { name: 'Long hold', target: 120, desc: 'Longer on each hand, at shoulder height. Same rule: the last 10 seconds should be hard, so add weight when they aren’t.' },
+      { name: 'Heavy jar', target: 90, desc: 'Fill it heavier, until your grip only just lasts its time on each hand. If it starts to slip, set it down: that’s the end of the set, not a failure.' },
+      { name: 'Two jars', target: 60, desc: 'A jar in each hand, both arms straight out to the sides at shoulder height, filled so the end is hard. Shoulders down, wrists level.' },
     ],
     criteria: level => {
       if (level === 4) return [
@@ -1254,11 +1263,12 @@ export const HOLDS = [
     areas: { upper: 0.6, legs: 0.4 }, style: 'soft', sash: 'blue',
     video: 'ba duan jin drawing the bow to shoot the vulture',
     about: 'The second of the Ba Duan Jin, held still: in a horse-riding stance, one arm pushes out straight to the side while the other draws the string back to your chest. Works the upper back and shoulders, with the legs.',
+    masteryTarget: 600,
     levels: [
-      { name: 'High stance', target: 45, desc: 'Feet wide, knees a little bent. One arm straight out to the side at shoulder height, index finger up, looking along it. The other fist pulled back to the front of your shoulder, elbow out at shoulder height. Then switch sides.' },
-      { name: 'Drawing the bow', target: 60, desc: 'Sink a little lower. Pull the drawing elbow back further and open the chest.' },
-      { name: 'Full draw', target: 75, desc: 'Lower again, thighs about 45° from level. Push the bow arm away and pull the string as if they stretch apart.' },
-      { name: 'Shooting the vulture', target: 90, desc: 'A minute and a half each side, steady and low, eyes on the raised finger.' },
+      { name: 'High stance', target: 60, desc: 'Feet wide, knees a little bent. One arm straight out to the side at shoulder height, index finger up, looking along it. The other fist pulled back to the front of your shoulder, elbow out at shoulder height. Then switch sides.' },
+      { name: 'Drawing the bow', target: 120, desc: 'Sink a little lower. Pull the drawing elbow back further and open the chest.' },
+      { name: 'Full draw', target: 240, desc: 'Lower again, thighs about 45° from level. Push the bow arm away and pull the string as if they stretch apart.' },
+      { name: 'Shooting the vulture', target: 360, desc: 'Held long on each side, steady and low, eyes on the raised finger.' },
     ],
     criteria: level => {
       const bow = (b, s) => b.arms[s.key], string = (b, s) => b.arms[s.key === 'L' ? 'R' : 'L'];
@@ -1307,11 +1317,12 @@ export const HOLDS = [
     areas: { upper: 1 }, style: 'hard', coins: 0.9, sash: 'green',
     video: 'isometric palm press chest exercise',
     about: 'The palms-together salute turned into a strength hold: press your palms into each other as hard as you can in front of your chest. Works the chest, shoulders and arms with nothing but yourself to push against.',
+    masteryTarget: 300,
     levels: [
       { name: 'Prayer press', target: 45, desc: 'Stand tall. Palms together in front of your chest, fingers up, forearms level and elbows out to the sides. Press the palms together firmly.' },
-      { name: 'Firm press', target: 60, desc: 'Press harder, about three quarters of your strength. Keep breathing; don’t hold your breath.' },
-      { name: 'Forward press', target: 75, desc: 'Slide your pressed hands a fist’s width forward from your chest, elbows still level. Press with everything.' },
-      { name: 'Iron palms', target: 90, desc: 'Full pressure for a minute and a half. Shoulders down, chest open, steady breaths.' },
+      { name: 'Firm press', target: 90, desc: 'Press harder, about three quarters of your strength. Keep breathing; don’t hold your breath.' },
+      { name: 'Forward press', target: 120, desc: 'Slide your pressed hands a fist’s width forward from your chest, elbows still level. Press with everything.' },
+      { name: 'Iron palms', target: 180, desc: 'Full pressure, held long. Shoulders down, chest open, steady breaths.' },
     ],
     criteria: () => [
       {
@@ -1341,11 +1352,12 @@ export const HOLDS = [
     hint: 'Phone low to the ground, side-on to you',
     video: 'xiao yan fei back exercise',
     about: 'A classic Chinese back exercise: lying face down, lift your chest (and later your legs) off the floor like a swallow in flight. Strengthens the lower back, the backs of the shoulders and the glutes.',
+    masteryTarget: 180,
     levels: [
       { name: 'Swallow', target: 30, desc: 'Lie face down, arms by your sides, palms up. Lift your chest and your straight legs off the floor together; only your belly and hips stay down. Look at the floor just ahead.' },
       { name: 'Flying swallow', target: 45, desc: 'Chest and legs up, and lift your arms back beside you like wings, squeezing your shoulder blades together.' },
-      { name: 'Superman', target: 30, desc: 'Chest and legs up with your arms stretched forward past your head. The hardest lever for the back.' },
-      { name: 'Long superman', target: 45, desc: 'Superman for 45 seconds. Keep breathing, and reach long through your fingers and toes.' },
+      { name: 'Superman', target: 60, desc: 'Chest and legs up with your arms stretched forward past your head. The hardest lever for the back.' },
+      { name: 'Long superman', target: 120, desc: 'Superman, held long. Keep breathing, and reach long through your fingers and toes.' },
     ],
     criteria: level => [
       {
@@ -1388,11 +1400,12 @@ export const HOLDS = [
     hint: 'Phone low to the ground, side-on to you',
     video: 'sphinx cobra bridge wheel pose progression',
     about: 'Lowering the waist (xià yāo) is Shaolin’s backbend. Most holds fold you forward or keep you flat; this one opens the front of the body (spine, chest, shoulders and hip flexors) and, at the wheel, loads the wrists bent back. Press into each position rather than hanging in it: holding a stretch under load is what tendons respond to.',
+    masteryTarget: 120,
     levels: [
-      { name: 'Sphinx', target: 45, desc: 'Lie face down, elbows under your shoulders and forearms flat on the floor. Press your forearms down and lift your chest, shoulders away from your ears. Hips and legs stay heavy on the floor.' },
-      { name: 'Cobra', target: 45, desc: 'Hands under your shoulders. Press up until your arms are straight, hips and thighs staying on the floor. Push the floor away and let your chest open forward. Stop if your lower back pinches.' },
-      { name: 'Bridge', target: 45, desc: 'Lie on your back, knees bent and feet flat near your hips. Press through your heels and lift your hips as high as they go, hands reaching towards your heels. Push your chest towards your chin.' },
-      { name: 'Wheel', target: 30, desc: 'On your back, hands by your ears with fingers pointing towards your shoulders, feet flat. Press up through hands and feet until your arms are straight and your back is arched. Use a mat, and come down slowly with your chin tucked.' },
+      { name: 'Sphinx', target: 60, desc: 'Lie face down, elbows under your shoulders and forearms flat on the floor. Press your forearms down and lift your chest, shoulders away from your ears. Hips and legs stay heavy on the floor.' },
+      { name: 'Cobra', target: 60, desc: 'Hands under your shoulders. Press up until your arms are straight, hips and thighs staying on the floor. Push the floor away and let your chest open forward. Stop if your lower back pinches.' },
+      { name: 'Bridge', target: 90, desc: 'Lie on your back, knees bent and feet flat near your hips. Press through your heels and lift your hips as high as they go, hands reaching towards your heels. Push your chest towards your chin.' },
+      { name: 'Wheel', target: 60, desc: 'On your back, hands by your ears with fingers pointing towards your shoulders, feet flat. Press up through hands and feet until your arms are straight and your back is arched. Use a mat, and come down slowly with your chin tucked.' },
     ],
     criteria: level => {
       const height = (p, b) => (anklesMid(b).y - p.y) / b.torsoLen;  // above the feet (the floor)
@@ -1486,11 +1499,12 @@ export const HOLDS = [
     hint: 'Phone low, side-on to you',
     video: 'seiza toes tucked kneeling sit feet',
     about: 'Kneeling with your seat on your heels, as in Japanese seiza: it keeps the knees able to bend fully and the ankles and feet supple. With the toes tucked under, it stretches the soles and the big-toe joints, the base every stance stands on, which nothing else here reaches. Use a mat, and a cushion between heels and seat until you can sit back fully. Pins and needles: shift your weight or come out.',
+    masteryTarget: 300,
     levels: [
-      { name: 'Cushioned kneel', target: 60, desc: 'Kneel on a mat, knees together, tops of your feet flat on the floor behind you. Sit back onto a cushion resting on your heels. Back upright, hands on your thighs.' },
-      { name: 'Seiza', target: 90, desc: 'No cushion: sit right back onto your heels, tops of the feet flat. Upright and still. If your ankles complain, a folded towel under them helps.' },
-      { name: 'Toes tucked', target: 45, desc: 'Curl your toes under so you kneel on the balls of your feet, heels up, and sit back onto your heels. Intense on the soles: start with a little weight forward on your hands if you need to.' },
-      { name: 'Long toes tucked', target: 90, desc: 'Toes tucked, sitting fully back, upright, hands on your thighs, for a minute and a half. Breathe slowly into the soles of your feet.' },
+      { name: 'Cushioned kneel', target: 120, desc: 'Kneel on a mat, knees together, tops of your feet flat on the floor behind you. Sit back onto a cushion resting on your heels. Back upright, hands on your thighs.' },
+      { name: 'Seiza', target: 300, desc: 'No cushion: sit right back onto your heels, tops of the feet flat. Upright and still. If your ankles complain, a folded towel under them helps.' },
+      { name: 'Toes tucked', target: 60, desc: 'Curl your toes under so you kneel on the balls of your feet, heels up, and sit back onto your heels. Intense on the soles: start with a little weight forward on your hands if you need to.' },
+      { name: 'Long toes tucked', target: 180, desc: 'Toes tucked, sitting fully back, upright, hands on your thighs, held long. Breathe slowly into the soles of your feet.' },
     ],
     criteria: level => {
       const leg = b => (b.legs.L.c.y > b.legs.R.c.y ? b.legs.L : b.legs.R);  // the leg drawn lower
@@ -1534,11 +1548,12 @@ export const HOLDS = [
     video: '90 90 hip stretch sitting',
     about: 'Sitting on the floor with both knees bent to 90°: one leg folded in front of you, the other out to the side and folded behind. It takes the hips to the ends of their rotation, turning out in the front leg and in in the back leg, which no stance reaches. From level 3 it becomes an active stretch: every 15 seconds you’re told to lift the back knee for 5 seconds, then relax. Switch legs halfway. A cushion under the front hip helps if you tip to one side.',
     press: { levels: [3, 4], press: 'Press: lift the back knee off the floor', relax: 'Relax, and sit tall' },
+    masteryTarget: 600,
     levels: [
       { name: 'Hands down', target: 60, desc: 'Sit with your front leg folded in front of you, shin across your body, and your back leg out to the side with the knee bent so the foot points behind you. Both knees at about 90°. Hands on the floor beside you, sitting up as tall as you can. Switch legs halfway.' },
-      { name: 'Hands free', target: 60, desc: 'The same, hands together at your chest. Sit tall on both sit bones, chest facing over the front shin. Switch legs halfway.' },
-      { name: 'Lifting the back knee', target: 60, desc: 'Hands at your chest. When told to press, lift the back knee a little off the floor and hold it there, without leaning away; then relax. Switch legs halfway.' },
-      { name: 'Long ninety-ninety', target: 120, desc: 'Two minutes, a minute each way, pressing and relaxing as before. Stay tall throughout.' },
+      { name: 'Hands free', target: 120, desc: 'The same, hands together at your chest. Sit tall on both sit bones, chest facing over the front shin. Switch legs halfway.' },
+      { name: 'Lifting the back knee', target: 240, desc: 'Hands at your chest. When told to press, lift the back knee a little off the floor and hold it there, without leaning away; then relax. Switch legs halfway.' },
+      { name: 'Long ninety-ninety', target: 360, desc: 'Long on each side, pressing and relaxing as before. Stay tall throughout. Switch legs halfway.' },
     ],
     criteria: level => [
       {
@@ -1577,11 +1592,12 @@ export const HOLDS = [
     hint: 'Phone low, side-on to you',
     video: 'reverse nordic hold',
     about: 'Kneeling upright, lean back from the knees in one straight line and hold. It loads the fronts of the thighs and the tendons around the knee, which few other holds reach.',
+    masteryTarget: 90,
     levels: [
-      { name: 'Lean back', target: 30, desc: 'Kneel on a mat or cushion, knees hip width, shins and the tops of your feet flat behind you. Arms crossed on your chest. Squeeze your glutes and lean back about 25° from upright in one straight line from knees to shoulders: don’t bend at the hips.' },
+      { name: 'Lean back', target: 20, desc: 'Kneel on a mat or cushion, knees hip width, shins and the tops of your feet flat behind you. Arms crossed on your chest. Squeeze your glutes and lean back about 25° from upright in one straight line from knees to shoulders: don’t bend at the hips.' },
       { name: 'Deep lean', target: 30, desc: 'About 35° back. Breathe steadily; your thighs do all the work.' },
-      { name: 'Full lean', target: 25, desc: 'About 45° back, still in one straight line. Come back up slowly, and stop if your knees complain.' },
-      { name: 'Long full lean', target: 40, desc: 'About 45° back for 40 seconds. Come back up slowly.' },
+      { name: 'Full lean', target: 30, desc: 'About 45° back, still in one straight line. Come back up slowly, and stop if your knees complain.' },
+      { name: 'Long full lean', target: 60, desc: 'About 45° back, held long. Come back up slowly.' },
     ],
     criteria: level => {
       const leg = b => (b.legs.L.c.y > b.legs.R.c.y ? b.legs.L : b.legs.R);  // the leg drawn lower (on the floor)
@@ -1623,11 +1639,12 @@ export const HOLDS = [
     hint: 'Stand side-on to the phone, feet in view',
     video: 'calf raise hold isometric',
     about: 'Standing high on the balls of your feet and holding: it strengthens the feet, ankles and calves, the tendons every stance stands on. It comes from the last movement of the Ba Duan Jin, where you rise onto your toes.',
+    masteryTarget: 240,
     levels: [
       { name: 'Heels up', target: 30, desc: 'Feet hip width, legs straight. Rise onto the balls of your feet, heels well off the floor, and hold. Weight over the big toes, not rolling out.' },
-      { name: 'High and steady', target: 60, desc: 'Heels as high as they go, for a full minute. Stand tall through the crown of your head.' },
-      { name: 'Arms overhead', target: 45, desc: 'High on your toes with both arms reaching overhead. A higher centre is harder to keep steady.' },
-      { name: 'One foot', target: 30, desc: 'On the toes of one foot, the other foot tucked behind your ankle. Switch feet halfway.' },
+      { name: 'High and steady', target: 60, desc: 'Heels as high as they go, held longer. Stand tall through the crown of your head.' },
+      { name: 'Arms overhead', target: 120, desc: 'High on your toes with both arms reaching overhead. A higher centre is harder to keep steady.' },
+      { name: 'One foot', target: 120, desc: 'On the toes of one foot, the other foot tucked behind your ankle. Switch feet halfway.' },
     ],
     criteria: level => {
       const raise = f => (f.toe.y - f.heel.y) / (dist(f.heel, f.toe) || 1);  // ~0 flat, ~0.65 high on the toes
@@ -1668,11 +1685,12 @@ export const HOLDS = [
     hint: 'Stand side-on to the phone, feet in view',
     video: 'tibialis raise wall hold',
     about: 'Standing on your heels with your toes pulled up towards your shins. It works the muscle down the front of the shin, which catches each foot as it lands and spares the knees. Rising on the Toes trains the back of the lower leg; this trains the front. The camera checks that your toes are up and how far you lean back; how high the toes go is on your honour.',
+    masteryTarget: 180,
     levels: [
       { name: 'Wall lean', target: 30, desc: 'Back flat against a wall, heels about a foot out from it, legs straight. Pull your toes up towards your shins as high as they go and hold them there, your weight on your heels and the wall.' },
-      { name: 'Further out', target: 45, desc: 'Walk your heels further from the wall, so you lean back more and your shins work harder. Toes as high as they go.' },
-      { name: 'Free heel stand', target: 30, desc: 'Away from the wall: stand on your heels with your toes lifted and your legs straight. Lean forward just enough to keep your balance.' },
-      { name: 'Arms overhead', target: 45, desc: 'On your heels, toes up, with both arms reaching overhead. A higher centre is harder to keep steady.' },
+      { name: 'Further out', target: 60, desc: 'Walk your heels further from the wall, so you lean back more and your shins work harder. Toes as high as they go.' },
+      { name: 'Free heel stand', target: 60, desc: 'Away from the wall: stand on your heels with your toes lifted and your legs straight. Lean forward just enough to keep your balance.' },
+      { name: 'Arms overhead', target: 120, desc: 'On your heels, toes up, with both arms reaching overhead. A higher centre is harder to keep steady.' },
     ],
     criteria: level => {
       // ~0 with the foot flat, negative with the toes lifted above the heel (about -0.4 pulled right up).
@@ -1757,11 +1775,12 @@ export const HOLDS = [
       ],
       lowFigure: () => ({ view: 'side', compact: true, torso: -45, legs: { L: [24, 24], R: [24, 24] }, arms: { L: [-45, -45], R: [-43, -43] } }),
     },
+    masteryTarget: 100,
     levels: [
       { name: 'Dand', target: 5, desc: 'Hands and feet on the floor a little wider than your shoulders, hips high in an upside-down V. Bend your elbows and dive your chest down between your hands, skimming the floor, then scoop forward and up until your arms are straight and your chest is open. Push your hips back up to the V. At least 5 seconds each cycle.' },
-      { name: 'Steady dand', target: 8, desc: 'Eight cycles. Pause for a moment at the top, chest open and shoulders down, away from your ears. At least 6 seconds each.' },
-      { name: 'Slow dand', target: 8, desc: 'Pause for two seconds at the top and look up. Let each cycle take 8 seconds or more, and lower back to the V just as slowly.' },
-      { name: 'Long dand', target: 12, desc: 'Twelve slow cycles without stopping. Keep the dive low and the scoop smooth to the end.' },
+      { name: 'Steady dand', target: 10, desc: 'Pause for a moment at the top, chest open and shoulders down, away from your ears. At least 6 seconds each.' },
+      { name: 'Slow dand', target: 20, desc: 'Pause for two seconds at the top and look up. Let each cycle take 8 seconds or more, and lower back to the V just as slowly.' },
+      { name: 'Long dand', target: 40, desc: 'Slow cycles without stopping. Keep the dive low and the scoop smooth to the end.' },
     ],
     // The high position (the scoop: hips low, arms straight, chest up); the start is flow.low.
     criteria: () => [
@@ -1809,11 +1828,12 @@ export const HOLDS = [
       }],
       lowFigure: level => airplaneFigure(level, 0),
     },
+    masteryTarget: 40,
     levels: [
       { name: 'Airplane', target: 6, desc: 'Stand on one leg, knee soft. Hinge forward and reach the other leg straight back until your body is tipped about 45° from upright. Turn your hips open towards the ceiling, then slowly back to face the floor. The back leg stays where it is. Switch legs halfway. At least 5 seconds each cycle.' },
-      { name: 'Lower airplane', target: 6, desc: 'Hinge further: body and back leg about 30° from level. Pause for a moment with your hips open. At least 6 seconds each.' },
-      { name: 'Level airplane', target: 8, desc: 'Body and back leg level with the floor. Pause for two seconds open, and take 8 seconds or more each cycle.' },
-      { name: 'Long airplane', target: 10, desc: 'Fully level, ten slow cycles, five each leg. Stay low the whole time.' },
+      { name: 'Lower airplane', target: 10, desc: 'Hinge further: body and back leg about 30° from level. Pause for a moment with your hips open. At least 6 seconds each.' },
+      { name: 'Level airplane', target: 16, desc: 'Body and back leg level with the floor. Pause for two seconds open, and take 8 seconds or more each cycle.' },
+      { name: 'Long airplane', target: 24, desc: 'Fully level, slow cycles, half on each leg. Stay low the whole time.' },
     ],
     // The high position (hips turned open); the start is flow.low.
     criteria: level => [...airplaneHinge(level), {
@@ -1829,11 +1849,12 @@ export const HOLDS = [
     hint: 'Phone low to the ground, side-on to you',
     video: 'fingertip plank hold',
     about: 'A plank on your fingertips, palms off the floor: Shaolin’s classic way to strengthen the fingers, hands and forearms. The camera checks the plank and that your wrists are lifted off the floor; how many fingers you use is on your honour. Build up slowly, and keep the fingers slightly bent, never bending backwards.',
+    masteryTarget: 60,
     levels: [
-      { name: 'Fingertip plank', target: 30, desc: 'Hands under your shoulders, fingers spread. Rise onto your fingertips, palms and wrists off the floor, and hold a straight plank from shoulders to heels on all ten fingertips. Keep the fingers firm and slightly bent.' },
-      { name: 'Long fingertip plank', target: 45, desc: 'Forty-five seconds on the fingertips, not collapsing flat.' },
+      { name: 'Fingertip plank', target: 20, desc: 'Hands under your shoulders, fingers spread. Rise onto your fingertips, palms and wrists off the floor, and hold a straight plank from shoulders to heels on all ten fingertips. Keep the fingers firm and slightly bent.' },
+      { name: 'Long fingertip plank', target: 45, desc: 'Longer on the fingertips, not collapsing flat.' },
       { name: 'Three fingers', target: 30, desc: 'Thumb, index and middle finger on each hand only. On your honour: the camera can’t count fingers.' },
-      { name: 'Two fingers', target: 20, desc: 'Thumb and index finger on each hand only, again on your honour. Build up to it over weeks, not days.' },
+      { name: 'Two fingers', target: 30, desc: 'Thumb and index finger on each hand only, again on your honour. Build up to it over weeks, not days.' },
     ],
     criteria: level => {
       const end = level === 1 ? kneesMid : b => (b.la.y > b.ra.y ? b.la : b.ra);
@@ -1881,11 +1902,12 @@ export const HOLDS = [
     hint: 'Phone low to the ground, side-on to you',
     video: 'bear crawl hold',
     about: 'On hands and toes with your knees hovering just off the floor: a hold for the core, shoulders and thighs together. From the side, hovering knees look just like resting ones, so the camera checks your shape and the hover is on your honour.',
+    masteryTarget: 180,
     levels: [
       { name: 'Hover', target: 30, desc: 'Start on hands and knees: hands under your shoulders, knees under your hips, toes tucked under. Press into your hands and lift your knees 2–3 cm off the floor. Back flat, knees still bent at 90°. If your knees touch down, that’s a rest, not the hold.' },
-      { name: 'Long hover', target: 60, desc: 'Knees hovering 2–3 cm off the floor for 40 seconds. Keep the back flat as a table; don’t let your hips rise.' },
-      { name: 'Reach', target: 40, desc: 'Knees hovering, reach one arm straight forward, level with your back. Switch arms halfway.' },
-      { name: 'Bear bird dog', target: 40, desc: 'Knees hovering, reach one arm forward and the opposite leg straight back, both level with your back. Switch sides halfway. The supporting knee stays just off the floor.' },
+      { name: 'Long hover', target: 60, desc: 'Knees hovering 2–3 cm off the floor, held longer. Keep the back flat as a table; don’t let your hips rise.' },
+      { name: 'Reach', target: 90, desc: 'Knees hovering, reach one arm straight forward, level with your back. Switch arms halfway.' },
+      { name: 'Bear bird dog', target: 90, desc: 'Knees hovering, reach one arm forward and the opposite leg straight back, both level with your back. Switch sides halfway. The supporting knee stays just off the floor.' },
     ],
     criteria: level => {
       const support = b => (lean(b.legs.L.a, b.legs.L.c) < lean(b.legs.R.a, b.legs.R.c) ? b.legs.L : b.legs.R);
@@ -1942,11 +1964,12 @@ export const HOLDS = [
     hint: 'Stand side-on to the phone',
     video: 'standing on one leg balance training',
     about: 'Balance as its own practice: standing on one leg, scored on how still you stay rather than the exact shape. Fix your eyes on one spot and let the standing foot grip the floor.',
+    masteryTarget: 240,
     levels: [
-      { name: 'Foot off the floor', target: 30, desc: 'Stand on one leg and lift the other foot just off the floor, hands together at your chest. Stay as still as you can. Then switch legs.' },
-      { name: 'Knee up', target: 45, desc: 'Raise the other knee to hip height. Keep the standing leg long and your gaze steady.' },
-      { name: 'Hands overhead', target: 60, desc: 'Knee up, and reach both hands overhead. A higher centre is harder to keep still.' },
-      { name: 'Eyes closed', target: 45, desc: 'Knee up, hands at your chest, eyes closed. Without your eyes, every wobble shows. (The camera can’t see your eyes, so that part is on your honour.)' },
+      { name: 'Foot off the floor', target: 60, desc: 'Stand on one leg and lift the other foot just off the floor, hands together at your chest. Stay as still as you can. Then switch legs.' },
+      { name: 'Knee up', target: 120, desc: 'Raise the other knee to hip height. Keep the standing leg long and your gaze steady.' },
+      { name: 'Hands overhead', target: 240, desc: 'Knee up, and reach both hands overhead. A higher centre is harder to keep still.' },
+      { name: 'Eyes closed', target: 120, desc: 'Knee up, hands at your chest, eyes closed. Without your eyes, every wobble shows. (The camera can’t see your eyes, so that part is on your honour.)' },
     ],
     criteria: level => gates([
       {
@@ -1980,11 +2003,12 @@ export const HOLDS = [
     hint: 'Face the phone, whole body in view',
     video: 'wuji standing meditation qigong',
     about: 'Wuji, “standing in emptiness”: the stillest posture of all. Stand naturally and do nothing at all, as still as a mountain. Scored almost entirely on how little you move.',
+    masteryTarget: 3600,
     levels: [
-      { name: 'One minute', target: 60, desc: 'Feet hip width, knees soft, arms hanging loosely at your sides. Crown up, chin slightly in. Breathe slowly and let everything settle.' },
-      { name: 'Two minutes', target: 120, desc: 'The same, for two minutes. Let your weight sink into your feet; stop correcting and simply stand.' },
-      { name: 'Three minutes', target: 180, desc: 'Three minutes. When thoughts wander, come back to the breath without moving.' },
-      { name: 'Five minutes', target: 300, desc: 'Five minutes, as still as the mountain behind the temple.' },
+      { name: 'Settling', target: 120, desc: 'Feet hip width, knees soft, arms hanging loosely at your sides. Crown up, chin slightly in. Breathe slowly and let everything settle.' },
+      { name: 'Sinking', target: 300, desc: 'The same, for longer. Let your weight sink into your feet; stop correcting and simply stand.' },
+      { name: 'Quiet mind', target: 900, desc: 'When thoughts wander, come back to the breath without moving.' },
+      { name: 'Mountain', target: 1800, desc: 'As still as the mountain behind the temple.' },
     ],
     criteria: level => gates([
       {
@@ -2005,15 +2029,15 @@ export const HOLDS = [
   {
     id: 'zuochan', name: 'Seated Meditation', native: 'Zuò Chán', view: 'front', sides: false, camera: true, still: true,
     masteryTarget: 7200,  // two hours: three would be more than a sitting
-    areas: { stillness: 1 }, style: 'soft', coins: [1, 1.5, 2.5, 3.5], sash: 'green',
+    areas: { stillness: 1 }, style: 'soft', coins: 1, sash: 'green',
     hint: 'Sit facing the phone, the phone at about chest height',
     video: 'zazen seated meditation posture',
-    about: 'Chan (Zen) began at Shaolin: seated meditation is where the monks’ training started. Sit cross-legged on a cushion, or on the front of a chair, and keep still, from five minutes up to an hour. Scored on stillness and an upright back.',
+    about: 'Chan (Zen) began at Shaolin: seated meditation is where the monks’ training started. Sit cross-legged on a cushion, or on the front of a chair, and keep still, from five minutes up to two hours. Scored on stillness and an upright back.',
     levels: [
-      { name: 'Five minutes', target: 300, desc: 'Sit cross-legged on a cushion (or on the front edge of a chair, feet flat). Back upright, hands resting in your lap, one palm in the other. Breathe slowly through the nose.' },
-      { name: 'Ten minutes', target: 600, desc: 'Ten minutes. Count breaths from one to ten, then start again.' },
-      { name: 'Half an hour', target: 1800, desc: 'Thirty minutes. Let the breath count fall away and just sit. If your legs go numb, use a chair; stillness matters more than the shape.' },
-      { name: 'One hour', target: 3600, desc: 'A full hour of stillness, as the Chan monks sit.' },
+      { name: 'First sitting', target: 300, desc: 'Sit cross-legged on a cushion (or on the front edge of a chair, feet flat). Back upright, hands resting in your lap, one palm in the other. Breathe slowly through the nose.' },
+      { name: 'Counting breaths', target: 600, desc: 'Count breaths from one to ten, then start again.' },
+      { name: 'Just sitting', target: 1200, desc: 'Let the breath count fall away and just sit. If your legs go numb, use a chair; stillness matters more than the shape.' },
+      { name: 'Long sitting', target: 2700, desc: 'Long, unbroken stillness, as the Chan monks sit.' },
     ],
     criteria: level => gates([
       {
