@@ -3,10 +3,11 @@
 // low again). What the coach says comes from the hold's `flow.say` (see holds.js). A cycle only counts if it takes at least the level's minimum time, so
 // the movement stays slow and soft. Without the camera it becomes a paced guide.
 //
-// Camera states: framing → ready (waiting in the start position) → flowing → done
-// Honour states: countdown → flowing (paused) → done
+// Camera states: framing → ready (waiting in the start position) → flowing → (switch → flowing) → done
+// Honour states: countdown → flowing (paused) → (switch → flowing) → done
+// One-sided levels count half the cycles on each side, with a switch in between.
 
-import { makeBody, scorePose, visible, viewing } from './scoring.js';
+import { makeBody, scorePose, visible, viewing, sided } from './scoring.js';
 import { requiredFor } from './holds.js';
 import { coinRateFor, targetBonusFor, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { Session } from './session.js';
@@ -16,6 +17,8 @@ const REACHED = 70;        // a position counts as reached at this score
 const IDLE = 20;           // seconds without progress before the session ends
 const IDLE_AFTER = 8;      // ...once the goal is met
 const HONOUR_PAUSE = 2.5;  // honour mode: seconds added to the minimum, for a comfortable pace
+const SWITCH_MIN = 3;      // seconds before side two can start
+const HONOUR_SWITCH = 6;   // honour mode: seconds given to change sides
 
 const NUMBERS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 
@@ -27,6 +30,10 @@ export class FlowSession {
     const f = hold.flow;
     this.words = f.say;
     this.goal = target ?? hold.levels[level - 1].target;
+    this.sides = sided(hold, level) ? 2 : 1;
+    this.sideIndex = 0;
+    this.sideCounts = [0, 0];
+    this.half = Math.ceil(this.goal / 2);  // cycles on side one
     this.minCycle = f.minCycle[level - 1];
     this.dwell = f.dwell[level - 1];
     this.boost = (daily ? DAILY_MULT : 1) * boost;
@@ -138,6 +145,12 @@ export class FlowSession {
         }
         if (!this.manual && this.idle > (this.reached ? IDLE_AFTER : IDLE)) this.finish(this.reached ? 'complete' : 'stopped');
         break;
+      case 'switch':
+        // Side two starts once you're settled back in the start position.
+        this.lowTime = low ? this.lowTime + dt : 0;
+        if (this.stateTime > SWITCH_MIN && this.lowTime > 0.6) this.resumeSide();
+        else if (!this.manual && this.stateTime > IDLE) this.finish('stopped');
+        break;
     }
   }
 
@@ -154,6 +167,9 @@ export class FlowSession {
           this.completeCycle();
           if (this.state === 'flowing') say('Rise', { minGap: 1000 });
         }
+        break;
+      case 'switch':
+        if (this.stateTime >= HONOUR_SWITCH) this.resumeSide();
         break;
     }
   }
@@ -182,6 +198,7 @@ export class FlowSession {
       // A cycle earns for the time it should take (at least the minimum), so dawdling doesn't pay more.
       this.coins += this.minCycle * this.rate * factor * bonusTier(this.count, this.goal).mult;
       this.count++;
+      this.sideCounts[this.sideIndex]++;
       this.held += dur;
       this.formSum += form;
       play('point');
@@ -193,8 +210,24 @@ export class FlowSession {
       } else {
         say(NUMBERS[this.count - 1] ?? String(this.count), { minGap: 1000 });
       }
+      if (this.sides === 2 && this.sideIndex === 0 && this.count >= this.half) return this.startSwitch();
     }
     this.startCycle();
+  }
+
+  startSwitch() {
+    this.lowTime = 0;
+    this.go('switch');
+    play('tick');
+    say('Switch sides', { priority: true });
+  }
+
+  resumeSide() {
+    this.sideIndex = 1;
+    this.go('flowing');
+    this.startCycle();
+    play('go');
+    say('Side two', { priority: true });
   }
 
   avgForm() { return this.count ? this.formSum / this.count : 0; }
@@ -212,7 +245,7 @@ export class FlowSession {
     this.result = {
       holdId: this.hold.id, level: this.level, held: this.held, target: this.goal * this.minCycle,
       coins: this.coins, daily: this.daily, avgForm: this.avgForm(), camera: this.camera, reason, reached: this.reached,
-      unit: 'cycles', count: this.count, goal: this.goal,
+      unit: 'cycles', count: this.count, goal: this.goal, ...(this.sides === 2 ? { sideCounts: this.sideCounts.slice() } : {}),
       bonus: Math.max(0, this.count - this.goal) / this.goal,  // extra cycles as a fraction of the goal
     };
     return this.result;
@@ -228,7 +261,7 @@ export class FlowSession {
       inPose: !!this.seen && this.scores[this.aim ?? 'low'] >= REACHED,
       results: this.results, worst: this.worst, tooFast: (this.now ?? 0) - this.tooFastAt < 2.5,
       cycleTime: (this.now ?? this.last) - this.cycleStart, hands: this.hands, topTime: this.topTime, dwell: this.dwell,
-      sides: 1, sideIndex: 0, canSwitch: false,
+      sides: this.sides, sideIndex: this.sideIndex, half: this.half, canSwitch: false,
     };
   }
 }

@@ -1785,7 +1785,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'airplane', name: 'Hip Airplane', native: '', view: 'side', sides: false, camera: true, uneven: [1, 2, 3, 4],
+    id: 'airplane', name: 'Hip Airplane', native: '', view: 'side', sides: false, switches: [1, 2, 3, 4], camera: true, uneven: [1, 2, 3, 4],
     areas: { balance: 0.5, mobility: 0.3, legs: 0.2 }, style: 'hard', coins: 1.2, sash: 'purple',
     hint: 'Stand side-on to the phone',
     video: 'hip airplane exercise',

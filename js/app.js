@@ -57,7 +57,7 @@ const fmtLong = s => s < 60 ? `${Math.round(s)}s`
   : s < 3600 ? `${Math.floor(s / 60)}m${Math.round(s % 60) ? ` ${String(Math.round(s % 60)).padStart(2, '0')}s` : ''}`
   : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
 // One-sided holds split the target between the sides.
-const targetText = (hold, level, t) => hold.flow ? `${t} slow cycles` : sided(hold, level) ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
+const targetText = (hold, level, t) => hold.flow ? (sided(hold, level) ? `${t} slow cycles, ${t / 2} each side` : `${t} slow cycles`) : sided(hold, level) ? `${fmtLong(t / 2)} each side` : `${fmtLong(t)} target`;
 // A best or a target in the hold's own unit: seconds, or cycles for flowing holds.
 const amount = (hold, n) => (hold.flow ? `${n} cycle${n === 1 ? '' : 's'}` : fmtLong(n));
 const videoUrl = hold => `https://www.youtube.com/results?search_query=${encodeURIComponent(hold.video)}`;
@@ -249,7 +249,7 @@ function renderHero() {
 // `long`: "30s each side", where "×2" could be read as sets.
 const targetShort = (h, level, { long = false } = {}) => {
   const t = h.levels[level - 1].target;
-  return h.flow ? `${t} cycles` : sided(h, level) ? `${fmtLong(t / 2)} ${long ? 'each side' : '×2'}` : fmtLong(t);
+  return h.flow ? (sided(h, level) ? `${t / 2} cycles ×2` : `${t} cycles`) : sided(h, level) ? `${fmtLong(t / 2)} ${long ? 'each side' : '×2'}` : fmtLong(t);
 };
 
 const STAR = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg>';
@@ -783,7 +783,7 @@ function flowStep(v) {
 function updateFlowHud(v) {
   $('#s-time').textContent = v.count;
   $('#s-target').textContent = ` / ${v.goal}`;
-  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.mastery ? ' · Mastery test' : run.test ? ' · Level test' : ''}${state.testMode ? ' · Test mode' : ''}`;
+  $('#s-level').textContent = `Level ${run.level} · ${run.hold.levels[run.level - 1].name} · slow cycles${v.sides === 2 ? ` · Side ${v.sideIndex + 1} of 2` : ''}${v.daily ? ` · ${DAILY_MULT}× today` : ''}${boostText(run.boost)}${run.mastery ? ' · Mastery test' : run.test ? ' · Level test' : ''}${state.testMode ? ' · Test mode' : ''}`;
   const whole = Math.floor(v.coins);
   $('#s-coins').textContent = whole.toLocaleString();
   $('#s-coin-next').style.width = `${Math.round((v.coins % 1) * 100)}%`;
@@ -819,6 +819,10 @@ function updateFlowHud(v) {
       if (v.tooFast) setStatus('bad', 'Slower');
       else setStatus(v.reached ? 'bonus' : 'good', `${v.phase === 'up' ? 'Rise' : 'Lower'} · ${secs}s${v.reached ? ` · bonus ×${v.tier.mult}` : ''}`);
       $('#s-cue').textContent = v.tooFast ? `At least ${v.minCycle} seconds for each cycle` : flowStep(v);
+      break;
+    case 'switch':
+      setStatus('wait', run.camera ? 'Switch sides' : `Switch sides · ${Math.max(1, Math.ceil(6 - v.stateTime))}`);
+      $('#s-cue').textContent = run.camera ? 'Change sides, then settle back in the start position to begin side two' : 'Change sides: side two starts in a moment';
       break;
   }
 }

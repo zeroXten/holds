@@ -26,10 +26,13 @@ for (const hold of HOLDS.filter(h => h.camera)) {
     }
     const r = s.result;
     // One-sided holds: each side reaches its own target and earns bonus time.
-    const sidesOk = !sided(hold, level) || (r?.sides?.length === 2 && r.sides.every(t => t > target / 2));
+    // (Flowing ones count cycles: half of them on each side.)
+    const sidesOk = !sided(hold, level) || (hold.flow
+      ? r?.sideCounts?.length === 2 && r.sideCounts.every(n => n >= Math.floor(target / 2))
+      : r?.sides?.length === 2 && r.sides.every(t => t > target / 2));
     const ok = r && r.reached && r.held >= target && r.avgForm >= 70 && r.reason === 'complete' && sidesOk;
     if (!ok) failures++;
-    const sides = r?.sides ? ` (${r.sides.map(t => t.toFixed(1)).join(' + ')})` : '';
+    const sides = r?.sides ? ` (${r.sides.map(t => t.toFixed(1)).join(' + ')})` : r?.sideCounts ? ` (${r.sideCounts.join(' + ')} cycles)` : '';
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${hold.id} L${level}: held ${r ? r.held.toFixed(1) : '-'}${sides}/${target}s, form ${r ? Math.round(r.avgForm) : '-'}, ${r ? Math.round(r.coins * 10) / 10 : "-"} coins, ended "${r?.reason ?? 'never'}" via ${[...states].join('→')}`);
   }
 }
