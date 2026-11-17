@@ -960,7 +960,7 @@ export const HOLDS = [
   }),
 
   {
-    id: 'plank', name: 'Fist Plank', native: '', view: 'side', sides: false, camera: true, uneven: [3],
+    id: 'plank', name: 'Fist Plank', native: '', view: 'side', sides: false, switches: [3], camera: true, uneven: [3],
     areas: { core: 0.6, upper: 0.4 }, style: 'hard',
     video: 'knuckle plank fist plank',
     hint: 'Phone low to the ground, side-on to you',
@@ -1021,7 +1021,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'forearm', name: 'Forearm Plank', native: '', view: 'side', sides: false, camera: true, uneven: [3],
+    id: 'forearm', name: 'Forearm Plank', native: '', view: 'side', sides: false, switches: [3], camera: true, uneven: [3],
     areas: { core: 0.85, upper: 0.15 }, style: 'hard', sash: 'orange',
     video: 'forearm plank form tutorial',
     hint: 'Phone low to the ground, side-on to you',
@@ -1204,7 +1204,7 @@ export const HOLDS = [
     figure: () => ({ view: 'front', torso: 180, legs: { L: [2, 0], R: [-2, 0] }, arms: { L: [90, 90], R: [-90, -90] } }),
   },
   {
-    id: 'jar', name: 'Grabbing the Jar', native: 'Zhuā Tán', view: 'front', sides: false, camera: true,
+    id: 'jar', name: 'Grabbing the Jar', native: 'Zhuā Tán', view: 'front', sides: false, switches: [1, 2, 3], camera: true,
     areas: { upper: 1 }, style: 'hard', sash: 'yellow',
     hint: 'Face the phone',
     video: 'kung fu jar training grip strength',
@@ -1528,7 +1528,7 @@ export const HOLDS = [
   },
 
   {
-    id: 'ninety', name: 'Ninety-Ninety', native: '', view: 'front', sides: false, camera: true,
+    id: 'ninety', name: 'Ninety-Ninety', native: '', view: 'front', sides: false, switches: [1, 2, 3, 4], camera: true,
     areas: { mobility: 0.8, legs: 0.2 }, style: 'soft', sash: 'yellow',
     hint: 'Sit facing the phone, the phone low',
     video: '90 90 hip stretch sitting',
@@ -1618,7 +1618,7 @@ export const HOLDS = [
   }),
 
   {
-    id: 'toes', name: 'Rising on the Toes', native: '', view: 'side', sides: false, camera: true, uneven: [4],
+    id: 'toes', name: 'Rising on the Toes', native: '', view: 'side', sides: false, switches: [4], camera: true, uneven: [4],
     areas: { legs: 0.7, balance: 0.3 }, style: 'hard', coins: 0.9, sash: 'yellow',
     hint: 'Stand side-on to the phone, feet in view',
     video: 'calf raise hold isometric',
@@ -1876,7 +1876,7 @@ export const HOLDS = [
   }),
 
   {
-    id: 'bear', name: 'Bear Crawl Hold', native: '', view: 'side', sides: false, camera: true, uneven: [3, 4],
+    id: 'bear', name: 'Bear Crawl Hold', native: '', view: 'side', sides: false, switches: [3, 4], camera: true, uneven: [3, 4],
     areas: { core: 0.6, upper: 0.2, legs: 0.2 }, style: 'hard', coins: 1.1, sash: 'purple',
     hint: 'Phone low to the ground, side-on to you',
     video: 'bear crawl hold',
