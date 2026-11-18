@@ -40,24 +40,40 @@ export const RANKS = [
 ];
 export const sashByKey = key => RANKS.find(r => r.key === key);
 
+// In roughly the order you'll earn them, in three stages: getting started (the first
+// days), the path (the weeks and months of regular training) and mastery.
+export const BADGE_TIERS = [
+  { id: 'start', name: 'Getting started' },
+  { id: 'path', name: 'On the path' },
+  { id: 'mastery', name: 'Mastery' },
+];
 export const BADGES = [
-  { id: 'first', name: 'First Stance', desc: 'Finish your first hold' },
-  { id: 'target', name: 'On Target', desc: 'Reach a target time' },
-  { id: 'perfect', name: 'Perfect Form', desc: 'Reach a target with 90+ average form' },
-  { id: 'overtime', name: 'Beyond the Target', desc: 'Hold 50% past a target' },
-  { id: 'streak3', name: 'Three Days', desc: 'Train 3 days in a row' },
-  { id: 'streak7', name: 'Full Week', desc: 'Train 7 days in a row' },
-  { id: 'streak30', name: 'Iron Discipline', desc: 'Train 30 days in a row' },
-  { id: 'levelup', name: 'Promoted', desc: 'Level up a hold' },
-  { id: 'rounded', name: 'Well Rounded', desc: 'Practise every hold' },
-  { id: 'ironhorse', name: 'Iron Horse', desc: 'Reach the Full Horse target' },
-  { id: 'master', name: 'Master of One', desc: 'Master any hold' },
-  { id: 'min30', name: 'Half Hour', desc: 'Hold for 30 minutes in total' },
-  { id: 'min120', name: 'Two Hours', desc: 'Hold for 2 hours in total' },
-  { id: 'early', name: 'Early Bird', desc: 'Train between 4 and 7am' },
-  { id: 'unlock', name: 'New Stance', desc: 'Unlock a hold with coins' },
-  { id: 'collector', name: 'Full Set', desc: 'Unlock every hold' },
-  { id: 'daily', name: 'Daily Devotion', desc: 'Reach the target on the hold of the day' },
+  { id: 'first', tier: 'start', name: 'First Stance', desc: 'Finish your first hold' },
+  { id: 'target', tier: 'start', name: 'On Target', desc: 'Reach a target time' },
+  { id: 'perfect', tier: 'start', name: 'Perfect Form', desc: 'Reach a target with 90+ average form' },
+  { id: 'overtime', tier: 'start', name: 'Beyond the Target', desc: 'Hold 50% past a target' },
+  { id: 'daily', tier: 'start', name: 'Daily Devotion', desc: 'Reach the target on the hold of the day' },
+  { id: 'streak3', tier: 'start', name: 'Three Days', desc: 'Train 3 days in a row' },
+  { id: 'unlock', tier: 'start', name: 'New Stance', desc: 'Unlock a hold with coins' },
+  { id: 'early', tier: 'start', name: 'Early Bird', desc: 'Train between 4 and 7am' },
+  { id: 'min30', tier: 'start', name: 'Half Hour', desc: 'Hold for 30 minutes in total' },
+  { id: 'fiveholds', tier: 'start', name: 'Full Session', desc: 'Reach the target on 5 different holds in one day' },
+  { id: 'streak7', tier: 'path', name: 'Full Week', desc: 'Train 7 days in a row' },
+  { id: 'levelup', tier: 'path', name: 'Promoted', desc: 'Level up a hold' },
+  { id: 'tenholds', tier: 'path', name: 'Ten Stances', desc: 'Practise 10 different holds' },
+  { id: 'min120', tier: 'path', name: 'Two Hours', desc: 'Hold for 2 hours in total' },
+  { id: 'days20', tier: 'path', name: 'Twenty Days', desc: 'Train on 20 different days' },
+  { id: 'sessions100', tier: 'path', name: 'Hundred Holds', desc: 'Finish 100 holds' },
+  { id: 'level3', tier: 'path', name: 'Third Level', desc: 'Reach level 3 on any hold' },
+  { id: 'broad', tier: 'path', name: 'Broad Base', desc: 'Reach level 2 on 10 holds' },
+  { id: 'streak30', tier: 'path', name: 'Iron Discipline', desc: 'Train 30 days in a row' },
+  { id: 'min600', tier: 'path', name: 'Ten Hours', desc: 'Hold for 10 hours in total' },
+  { id: 'level4', tier: 'path', name: 'Summit in Sight', desc: 'Reach level 4 on any hold' },
+  { id: 'collector', tier: 'mastery', name: 'Full Set', desc: 'Unlock every hold' },
+  { id: 'rounded', tier: 'mastery', name: 'Well Rounded', desc: 'Practise every hold' },
+  { id: 'ironhorse', tier: 'mastery', name: 'Iron Horse', desc: 'Reach the Full Horse target' },
+  { id: 'master', tier: 'mastery', name: 'Master of One', desc: 'Master any hold' },
+  { id: 'master5', tier: 'mastery', name: 'Master of Five', desc: 'Master 5 holds' },
 ];
 
 export const DEFAULT_SETTINGS = { holdList: null, voice: true, sounds: true, camera: true, autoframe: true, showValues: false, calm: true, strictness: 'normal', model: 'full', appearance: 'system', ambient: false };
@@ -915,7 +931,7 @@ export function recordSession(state, s) {
   state.days[today] = day;
   state.history.push({
     at: new Date().toISOString(), holdId: s.holdId, level: s.level, held: Math.round(s.held * 10) / 10,
-    target: s.target, avgForm: s.camera ? Math.round(s.avgForm) : null, coins, camera: s.camera, daily: !!s.daily,
+    target: s.target, avgForm: s.camera ? Math.round(s.avgForm) : null, coins, camera: s.camera, daily: !!s.daily, reached,
   });
   if (state.history.length > 1000) state.history.splice(0, state.history.length - 1000);
   const plan = planAfterSession(state, today);  // today's plan done, or the whole plan
@@ -976,6 +992,17 @@ export function recordSession(state, s) {
   check('min120', t.time >= 7200);
   check('early', new Date().getHours() >= 4 && new Date().getHours() < 7);
   check('daily', reached && s.daily);
+  const holdStates = Object.values(state.holds);
+  const reachedToday = new Set(state.history.filter(h => h.at && dayKey(new Date(h.at)) === today && (h.reached ?? h.held >= h.target)).map(h => h.holdId));
+  check('fiveholds', reachedToday.size >= 5);
+  check('tenholds', holdStates.filter(h => h.sessions).length >= 10);
+  check('days20', Object.values(state.days).filter(d => d.sessions).length >= 20);
+  check('sessions100', holdStates.reduce((n, h) => n + (h.sessions ?? 0), 0) >= 100);
+  check('level3', holdStates.some(h => h.level >= 3 || h.mastered));
+  check('broad', holdStates.filter(h => h.level >= 2 || h.mastered).length >= 10);
+  check('min600', t.time >= 36000);
+  check('level4', holdStates.some(h => h.level >= 4 || h.mastered));
+  check('master5', holdStates.filter(h => h.mastered).length >= 5);
 
   save(state);
   // The cheapest locked hold's price, to nudge towards the next unlock.

@@ -101,5 +101,27 @@ check('tier 3 at double', bonusTier(60, 30).tier === 3 && bonusTier(60, 30).mult
   check('shuffle picks open holds', [...picks].every(id => P.isUnlocked(s, id)));
 }
 
+// Badges: every one belongs to a stage, listed stage by stage; the middle ones are earned.
+{
+  const tiers = P.BADGE_TIERS.map(t => t.id);
+  const order = P.BADGES.map(b => tiers.indexOf(b.tier));
+  check('every badge has a stage', order.every(i => i >= 0));
+  check('badges listed stage by stage', order.every((i, n) => n === 0 || i >= order[n - 1]));
+  check('unique badge ids', new Set(P.BADGES.map(b => b.id)).size === P.BADGES.length);
+  store.clear();
+  const s = P.load();
+  const ids = ['horse', 'wings', 'plank', 'weituo', 'cat', 'drop', 'bow', 'squat', 'kick', 'rest'];
+  ids.forEach((id, i) => { s.holds[id] = { ...P.holdState(s, id), level: i < 1 ? 4 : 2, sessions: 10 }; });
+  for (let d = 1; d <= 20; d++) s.days[`2026-09-${String(d).padStart(2, '0')}`] = { coins: 1, time: 60, sessions: 1 };
+  s.unlocked = [...ids];
+  let o;
+  for (const id of ['horse', 'wings', 'plank', 'weituo', 'cat']) o = P.recordSession(s, { holdId: id, level: 1, held: 61, target: 60, avgForm: 0, camera: false, reached: true, daily: false });
+  const got = id => !!s.badges[id];
+  check('full session after 5 targets in a day', got('fiveholds'));
+  check('ten stances, twenty days, hundred holds', got('tenholds') && got('days20') && got('sessions100'));
+  check('third level, broad base, summit in sight', got('level3') && got('broad') && got('level4'));
+  check('not master of five yet', !got('master5') && !got('min600'));
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);

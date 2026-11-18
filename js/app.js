@@ -554,7 +554,8 @@ $('#hs-buy').onclick = () => {
   if (!badges) return;
   audio.unlock();
   audio.play('level');
-  toast(`${sheetHold.name} unlocked!${badges.length ? ` Badge: ${badges.map(b => b.name).join(', ')}` : ''}`);
+  toast(`${sheetHold.name} unlocked!`);
+  celebrateBadges(badges);
   renderSheetLevel();
   renderHome();
 };
@@ -1027,6 +1028,7 @@ function renderSummary(hold, level, r, o, boost) {
   // The big moments get the full-screen treatment, once the summary has appeared.
   setTimeout(() => {
     if (o.mastered) celebrateMastery(hold, r);
+    celebrateBadges(o.badges);
     o.betSteps.forEach(celebrateBetStep);
     o.bets.forEach(celebrateBet);
     o.milestones.forEach(celebrateMilestone);
@@ -1060,7 +1062,7 @@ function renderSummary(hold, level, r, o, boost) {
 
   const items = [
     ...(o.rankUp ? [`<div class="badge earned rank"><span class="sash" style="--sash:${o.rank.color};--deg:${o.rank.degree ?? 0}"></span><b>${o.rank.name}</b><small>New rank</small></div>`] : []),
-    ...o.badges.map(b => `<div class="badge earned">${medal()}<b>${b.name}</b><small>${b.desc}</small></div>`),
+    ...o.badges.map(b => badgeHTML(b, null).replace('locked', 'earned')),
   ];
   $('#sum-badges').innerHTML = items.join('');
   $('#sum-msg').textContent = encouragement(r, o);
@@ -1092,6 +1094,8 @@ function countUp(el, to, prefix = '') {
 }
 
 const medal = () => '<svg viewBox="0 0 24 24" class="medal"><circle cx="12" cy="14" r="7"/><path d="M8 2h3l1 5-3 1zM16 2h-3l-1 5 3 1z"/></svg>';
+// A badge card: bronze, silver or gold by its stage, with the day it was earned.
+const badgeHTML = (b, on) => `<div class="badge ${on ? 'earned' : 'locked'} tier-${b.tier}">${medal()}<b>${b.name}</b><small>${b.desc}</small>${on ? `<small class="badge-date">${new Date(on + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</small>` : ''}</div>`;
 
 // ---------- Progress ----------
 
@@ -1127,7 +1131,11 @@ function renderProgress() {
   $('#heatmap').innerHTML = cells;
 
   $('#bet-log').innerHTML = betLogHTML();
-  $('#badges').innerHTML = P.BADGES.map(b => `<div class="badge ${state.badges[b.id] ? 'earned' : 'locked'}">${medal()}<b>${b.name}</b><small>${b.desc}</small></div>`).join('');
+  $('#badges').innerHTML = P.BADGE_TIERS.map(t => {
+    const list = P.BADGES.filter(b => b.tier === t.id), got = list.filter(b => state.badges[b.id]).length;
+    return `<h3 class="badge-tier">${t.name} <small>${got} of ${list.length}</small></h3>
+      ${list.map(b => badgeHTML(b, state.badges[b.id])).join('')}`;
+  }).join('');
   const recent = state.history.slice(-12).reverse();
   $('#history').innerHTML = recent.length ? recent.map(h => {
     const hold = holdById(h.holdId);
@@ -1283,8 +1291,10 @@ function celebrate(c) {
 
 function showCelebration() {
   const c = celebrations[0], el = $('#celebrate');
-  if (!c) { el.hidden = true; return; }
+  if (!c) { el.hidden = true; if (el.matches?.(':popover-open')) el.hidePopover(); return; }
   el.hidden = false;
+  // In the top layer, so it shows over an open dialog (like a hold's page) as well as the screens.
+  if (el.showPopover) { if (el.matches(':popover-open')) el.hidePopover(); el.showPopover(); }
   el.className = `celebrate ${c.win ? 'win' : 'lose'} ${c.kind ?? ''}`;
   $('#cel-icon').hidden = !c.icon;
   $('#cel-icon').innerHTML = c.icon ?? '';
@@ -1353,6 +1363,26 @@ function celebrateMastery(hold, r) {
     say: `${hold.name} mastered!`, ok: 'Wonderful',
   });
 }
+
+// New badges: one card for a single badge, or one card for several earned together
+// (so a session that earns a handful doesn't queue a pop-up for each).
+function celebrateBadges(list) {
+  if (!list?.length) return;
+  const one = list.length === 1 ? list[0] : null;
+  celebrate({
+    win: true, kind: `badge-cel tier-${(one ?? list.at(-1)).tier}`, burst: medal(),
+    icon: `<span class="cel-medals">${list.map(b => `<span class="tier-${b.tier}">${medal()}</span>`).join('')}</span>`,
+    kicker: one ? 'Badge earned' : `${list.length} badges earned`,
+    title: one ? one.name : list.map(b => b.name).join(' · '),
+    msg: one ? `${one.desc}. ${BADGE_CHEER[one.tier]}` : `${list.map(b => `${b.name}: ${b.desc.toLowerCase()}`).join('. ')}. ${BADGE_CHEER[list.at(-1).tier]}`,
+    say: one ? `Badge earned: ${one.name}` : `${list.length} badges earned`, ok: 'Keep going',
+  });
+}
+const BADGE_CHEER = {
+  start: 'A good start: keep coming back and the rest will follow.',
+  path: 'This is what steady training looks like. Keep up the good work.',
+  mastery: 'Few people get this far. Wear it with pride.',
+};
 
 function celebrateMilestone(m) {
   celebrate({

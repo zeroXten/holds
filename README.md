@@ -16,7 +16,7 @@ A gamified trainer for Shaolin isometric stances. Prop your phone up, step back,
 - **Level tests:** take the next level early; pass with 80+ form and it unlocks for free, fail and it costs coins.
 - **Your temple:** a pixel-art Shaolin courtyard, drawn entirely in code, across the top of the home screen. It starts bare; buy 15 features (path, bamboo, lanterns, hall, pagoda…) and 6 themes (dawn, day, dusk, autumn, night, snow) that also recolour the app. `node tools/render-temple.mjs <dir>` renders scenes to PNG.
 - **Levelling up:** reach a level's target with 70+ average form on 3 different days to unlock the next level.
-- **Also:** sash ranks from mastery points (one for each level reached beyond the first on any hold, one more for mastering it), badges, a training heatmap and personal bests. Plain HTML/CSS/JS with no build step. Installs as an app and works offline.
+- **Also:** sash ranks from mastery points (one for each level reached beyond the first on any hold, one more for mastering it), badges in three stages (bronze for getting started, silver for the path, gold for mastery, each celebrated when earned), a training heatmap and personal bests. Plain HTML/CSS/JS with no build step. Installs as an app and works offline.
 
 ## Run locally
 

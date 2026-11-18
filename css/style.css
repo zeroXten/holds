@@ -594,6 +594,16 @@ body.demo .stage video { display: none; }
 .badge.locked .medal circle { fill: var(--surface-2); stroke: var(--line); }
 .badge.locked .medal path { fill: var(--line); }
 .badge.rank .sash { margin: 0 0 8px; }
+/* Bronze, silver and gold medals for the three stages. */
+.tier-start { --medal: #c27c3e; }
+.tier-path { --medal: #b9c0c8; }
+.tier-mastery { --medal: var(--gold); }
+.badge .medal circle, .cel-medals .medal circle, .cel-burst .medal circle { fill: var(--medal, var(--gold)); stroke: color-mix(in srgb, var(--medal, var(--gold)) 60%, #000); }
+.badge.locked .medal circle { fill: var(--surface-2); stroke: var(--line); }
+.badge-tier { grid-column: 1 / -1; margin: 10px 0 0; font-size: .95rem; display: flex; justify-content: space-between; align-items: baseline; }
+.badge-tier:first-child { margin-top: 0; }
+.badge-tier small { color: var(--muted); font-weight: 400; font-size: .8rem; }
+.badge .badge-date { color: var(--accent); font-weight: 600; margin-top: 2px; }
 .history { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 .history li {
   display: grid; grid-template-columns: 1fr auto 2.5em 4em; gap: 4px 10px; align-items: center;
@@ -764,6 +774,9 @@ button.chip { cursor: pointer; }
   position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px;
   background: rgba(15, 9, 5, .72); backdrop-filter: blur(3px); animation: fadein .25s ease-out;
 }
+/* As a popover (in the top layer), undo the browser's popover box. */
+.celebrate[popover] { margin: 0; border: 0; width: auto; height: auto; max-width: none; max-height: none; color: inherit; overflow: auto; }
+.celebrate[popover]:not(:popover-open) { display: none; }
 @keyframes fadein { from { opacity: 0; } }
 .cel-card {
   position: relative; width: min(380px, 100%); text-align: center; display: grid; gap: 10px;
@@ -777,6 +790,16 @@ button.chip { cursor: pointer; }
 .cel-icon .figure { width: 150px; height: 120px; }
 .cel-star { position: absolute; top: -4px; left: 50%; transform: translateX(-50%); width: 56px; height: 56px; color: var(--gold); animation: starpop .9s cubic-bezier(.2, 1.6, .4, 1) .15s both; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--gold) 70%, transparent)); }
 .cel-star .ico { width: 56px; height: 56px; }
+.celebrate.badge-cel .cel-icon { width: auto; height: auto; padding-top: 0; }
+.cel-medals { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 300px; }
+.cel-medals .medal { width: 84px; height: 84px; margin: 0; animation: starpop-medal .8s cubic-bezier(.2, 1.6, .4, 1) .15s both; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--medal) 60%, transparent)); }
+.cel-medals span:not(:only-child) .medal { width: 52px; height: 52px; }
+.cel-medals span:nth-child(2) .medal { animation-delay: .3s; }
+.cel-medals span:nth-child(3) .medal { animation-delay: .45s; }
+.cel-medals span:nth-child(n+4) .medal { animation-delay: .6s; }
+@keyframes starpop-medal { from { transform: scale(0) rotate(-90deg); } }
+.cel-burst .medal { width: 22px; height: 22px; margin: 0; }
+.celebrate.badge-cel.tier-mastery .cel-card { border-width: 3px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold) 25%, transparent), 0 20px 60px rgba(0, 0, 0, .5); }
 @keyframes starpop { from { transform: translateX(-50%) scale(0) rotate(-120deg); } }
 .cel-kicker { text-transform: uppercase; letter-spacing: .14em; font-size: .78rem; font-weight: 800; color: var(--gold); }
 .celebrate.lose .cel-kicker { color: var(--muted); }
