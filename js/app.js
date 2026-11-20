@@ -197,6 +197,19 @@ function renderPlanCard() {
   const card = $('#plan-card');
   card.hidden = !p || !!p.done;
   if (card.hidden) return;
+  if (P.planWaiting(state)) {
+    $('#pc-kicker').textContent = `Your new plan · ${dayType(p).name}`;
+    $('#pc-where').textContent = p.weeks > 1 ? `Week 1 of ${p.weeks}` : 'Day 1 of 7';
+    $('#pc-progress').innerHTML = '<div class="hp-top"><span>You’ve trained today, so day 1 is tomorrow.</span></div>';
+    card.classList.add('done');
+    $('#pc-more').hidden = true;
+    $('#pc-fig').innerHTML = '<span class="pc-tick" aria-hidden="true">✓</span>';
+    $('#pc-name').textContent = 'Starts tomorrow';
+    $('#pc-level').textContent = `Day 1: ${dayType(p).name.toLowerCase()}`;
+    $('#pc-meta').innerHTML = '';
+    $('#pc-start').textContent = 'See the plan';
+    return;
+  }
   const planned = P.planSeconds(state, p.picks), held = state.days[P.dayKey()]?.time ?? 0;
   $('#pc-kicker').textContent = `Today’s plan · ${dayType(p).name}`;
   $('#pc-where').textContent = p.weeks > 1 ? `Week ${Math.floor(p.step / 7) + 1} of ${p.weeks}` : `Day ${p.step % 7 + 1} of 7`;
@@ -319,6 +332,15 @@ function renderPlan() {
   const { p } = planNow();
   if (!p) { $('#grid').innerHTML = planPitchHTML(); return; }
   if (p.done) { $('#grid').innerHTML = planDoneHTML(p); return; }
+  if (P.planWaiting(state)) {
+    $('#grid').innerHTML = `<div class="plan-head">
+        <div class="plan-top"><b>${planLabel(p)}</b><button class="text-btn" data-act="plan-builder">Change</button></div>
+        <small class="plan-where">${p.weeks > 1 ? `Week 1 of ${p.weeks} · ` : ''}starts tomorrow</small>
+        <div class="plan-dots">${focusByKey(p.focus).week.map((t, i) => `<i class="${i ? '' : 'now'}" title="Day ${i + 1}: ${DAY_TYPES[t].name}"></i>`).join('')}</div>
+      </div>
+      <p class="plan-note"><b>Your plan starts tomorrow</b> with ${dayType(p).name.toLowerCase()}. You’ve already trained today, so today’s holds don’t count towards it. Tomorrow’s list is picked from the holds you have then.</p>`;
+    return;
+  }
   const week = Math.floor(p.step / 7), focus = focusByKey(p.focus), length = p.weeks * 7;
   const dots = focus.week.map((t, i) => {
     const step = week * 7 + i;
@@ -425,7 +447,8 @@ function renderBuilder() {
     <ol class="plan-preview">${preview}</ol>
     <p class="plan-note">Each day is filled from the holds you have, so days grow as you unlock holds and level up. A missed day waits for you. Finishing the plan pays ${PLAN_COINS.full} coins for each full day.</p>
     ${replacing ? `<p class="plan-note"><b>This starts again from day 1</b>, in place of your current plan.</p>` : ''}
-    <button class="btn primary builder-start" id="builder-start">Start plan</button>
+    ${P.trainedOn(state) ? '<p class="plan-note">You’ve trained today, so the plan starts tomorrow.</p>' : ''}
+    <button class="btn primary builder-start" id="builder-start">${P.trainedOn(state) ? 'Start plan tomorrow' : 'Start plan'}</button>
     ${p && !p.done ? '<p class="builder-end"><button class="text-btn" id="builder-end">End this plan and train freely</button></p>' : ''}`;
 }
 
@@ -441,7 +464,7 @@ $('#builder-body').onclick = e => {
     audio.play('point');
     show('home');
     renderHome();
-    toast('Plan started');
+    toast(P.planWaiting(state) ? 'Plan starts tomorrow' : 'Plan started');
     return;
   }
   if (e.target.closest('#builder-end')) {
@@ -1656,7 +1679,7 @@ document.addEventListener('click', e => {
     'test-mode-off': () => { P.setTestMode(state, false); return 'Test mode off'; },
     bet: () => P.placeBet(state, id) && 'Bet placed. Good luck!',
     'plan-builder': () => { openBuilder(); },
-    'plan-again': () => { const { minutes, focus, weeks } = state.plan; P.startPlan(state, { minutes, focus, weeks }); heroSlide = 'plan'; return 'New plan started'; },
+    'plan-again': () => { const { minutes, focus, weeks } = state.plan; P.startPlan(state, { minutes, focus, weeks }); heroSlide = 'plan'; return P.planWaiting(state) ? 'New plan starts tomorrow' : 'New plan started'; },
     'plan-end': () => { P.endPlan(state); return 'Plan ended'; },
     'plan-invite-off': () => { P.dismissPlanInvite(state); return ''; },
   };

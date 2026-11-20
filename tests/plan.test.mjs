@@ -124,6 +124,23 @@ const style = id => HOLDS.find(h => h.id === id).style;
 }
 
 {
+  // A plan picked after training today starts tomorrow, and today's holds don't count towards it.
+  const s = fresh();
+  s.unlocked = HOLDS.map(h => h.id);
+  for (const h of HOLDS.slice(0, 12)) did(s, h.id, day(0));
+  P.startPlan(s, { minutes: 10, focus: 'core', weeks: 1 }, day(0));
+  check('picked after training, it starts tomorrow', s.plan.start === day(1) && P.planWaiting(s, day(0)) && P.planToday(s, day(0)).picks.length === 0);
+  P.planToday(s, day(1));
+  check('tomorrow is day 1, with holds to do', s.plan.step === 0 && s.plan.day === day(1) && s.plan.picks.length > 0 && !P.planWaiting(s, day(1)));
+  check('none of them done yet', s.plan.picks.every(x => P.setsDone(s, x.holdId, day(1)) === 0));
+  P.planToday(s, day(2));
+  check('a day 1 not trained still waits', s.plan.step === 0);
+  const t = fresh();
+  P.startPlan(t, { minutes: 10, focus: 'core', weeks: 1 }, day(0));
+  check('picked before training, it starts today', t.plan.start === day(0) && !P.planWaiting(t, day(0)) && t.plan.picks.length > 0);
+}
+
+{
   // Plans from before plans had choices, or set up without being chosen, aren't plans; bad choices fall back.
   store.clear();
   localStorage.setItem('holds.v1', JSON.stringify({ version: 2, plan: { step: 3, day: '2026-01-01', picks: [], prev: [], cycle: ['full'], weeks: 4 } }));

@@ -672,15 +672,21 @@ function planDayStatus(state, picks, day) {
   return picks.length && done.every(Boolean) ? 'full' : picks.some(p => setsDone(state, p.holdId, day)) ? 'part' : null;
 }
 
+// Whether you've held anything today.
+export const trainedOn = (state, day = dayKey()) => state.history.some(h => dayKey(new Date(h.at)) === day);
+
 // Starts a plan from its first day: { minutes, focus, weeks }, each checked against the choices.
+// Picked after you've trained today, it starts tomorrow: today's holds belong to the day
+// you've had (often the last day of the plan before), not to the new plan's day 1.
 export function startPlan(state, choice = {}, today = dayKey()) {
   const old = state.plan ?? {};
+  const start = trainedOn(state, today) ? addDays(today, 1) : today;
   const pick = (v, list, def) => (list.includes(v) ? v : def);
   state.plan = {
     minutes: pick(choice.minutes, MINUTES, DEFAULT_PLAN.minutes),
     focus: pick(choice.focus, FOCUSES.map(f => f.key), DEFAULT_PLAN.focus),
     weeks: pick(choice.weeks, LENGTHS, DEFAULT_PLAN.weeks),
-    start: today, step: 0, day: null, picks: [], cycle: [], done: null,
+    start, step: 0, day: null, picks: [], cycle: [], done: null,
     // The last plan day's holds and main sections, to give them a day's rest.
     prev: old.prev ?? [], prevMains: old.prevMains ?? [],
     points: sashRank(state).points,  // to count mastery points earned during the plan
@@ -693,6 +699,9 @@ export function startPlan(state, choice = {}, today = dayKey()) {
 // A plan set up automatically before that (`chosen: false`) or from before plans had choices
 // doesn't count.
 export const hasPlan = state => !!state.plan?.minutes && state.plan.chosen !== false;
+
+// A plan picked after training that starts tomorrow: nothing to do on it today.
+export const planWaiting = (state, today = dayKey()) => hasPlan(state) && !state.plan.done && state.plan.start > today;
 
 // Stops the plan: back to training whatever you like. Keeps the count of plans finished.
 export function endPlan(state) {
@@ -727,6 +736,7 @@ export function planToday(state, today = dayKey()) {
   if (!hasPlan(state)) return null;
   const p = state.plan;
   if (p.day === today) return p;
+  if (planWaiting(state, today)) { p.picks = []; return p; }
   if (p.day && !p.done) {
     const status = planDayStatus(state, p.picks, p.day);
     if (status) advancePlan(state, status, today);
