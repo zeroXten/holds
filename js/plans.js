@@ -10,7 +10,9 @@
 // the list runs out first, sets are added to the holds already picked.
 //
 // A slot with 2 or more sets is a main slot: it takes a hard hold when you have one, and
-// its section gets a day's rest afterwards (the next day skips that section). Easy days
+// its section gets a day's rest afterwards (the next day has no main hold from it, and at
+// most one light set). The day's own sections come first and get the extra sets, and
+// holds from other sections are kept short, so a core day is mostly core. Easy days
 // are soft holds only, at EASY_SHARE of the minutes. Qigong holds are mostly arm work, so
 // they fill out arm days and easy days. The plan moves on a day when you train, so a missed
 // day doesn't skip anything.
@@ -18,9 +20,9 @@
 const slots = (...list) => list.map(([group, sets = 1]) => ({ group, sets }));
 
 export const DAY_TYPES = {
-  legs: { name: 'Legs', slots: slots(['stances', 2], ['core'], ['stances'], ['qigong'], ['upper'], ['still'], ['stances'], ['core']) },
-  arms: { name: 'Arms & upper body', slots: slots(['upper', 2], ['qigong'], ['upper'], ['core'], ['stances'], ['qigong'], ['upper']) },
-  core: { name: 'Core', slots: slots(['core', 2], ['qigong'], ['core'], ['stances'], ['still'], ['upper'], ['core']) },
+  legs: { name: 'Legs', slots: slots(['stances', 2], ['stances'], ['core'], ['qigong'], ['stances'], ['upper'], ['still'], ['core']) },
+  arms: { name: 'Arms & upper body', slots: slots(['upper', 2], ['upper'], ['qigong'], ['core'], ['upper'], ['stances'], ['qigong']) },
+  core: { name: 'Core', slots: slots(['core', 2], ['core'], ['qigong'], ['core'], ['stances'], ['upper'], ['still']) },
   armscore: { name: 'Arms & core', slots: slots(['upper', 2], ['core', 2], ['qigong'], ['upper'], ['core'], ['stances']) },
   easy: { name: 'Easy day', easy: true, slots: slots(['still'], ['qigong'], ['qigong'], ['still'], ['qigong'], ['still']) },
 };
@@ -41,8 +43,9 @@ export const DEFAULT_PLAN = { minutes: 10, focus: 'balanced', weeks: 2 };
 export const RAMPS = { 1: [1], 2: [0.85, 1], 4: [0.7, 1, 1, 0.85], 6: [0.7, 0.85, 1, 1, 1, 0.85] };
 export const EASY_SHARE = 0.6;
 
-// The most sets of one hold in a day: the main hold, and the others.
-export const MAX_SETS = { main: 4, other: 3 };
+// The most sets of one hold in a day: a hold of the day's own sections (a core hold on a
+// core day), and the others.
+export const MAX_SETS = { main: 5, other: 3 };
 
 // Coins for finishing a plan: for each day of it you trained, more for a full day.
 export const PLAN_COINS = { full: 10, part: 5 };

@@ -796,9 +796,12 @@ function fillPlanDay(state, p, today) {
     const days = hs.last ? Math.min(7, Math.round((new Date(today) - new Date(hs.last)) / 864e5)) : 7;
     return rand() + days * 0.3 + (readyForTest(hs) ? 3 : 0) + (hs.mastered ? 0 : 2) + (isDaily(state, id) ? 2.5 : 0) - (p.prev.includes(id) ? 4 : 0);
   };
+  // The day's own sections (its main slots'): a core day is mostly core.
+  const theme = new Set(type.slots.filter(x => x.sets > 1).map(x => x.group));
   // No one hold takes over the day (a long sit on a legs day): a cap on its time. The main
-  // hold may take a little more, for its repeat sets.
-  const capOf = main => budget * (type.easy ? 0.6 : main ? 0.5 : 0.4);
+  // hold may take a little more, for its repeat sets, and a hold from outside the day's
+  // own sections less, so long qigong or stillness holds don't crowd out the day's theme.
+  const capOf = (main, group) => budget * (type.easy ? 0.6 : main ? 0.5 : theme.has(group) ? 0.4 : 0.25);
   const used = new Set(), picks = [];
   let total = 0, next = 0;
   const short = () => total < budget - slack;
@@ -806,34 +809,44 @@ function fillPlanDay(state, p, today) {
   const addHolds = limit => {
     for (; next < type.slots.length && picks.length < limit && short(); next++) {
       const slot = type.slots[next], main = slot.sets > 1;
-      for (const key of [slot.group, ...FALLBACK[slot.group]].filter(g => !p.prevMains.includes(g))) {
-        let options = HOLD_GROUPS.find(g => g.key === key).ids.filter(id => isOpen(state, id) && !used.has(id)
-          && (!type.easy || holdOf(id).style === 'soft') && secs(id) <= capOf(main) && total + secs(id) <= budget + slack);
-        if (!options.length) continue;
-        const hard = options.filter(id => holdOf(id).style === 'hard');
-        if (main && hard.length) options = hard;
-        // A main hold short enough for its sets, if there is one.
-        const fits = options.filter(id => slot.sets * secs(id) <= capOf(main));
-        if (main && fits.length) options = fits;
-        const best = options.map(id => [score(id), id]).sort((a, b) => b[0] - a[0])[0][1];
-        // Longer days start with a third set of the main hold.
-        const want = main && budget >= 480 ? slot.sets + 1 : slot.sets;
-        const sets = Math.max(1, Math.min(want, Math.floor((budget + slack - total) / secs(best)), Math.floor(capOf(main) / secs(best))));
-        used.add(best);
-        picks.push({ holdId: best, sets, group: key, main });
-        total += sets * secs(best);
-        break;
-      }
+      // A section the last plan day worked hard rests: no main hold from it, and at most
+      // one light set of one of its holds.
+      const resting = g => p.prevMains.includes(g) && (main || picks.some(x => x.group === g));
+      // The first section with a hold for the slot, looking past the last plan day's holds
+      // before taking one of them again.
+      const keys = [slot.group, ...FALLBACK[slot.group]].filter(g => !resting(g));
+      const optionsFor = (key, fresh) => HOLD_GROUPS.find(g => g.key === key).ids.filter(id => isOpen(state, id) && !used.has(id)
+        && (!fresh || !p.prev.includes(id)) && (!type.easy || holdOf(id).style === 'soft')
+        && secs(id) <= capOf(main, key) && total + secs(id) <= budget + slack);
+      let key, options;
+      for (const fresh of [true, false]) if ((key = keys.find(k => (options = optionsFor(k, fresh)).length))) break;
+      if (!key) continue;
+      const hard = options.filter(id => holdOf(id).style === 'hard');
+      if (main && hard.length) options = hard;
+      // A main hold short enough for its sets, if there is one.
+      const fits = options.filter(id => slot.sets * secs(id) <= capOf(main, key));
+      if (main && fits.length) options = fits;
+      const best = options.map(id => [score(id), id]).sort((a, b) => b[0] - a[0])[0][1];
+      // Longer days start with a third set of the main hold.
+      const want = main && budget >= 480 ? slot.sets + 1 : slot.sets;
+      const rests = p.prevMains.includes(key);
+      const sets = rests ? 1 : Math.max(1, Math.min(want, Math.floor((budget + slack - total) / secs(best)), Math.floor(capOf(main, key) / secs(best))));
+      used.add(best);
+      picks.push({ holdId: best, sets, group: key, main, ...(rests && { rests }) });
+      total += sets * secs(best);
     }
   };
-  // Another set of each hold in turn, main holds first, while short of the minutes.
+  // Another set of each hold in turn while short of the minutes: the day's own sections
+  // first (main holds, then the rest of the theme), going round them until they're full,
+  // and only then the other holds.
+  const ours = x => x.main || theme.has(x.group);
   const addSets = () => {
-    const order = [...picks.filter(x => x.main), ...picks.filter(x => !x.main)];
+    for (const order of [[...picks.filter(x => x.main), ...picks.filter(x => !x.main && ours(x))], picks.filter(x => !ours(x))])
     for (let added = true; added && short();) {
       added = false;
       for (const x of order) {
         const s = secs(x.holdId);
-        if (short() && x.sets < (x.main ? MAX_SETS.main : MAX_SETS.other) && (x.sets + 1) * s <= capOf(x.main) && total + s <= budget + slack) {
+        if (short() && !x.rests && x.sets < (ours(x) ? MAX_SETS.main : MAX_SETS.other) && (x.sets + 1) * s <= capOf(x.main, x.group) && total + s <= budget + slack) {
           x.sets++; total += s; added = true;
         }
       }

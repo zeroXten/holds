@@ -70,10 +70,11 @@ const style = id => HOLDS.find(h => h.id === id).style;
 }
 
 {
-  // With more holds open, the last plan day's holds and main section get a rest.
-  const s = fresh();
-  s.unlocked = HOLDS.map(h => h.id);
+  // With more holds open, the last plan day's holds and main section get a rest: no hold
+  // again, and from each main section at most one light set.
   for (const focus of ['balanced', 'legs', 'arms', 'core']) {
+    const s = fresh();
+    s.unlocked = HOLDS.map(h => h.id);
     P.startPlan(s, { minutes: 15, focus, weeks: 1 }, day(0));
     let bad = [];
     for (let i = 0; i < 7; i++) {
@@ -82,9 +83,25 @@ const style = id => HOLDS.find(h => h.id === id).style;
       P.planToday(s, day(i + 1));
       if (i === 6) break;
       const mains = prev.filter(x => x.main).map(x => x.group);
-      bad.push(...s.plan.picks.filter(x => mains.includes(x.group) || prev.some(y => y.holdId === x.holdId)).map(x => `day ${i + 2} ${x.holdId}`));
+      const rested = s.plan.picks.filter(x => mains.includes(x.group));
+      if (new Set(rested.map(x => x.group)).size < rested.length || rested.some(x => x.main || x.sets > 1)) bad.push(`day ${i + 2} rested ${rested.map(x => `${x.holdId}x${x.sets}`)}`);
+      bad.push(...s.plan.picks.filter(x => prev.some(y => y.holdId === x.holdId)).map(x => `day ${i + 2} ${x.holdId}`));
     }
     check(`${focus}: main sections and holds get a day's rest`, !bad.length, bad.join());
+  }
+}
+
+{
+  // A focus's days are mostly its own section: a core day is mostly core holds, even with
+  // only a few core holds open, and long qigong holds don't crowd it out.
+  const secs = (s, x) => x.sets * HOLDS.find(h => h.id === x.holdId).levels[0].target;
+  for (const [unlocked, want] of [[HOLDS.filter(h => !h.sash || h.sash === 'yellow').map(h => h.id), 0.5], [HOLDS.map(h => h.id), 0.6]]) {
+    const s = fresh();
+    s.unlocked = unlocked;
+    P.startPlan(s, { minutes: 10, focus: 'core', weeks: 1 }, day(0));
+    const picks = s.plan.picks.filter(x => !HOLDS.find(h => h.id === x.holdId).flow);
+    const core = picks.filter(x => x.group === 'core').reduce((t, x) => t + secs(s, x), 0), all = picks.reduce((t, x) => t + secs(s, x), 0);
+    check(`a core day is mostly core (${unlocked.length} holds open)`, core / all >= want, `${Math.round(100 * core / all)}%: ${s.plan.picks.map(x => `${x.holdId}x${x.sets}`)}`);
   }
 }
 
