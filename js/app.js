@@ -2,8 +2,9 @@ import { HOLDS, HOLD_GROUPS, holdById, prefersLandscape, AREAS, STYLES, mainArea
 import {
   coinsAtTarget, shownTheme, DAILY_MULT, BONUS_TIERS, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, BETS,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES, FRAMES, FREEZE_PRICE, FREEZE_MAX,
-  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, MILESTONE_DAY_MULT, testPrice, masteryTarget, MASTERY_MULT, LEVEL_UP_COINS,
+  REST_DAY_PRICE, REPAIR_PRICE_PER_DAY, STREAK_MILESTONES, MILESTONE_DAY_MULT, testPrice, masteryTarget, MASTERY_MULT, LEVEL_UP_COINS, TEACHING_PRICE,
 } from './economy.js';
+import { TEACHINGS, KINDS, teachingById } from './teachings.js';
 import { drawTemple, SCENE_H } from './temple.js';
 import { renderAvatar } from './avatar.js';
 import { figureSVG } from './figure.js';
@@ -1481,8 +1482,60 @@ function renderHomeCards() {
   const bets = ['bet', 'weekBet'].map(slot => P.betProgress(state, slot)).filter(Boolean);
   if (bets.length > 1) cards.push(`<div class="swipe" id="bet-swipe"><div class="swipe-track">${bets.map(betCard).join('')}</div><div class="swipe-dots"></div></div>`);
   else cards.push(...bets.map(betCard));
+  cards.push(teachingCard());
   $('#home-cards').innerHTML = cards.join('');
   if ($('#bet-swipe')) setupSwipe($('#bet-swipe'));
+}
+
+// ---------- The donation box and the book of teachings ----------
+
+let justTaught = false;  // today's teaching was just received: unroll it
+const kindOf = t => KINDS.find(k => k.key === t.kind);
+const teachingLabel = t => t.kind === 'technique' ? `Technique · ${holdById(t.hold).name}` : kindOf(t).one;
+const starBtn = t => {
+  const on = state.teachings.starred.includes(t.id);
+  return `<button class="icon-btn teach-star" data-act="teach-star" data-id="${t.id}" aria-pressed="${on}" aria-label="${on ? 'Unstar' : 'Star'} this teaching">${STAR}</button>`;
+};
+
+// Once you've trained today: the donation box, or the teaching it gave.
+function teachingCard() {
+  const status = P.teachingStatus(state);
+  if (status === 'train') return '';
+  if (status === 'given') {
+    const t = P.todaysTeaching(state), reveal = justTaught;
+    justTaught = false;
+    return `<div class="home-card teaching ${reveal ? 'reveal' : ''}">
+      <p class="tc-kicker">Today’s teaching · ${teachingLabel(t)}</p>
+      <blockquote class="tc-text">${t.text}</blockquote>
+      ${t.source ? `<p class="tc-source">${t.source}</p>` : ''}
+      <div class="row"><button class="text-btn" data-act="teach-book">Book of teachings</button>${starBtn(t)}</div>
+    </div>`;
+  }
+  return `<div class="home-card teaching offer">
+    <p><b>The donation box.</b> You’ve trained today. Leave ${TEACHING_PRICE} coins at the temple and a monk will share today’s teaching.</p>
+    <div class="row"><button class="text-btn" data-act="teach-book">Book of teachings</button><button class="btn primary" data-act="teach-offer" ${status === 'coins' ? 'disabled' : ''}>${COIN} Offer ${TEACHING_PRICE}</button></div>
+  </div>`;
+}
+
+let bookTab = 'all';
+function openBook() { show('teachings'); renderBook(); }
+
+// The book: teachings received, newest first, by kind or starred.
+function renderBook() {
+  const got = state.teachings.got, order = state.teachings.order;
+  $('#book-count').textContent = `${order.length} of ${TEACHINGS.length} teachings received. A new one each day you train.`;
+  const tabs = [['all', 'All'], ['starred', 'Starred'], ...KINDS.map(k => [k.key, k.name])];
+  $('#book-tabs').innerHTML = tabs.map(([key, name]) => `<button type="button" role="tab" data-act="book-tab" data-id="${key}" aria-selected="${bookTab === key}">${name}</button>`).join('');
+  const list = [...order].reverse().map(teachingById).filter(Boolean)
+    .filter(t => bookTab === 'all' || (bookTab === 'starred' ? state.teachings.starred.includes(t.id) : t.kind === bookTab));
+  const kind = KINDS.find(k => k.key === bookTab);
+  const total = kind && TEACHINGS.filter(t => t.kind === kind.key).length;
+  const note = kind ? `<p class="plan-note">${list.length} of ${total} ${kind.name.toLowerCase()} teachings received.</p>` : '';
+  const when = day => new Date(day + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  $('#book-body').innerHTML = note + (list.map(t => `<article class="book-item">
+      <div class="bi-top"><p class="tc-kicker">${teachingLabel(t)} · ${when(got[t.id])}</p>${starBtn(t)}</div>
+      <p class="tc-text">${t.text}</p>${t.source ? `<p class="tc-source">${t.source}</p>` : ''}
+    </article>`).join('') || `<p class="empty-note">${bookTab === 'starred' ? 'Star a teaching to keep it here.' : order.length ? 'None of these yet.' : 'Your book is empty. Train, then leave a few coins in the donation box on the home screen for your first teaching.'}</p>`);
 }
 
 // Settled bets, newest first.
@@ -1682,6 +1735,10 @@ document.addEventListener('click', e => {
     'plan-again': () => { const { minutes, focus, weeks } = state.plan; P.startPlan(state, { minutes, focus, weeks }); heroSlide = 'plan'; return P.planWaiting(state) ? 'New plan starts tomorrow' : 'New plan started'; },
     'plan-end': () => { P.endPlan(state); return 'Plan ended'; },
     'plan-invite-off': () => { P.dismissPlanInvite(state); return ''; },
+    'teach-offer': () => { if (!P.receiveTeaching(state)) return false; justTaught = true; audio.unlock(); audio.play('bell'); return ''; },
+    'teach-star': () => { P.starTeaching(state, id); if (document.body.dataset.screen === 'teachings') { renderBook(); return false; } return ''; },
+    'teach-book': () => { openBook(); return false; },
+    'book-tab': () => { bookTab = id; renderBook(); return false; },
   };
   const msg = actions[b.dataset.act]?.();
   if (msg === false || msg === undefined) return;

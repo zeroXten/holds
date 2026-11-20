@@ -7,8 +7,9 @@ import {
   STARTER_HOLDS, UNLOCK_PRICES, REST_DAY_PRICE, REST_DAYS_PER_WEEK, FREEZE_PRICE, FREEZE_MAX,
   REPAIR_PRICE_PER_DAY, REPAIR_WINDOW_DAYS, BETS, LEVEL_UP_COINS, testPrice, TEMPLE_TIERS, TEMPLE_ITEMS, THEMES, OLD_THEME_PRICES, FRAMES, SEASONS, inSeason, inBloom, STREAK_MILESTONES, LEVEL_MULT,
   AVATAR_CHARACTERS, AVATAR_OUTFITS, AVATAR_ACCESSORIES,
-  DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT,
+  DAILY_MIN_SECONDS, STREAK_STEP, STREAK_MAX_WEEKS, MILESTONE_DAY_MULT, TEACHING_PRICE,
 } from './economy.js';
+import { TEACHINGS, teachingById } from './teachings.js';
 
 const KEY = 'holds.v1';
 // Levelling up a hold: reach its target on this many different days, with this average
@@ -91,6 +92,8 @@ const blank = () => ({
   avatar: { character: 'young', outfit: 'saffron', wear: {}, owned: ['young', 'saffron'], inTemple: true },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
   starred: [],  // holds you've starred, to see on their own
+  // The donation box: teachings received (id → the day), in order, the day's, and starred ones.
+  teachings: { got: {}, order: [], today: null, starred: [] },
 });
 
 // Version 1 had points (about 80 per coin) and every hold open. Convert the
@@ -148,6 +151,7 @@ export function load() {
         streak: { ...fresh.streak, ...data.streak },
         temple: { ...fresh.temple, ...data.temple },
         avatar: { ...fresh.avatar, ...data.avatar },
+        teachings: { ...fresh.teachings, ...data.teachings },
       };
       if (refunded) save(state);  // so the refund can't happen twice
       return state;
@@ -925,7 +929,7 @@ export function recordSession(state, s) {
   if (s.test && readyForTest(hs) && testLevel === hs.level + 1 && hs.lastTest !== today && state.coins >= testPrice(testLevel)) {
     hs.lastTest = today;
     const passed = reached && s.camera && s.avgForm >= qualifyForm(testLevel);
-    if (passed && testLevel === 5) { hs.mastered = true; hs.qualDays = []; mastered = true; }
+    if (passed && testLevel === 5) { hs.mastered = true; hs.masteredOn = today; hs.qualDays = []; mastered = true; }
     // The test doesn't count towards the next level, but it's today's work on this hold.
     else if (passed) { hs.level = testLevel; hs.qualDays = []; hs.passedOn = today; levelUp = true; }
     else state.coins -= testPrice(testLevel);
@@ -955,6 +959,7 @@ export function recordSession(state, s) {
   state.history.push({
     at: new Date().toISOString(), holdId: s.holdId, level: s.level, held: Math.round(s.held * 10) / 10,
     target: s.target, avgForm: s.camera ? Math.round(s.avgForm) : null, coins, camera: s.camera, daily: !!s.daily, reached,
+    ...(s.fault && { fault: s.fault }),
   });
   if (state.history.length > 1000) state.history.splice(0, state.history.length - 1000);
   const plan = planAfterSession(state, today);  // today's plan done, or the whole plan
@@ -1036,4 +1041,95 @@ export function recordSession(state, s) {
     levelBonus, badges: earn, rankUp: sashRank(state).index > before.rank.index, rank: sashRank(state),
     wallet: state.coins, nextUnlock: locked.length ? unlockPrice(state) : null, plan,
   };
+}
+
+// ---------- The donation box ----------
+
+// A teaching a day: once you've trained today, a few coins in the box. 'ready', 'given'
+// (today's is had), 'train' (train first) or 'coins' (not enough).
+export function teachingStatus(state, today = dayKey()) {
+  if (state.teachings.today?.day === today) return 'given';
+  if (!trainedOn(state, today)) return 'train';
+  return state.coins < TEACHING_PRICE ? 'coins' : 'ready';
+}
+export const todaysTeaching = (state, today = dayKey()) =>
+  state.teachings.today?.day === today ? teachingById(state.teachings.today.id) : null;
+
+// What today has been: the holds trained (weakest form first) with the form check that
+// slipped most in each, and anything that marks the day.
+function teachingDay(state, today) {
+  const sessions = state.history.filter(h => dayKey(new Date(h.at)) === today);
+  const byHold = new Map();
+  for (const h of sessions) {
+    const x = byHold.get(h.holdId) ?? { holdId: h.holdId, form: 100, faults: [] };
+    if (h.avgForm != null) x.form = Math.min(x.form, h.avgForm);
+    if (h.fault) x.faults.push(h.fault);
+    byHold.set(h.holdId, x);
+  }
+  const before = state.history.some(h => dayKey(new Date(h.at)) < addDays(today, -1));
+  return {
+    holds: [...byHold.values()].sort((a, b) => a.form - b.form),
+    first: !state.teachings.order.length,
+    mastery: Object.values(state.holds).some(hs => hs.mastered && hs.masteredOn === today),
+    levelup: Object.values(state.holds).some(hs => hs.passedOn === today),
+    plan: hasPlan(state) && state.plan.done?.on === today,
+    return: before && !trainedOn(state, addDays(today, -1)),
+  };
+}
+
+// The teaching for today. A moment first (your first, a level up, a finished plan, back
+// after a gap); then technique and wisdom take turns (technique after anything else). Technique goes to what you trained
+// today: the check that slipped most, then the hold itself, the shakiest hold first.
+// Wisdom goes round its kinds. Ones you haven't had come first; once they're all had,
+// the one you had longest ago.
+export function pickTeaching(state, today = dayKey()) {
+  const got = state.teachings.got, ctx = teachingDay(state, today);
+  const best = list => list.filter(t => !got[t.id])[0]
+    ?? (list.length ? [...list].sort((a, b) => got[a.id].localeCompare(got[b.id]))[0] : null);
+  const fresh = list => list.filter(t => !got[t.id])[0] ?? null;
+  for (const when of ['first', 'mastery', 'levelup', 'plan', 'return']) {
+    if (!ctx[when]) continue;
+    const t = fresh(TEACHINGS.filter(x => x.when === when));
+    if (t) return t;
+  }
+  const n = state.teachings.order.length;
+  const technique = () => {
+    for (const h of ctx.holds) {
+      for (const crit of h.faults) { const t = fresh(TEACHINGS.filter(x => x.hold === h.holdId && x.crit === crit)); if (t) return t; }
+      const t = fresh(TEACHINGS.filter(x => x.hold === h.holdId));
+      if (t) return t;
+    }
+    return fresh(TEACHINGS.filter(x => x.kind === 'technique' && isUnlocked(state, x.hold)));
+  };
+  const wisdom = () => {
+    const kinds = ['buddhist', 'training', 'dao', 'martial'];
+    const k = Math.floor(n / 2) % kinds.length;
+    for (const kind of [...kinds.slice(k), ...kinds.slice(0, k)]) {
+      const t = fresh(TEACHINGS.filter(x => x.kind === kind && !x.when));
+      if (t) return t;
+    }
+    return null;
+  };
+  const last = state.teachings.today && teachingById(state.teachings.today.id);
+  return (last?.kind === 'technique' ? wisdom() ?? technique() : technique() ?? wisdom())
+    ?? best(TEACHINGS.filter(x => !x.when && (x.kind !== 'technique' || isUnlocked(state, x.hold))));
+}
+
+// Puts coins in the box for today's teaching. Returns it, or null if it can't be had.
+export function receiveTeaching(state, today = dayKey()) {
+  if (teachingStatus(state, today) !== 'ready') return null;
+  const t = pickTeaching(state, today);
+  if (!t) return null;
+  state.coins -= TEACHING_PRICE;
+  if (!state.teachings.got[t.id]) state.teachings.order.push(t.id);
+  state.teachings.got[t.id] = today;
+  state.teachings.today = { day: today, id: t.id };
+  save(state);
+  return t;
+}
+
+export function starTeaching(state, id) {
+  const s = state.teachings.starred;
+  state.teachings.starred = s.includes(id) ? s.filter(x => x !== id) : [...s, id];
+  save(state);
 }

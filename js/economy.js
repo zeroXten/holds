@@ -55,6 +55,7 @@ export function bonusTier(held, target) {
 }
 
 // ---- Shop: protecting the streak (cheapest when planned ahead, dearest after the fact) ----
+export const TEACHING_PRICE = 5;        // the donation box: a teaching a day, after training
 export const REST_DAY_PRICE = 30;       // book a rest day in advance: a real cost, but well below a freeze
 export const REST_DAYS_PER_WEEK = 2;
 export const FREEZE_PRICE = 100;        // used automatically on a missed day; a hard day's training to

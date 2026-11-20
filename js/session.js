@@ -66,6 +66,7 @@ export class Session {
     this.sideReached = new Array(this.sides).fill(false);
     this.worst = null;
     this.worstTime = 0;
+    this.faults = {};  // seconds each form check was the worst while holding, for the session's main fault
     this.milestones = new Set();
     this.result = null;
     this.side = null;
@@ -191,6 +192,7 @@ export class Session {
 
   trackWorst(dt, results) {
     const w = results?.filter(r => r.cue && r.s < 0.75).sort((a, b) => a.s * a.weight - b.s * b.weight)[0] ?? null;
+    if (w && this.state === 'holding') this.faults[w.id] = (this.faults[w.id] ?? 0) + dt;
     if (w && this.worst && w.id === this.worst.id) this.worstTime += dt;
     else this.worstTime = 0;
     this.worst = w;
@@ -264,6 +266,8 @@ export class Session {
       holdId: this.hold.id, level: this.level, held: this.held, target: this.target,
       coins: this.coins, daily: this.daily, avgForm: this.avgForm(), camera: this.camera, reason,
       reached: this.reached, ...(this.sides === 2 ? { sides: this.sideHeld.slice() } : {}),
+      // The form check that slipped most, if any did for a good part of the hold.
+      fault: this.camera ? (Object.entries(this.faults).filter(([, t]) => t >= Math.max(3, this.held * 0.15)).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null) : null,
       // Time held past the target (per side) as a fraction of the target, for the bonus time bet.
       bonus: this.sideHeld.reduce((t, h) => t + Math.max(0, h - this.sideTarget), 0) / this.target,
     };

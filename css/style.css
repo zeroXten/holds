@@ -918,3 +918,22 @@ button.chip { cursor: pointer; }
 /* Side by side the cards share a height: buttons sit at the bottom of each. */
 .swipe-track > .hero { display: flex; flex-direction: column; }
 .swipe-track > .hero .hero-btns { margin-top: auto; }
+
+/* ---------- The donation box and the book of teachings ---------- */
+.home-card.teaching { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.home-card.teaching.reveal { animation: unroll .9s ease-out both; transform-origin: top; }
+@keyframes unroll { from { clip-path: inset(0 0 100% 0); opacity: .3; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+.tc-kicker { font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin: 0; }
+.tc-text { margin: 0; font-family: var(--display); font-size: 1.08rem; line-height: 1.5; color: var(--ink); }
+.tc-source { margin: 0; font-size: .85rem; color: var(--muted); font-style: italic; }
+.tc-source::before { content: '— '; }
+.home-card.teaching .row { justify-content: space-between; align-items: center; }
+.teach-star .ico { width: 22px; height: 22px; fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.teach-star[aria-pressed="true"] .ico { fill: var(--gold); stroke: var(--gold); }
+.foot .text-btn + .text-btn { margin-left: 14px; }
+.book-count { color: var(--muted); margin: 0 0 12px; }
+.book-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; scrollbar-width: none; }
+.book-tabs button { flex: none; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: .85rem; font-weight: 700; }
+.book-tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.book-item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; display: grid; gap: 6px; }
+.bi-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
