@@ -105,3 +105,22 @@ export class Pix {
     });
   }
 }
+
+// Small hand-drawn sprites as crisp SVG: `rows` are equal-length strings, one character
+// per pixel, looked up in `palette` ('.' or anything missing is see-through).
+export function pixelSVG(rows, palette, { cls = '', label = '' } = {}) {
+  const w = rows[0].length, h = rows.length;
+  let rects = '';
+  rows.forEach((row, y) => {
+    if (row.length !== w) throw new Error(`pixelSVG: row ${y} is ${row.length} wide, not ${w}`);
+    for (let x = 0; x < w;) {
+      const c = row[x];
+      let n = 1;
+      while (row[x + n] === c) n++;
+      if (palette[c]) rects += `<rect x="${x}" y="${y}" width="${n}" height="1" fill="${palette[c]}"/>`;
+      x += n;
+    }
+  });
+  const a11y = label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"';
+  return `<svg class="${cls}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" shape-rendering="crispEdges" ${a11y}>${rects}</svg>`;
+}

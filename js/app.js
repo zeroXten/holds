@@ -6,6 +6,7 @@ import {
 } from './economy.js';
 import { TEACHINGS, KINDS, teachingById } from './teachings.js';
 import { drawTemple, SCENE_H } from './temple.js';
+import { pixelSVG } from './pixel.js';
 import { renderAvatar } from './avatar.js';
 import { figureSVG } from './figure.js';
 import * as P from './progress.js';
@@ -71,7 +72,7 @@ function show(id) {
   $$('.screen').forEach(s => { s.hidden = s.id !== id; });
   document.body.dataset.screen = id;
   window.scrollTo(0, 0);
-  if (id === 'home' || id === 'shop' || id === 'temple-view') requestAnimationFrame(() => drawScenes(true));
+  if (id === 'home' || id === 'shop' || id === 'temple-view' || id === 'teachings') requestAnimationFrame(() => drawScenes(true));
 }
 
 // Toasts queue up, so several notices in a row are each seen.
@@ -142,7 +143,12 @@ function renderDayStats() {
     ${stat(d.sessions === 1 ? 'hold' : 'holds', d.sessions ?? 0, y.sessions ?? 0)}
     ${stat('coins', (d.coins ?? 0).toLocaleString(), (y.coins ?? 0).toLocaleString())}
     ${stat(d.points === 1 ? 'mastery point' : 'mastery points', d.points ?? 0, y.points ?? 0)}
-  </div>`;
+  </div>
+  <button class="progress-link" data-act="open-progress"><span><b>Progress &amp; badges</b>
+    <small>${P.sashRank(state).name} · ${P.BADGES.filter(b => state.badges[b.id]).length} of ${P.BADGES.length} badges</small></span>${CHEVRON}</button>`;
+  const read = state.teachings.order.length;
+  $('#book-n').textContent = read || '';
+  $('.book-btn').setAttribute('aria-label', `Book of teachings: ${read} received`);
 }
 
 // ---------- Swipe cards ----------
@@ -266,6 +272,7 @@ const targetShort = (h, level, { long = false, t = h.levels[level - 1].target } 
 // A mastered hold is practised at the master's time, in level 4's position.
 const masterShort = (h, opts = {}) => targetShort(h, 4, { ...opts, t: masteryTarget(h) });
 
+const CHEVRON = '<svg viewBox="0 0 24 24" class="ico chev"><path d="M9 4l8 8-8 8-1.4-1.4 6.6-6.6-6.6-6.6z"/></svg>';
 const STAR = '<svg viewBox="0 0 24 24" class="ico"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg>';
 const star = h => (P.isStarred(state, h.id) ? `<span class="card-star" aria-label="Starred">${STAR}</span>` : '');
 
@@ -1517,13 +1524,40 @@ function teachingCard() {
   </div>`;
 }
 
+// Pixel art for the book: a hanging scroll (on the temple and the book's title), the
+// wooden rods each teaching hangs between, and a red seal stamped with its kind.
+const SCROLL_ART = pixelSVG([
+  '................',
+  '.KKKKKKKKKKKKKK.',
+  'KGwwwwwwwwwwwwGK',
+  'KgWWWWWWWWWWWWgK',
+  '.KKKKKKKKKKKKKK.',
+  '..KPPPPPPPPPpK..',
+  '..KPLLLLLLPPpK..',
+  '..KPPPPPPPPPpK..',
+  '..KPLLLLLPPPpK..',
+  '..KPPPPPPPPPpK..',
+  '..KPLLLLLLLPpK..',
+  '..KPPPPPPPRRpK..',
+  '..KPPPPPPPRRpK..',
+  '.KKKKKKKKKKKKKK.',
+  'KGwwwwwwwwwwwwGK',
+  'KgWWWWWWWWWWWWgK',
+  '.KKKKKKKKKKKKKK.',
+], { K: '#2a1a12', W: '#7a4a2c', w: '#9b6a40', G: '#f6d77a', g: '#a87820', P: '#f4e6c4', p: '#d8c49a', L: '#8a6a4a', R: '#b8352b' });
+const KNOB = pixelSVG(['.KKKK.', 'KGGGgK', 'KGGggK', 'KGgggK', 'KGgggK', 'KggggK', 'KggggK', 'KgggKK', '.KKKK.'], { K: '#2a1a12', G: '#f6d77a', g: '#a87820' }, { cls: 'knob' });
+const ROD = `<div class="rod" aria-hidden="true">${KNOB}<i></i>${KNOB}</div>`;
+const SEALS = { technique: '技', training: '练', buddhist: '禅', dao: '道', martial: '武' };
+const sealHTML = t => `<span class="seal" lang="zh" title="${kindOf(t).name}">${SEALS[t.kind] ?? '道'}</span>`;
+document.querySelectorAll('.scroll-sprite').forEach(el => { el.innerHTML = SCROLL_ART; });
+
 let bookTab = 'all';
 function openBook() { show('teachings'); renderBook(); }
 
 // The book: teachings received, newest first, by kind or starred.
 function renderBook() {
   const got = state.teachings.got, order = state.teachings.order;
-  $('#book-count').textContent = `${order.length} of ${TEACHINGS.length} teachings received. A new one each day you train.`;
+  $('#book-count').innerHTML = `<b>${order.length}</b> of ${TEACHINGS.length} teachings received<small>A new one each day you train</small>`;
   const tabs = [['all', 'All'], ['starred', 'Starred'], ...KINDS.map(k => [k.key, k.name])];
   $('#book-tabs').innerHTML = tabs.map(([key, name]) => `<button type="button" role="tab" data-act="book-tab" data-id="${key}" aria-selected="${bookTab === key}">${name}</button>`).join('');
   const list = [...order].reverse().map(teachingById).filter(Boolean)
@@ -1532,10 +1566,11 @@ function renderBook() {
   const total = kind && TEACHINGS.filter(t => t.kind === kind.key).length;
   const note = kind ? `<p class="plan-note">${list.length} of ${total} ${kind.name.toLowerCase()} teachings received.</p>` : '';
   const when = day => new Date(day + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  $('#book-body').innerHTML = note + (list.map(t => `<article class="book-item">
+  $('#book-body').innerHTML = note + (list.map(t => `<article class="scroll">${ROD}<div class="scroll-paper">
       <div class="bi-top"><p class="tc-kicker">${teachingLabel(t)} · ${when(got[t.id])}</p>${starBtn(t)}</div>
-      <p class="tc-text">${t.text}</p>${t.source ? `<p class="tc-source">${t.source}</p>` : ''}
-    </article>`).join('') || `<p class="empty-note">${bookTab === 'starred' ? 'Star a teaching to keep it here.' : order.length ? 'None of these yet.' : 'Your book is empty. Train, then leave a few coins in the donation box on the home screen for your first teaching.'}</p>`);
+      <p class="tc-text">${t.text}</p>
+      <div class="scroll-foot">${t.source ? `<p class="tc-source">${t.source}</p>` : '<span></span>'}${sealHTML(t)}</div>
+    </div>${ROD}</article>`).join('') || `<p class="empty-note">${bookTab === 'starred' ? 'Star a teaching to keep it here.' : order.length ? 'None of these yet.' : 'Your book is empty. Train, then leave a few coins in the donation box on the home screen for your first teaching.'}</p>`);
 }
 
 // Settled bets, newest first.
@@ -1738,6 +1773,7 @@ document.addEventListener('click', e => {
     'teach-offer': () => { if (!P.receiveTeaching(state)) return false; justTaught = true; audio.unlock(); audio.play('bell'); return ''; },
     'teach-star': () => { P.starTeaching(state, id); if (document.body.dataset.screen === 'teachings') { renderBook(); return false; } return ''; },
     'teach-book': () => { openBook(); return false; },
+    'open-progress': () => { renderProgress(); return false; },
     'book-tab': () => { bookTab = id; renderBook(); return false; },
   };
   const msg = actions[b.dataset.act]?.();
@@ -1819,7 +1855,8 @@ document.addEventListener('visibilitychange', () => {
 function drawScenes(resize = false) {
   const screen = document.body.dataset.screen;
   if (screen === 'temple-view') return drawFullTemple();
-  const cv = screen === 'home' ? $('#temple-canvas') : screen === 'shop' && !$('#shop-preview').hidden ? $('#shop-canvas') : null;
+  const cv = screen === 'home' ? $('#temple-canvas') : screen === 'teachings' ? $('#book-canvas')
+    : screen === 'shop' && !$('#shop-preview').hidden ? $('#shop-canvas') : null;
   if (!cv) return;
   if (resize || !cv.dataset.sized) {
     const w = Math.max(150, Math.round(cv.parentElement.clientWidth / ART_PX));
@@ -1894,7 +1931,6 @@ $('#welcome').addEventListener('close', () => {
 });
 $('#how-btn').onclick = () => { $('#settings').close(); openWelcome(); };
 $('#rank-btn').onclick = renderProgress;
-$('#progress-btn').onclick = renderProgress;
 $('#end-btn').onclick = () => endSession();
 $('#s-retry').onclick = () => { const { hold, level, test, mastery } = run ?? lastRun; startSession(hold, level, true, { test, mastery }); };
 // A test needs the camera, so without it you train at your own level.

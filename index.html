@@ -38,9 +38,12 @@
       <span class="rank-text"><strong id="rank-name"></strong><span class="xpbar"><i id="xp-fill"></i></span><small id="xp-text"></small></span>
     </button>
 
-    <button class="temple-banner" id="temple-banner" aria-label="Your temple: open it full screen">
-      <canvas id="temple-canvas" width="180" height="104"></canvas>
-    </button>
+    <div class="temple-wrap">
+      <button class="temple-banner" id="temple-banner" aria-label="Your temple: open it full screen">
+        <canvas id="temple-canvas" width="180" height="104"></canvas>
+      </button>
+      <button class="book-btn" data-act="teach-book" aria-label="Book of teachings"><span class="scroll-sprite"></span><b id="book-n"></b></button>
+    </div>
 
     <button class="streak-strip" id="streak-strip" aria-label="Your streak: open the streak shop"></button>
     <div id="home-cards"></div>
@@ -85,13 +88,15 @@
     </div>
     <div id="grid"></div>
     <section class="day-stats" id="day-stats" aria-label="Today and yesterday"></section>
-    <p class="foot"><button class="text-btn" id="progress-btn">Progress &amp; badges →</button><button class="text-btn" data-act="teach-book">Book of teachings →</button></p>
   </section>
 
   <!-- The book of teachings: those received from the donation box -->
   <section id="teachings" class="screen" hidden>
     <header class="subbar"><button class="icon-btn back" data-home aria-label="Back"><svg viewBox="0 0 24 24" class="ico"><path d="M15 4l-8 8 8 8 1.4-1.4L9.8 12l6.6-6.6z"/></svg></button><h1>Book of teachings</h1></header>
-    <p class="book-count" id="book-count"></p>
+    <div class="temple-banner static book-hero">
+      <canvas id="book-canvas" width="180" height="104"></canvas>
+      <p class="book-count"><span class="scroll-sprite"></span><span id="book-count"></span></p>
+    </div>
     <div class="book-tabs" id="book-tabs" role="tablist"></div>
     <div id="book-body"></div>
   </section>
@@ -261,6 +266,7 @@
     <button class="icon-btn tv-x" data-home aria-label="Back"><svg viewBox="0 0 24 24" class="ico"><path d="M15 4l-8 8 8 8 1.4-1.4L9.8 12l6.6-6.6z"/></svg></button>
     <div class="tv-btns">
       <button class="chip" id="tv-sound" aria-pressed="false"></button>
+      <button class="chip" data-act="teach-book">Book</button>
       <button class="chip" id="tv-shop">Shop</button>
     </div>
   </section>

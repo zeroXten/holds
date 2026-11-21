@@ -334,6 +334,15 @@ p { margin: 0; }
 .day-stat-grid div { display: grid; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); }
 .day-stat-grid b { font-family: var(--display); font-size: 1.6rem; line-height: 1.1; }
 .day-stat-grid small { color: var(--muted); font-weight: 600; font-size: .82rem; }
+.progress-link {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 10px;
+  text-align: left; font: inherit; color: var(--ink); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow);
+}
+.progress-link span { display: grid; gap: 2px; }
+.progress-link small { color: var(--muted); font-weight: 600; font-size: .82rem; }
+.progress-link .chev { fill: var(--accent); }
+.progress-link:active { transform: scale(.99); }
 .day-stat-grid em { font-style: normal; color: var(--muted); font-size: .78rem; margin-top: 4px; }
 
 /* ---------- Sheets ---------- */
@@ -633,6 +642,19 @@ body.demo .stage video { display: none; }
   border-radius: var(--radius); overflow: hidden; background: #000; box-shadow: var(--shadow); cursor: pointer;
 }
 .temple-banner.static { cursor: default; }
+.temple-wrap { position: relative; margin: 0 0 14px; }
+.temple-wrap .temple-banner { margin: 0; }
+.scroll-sprite { display: inline-flex; }
+.scroll-sprite svg { width: 100%; height: auto; image-rendering: pixelated; }
+.book-btn {
+  position: absolute; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 4px;
+  padding: 5px 9px 5px 6px; border: 0; border-radius: 10px; cursor: pointer; font: inherit;
+  background: rgba(20, 12, 8, .55); color: #f6d77a; backdrop-filter: blur(2px);
+}
+.book-btn .scroll-sprite { width: 32px; }
+.book-btn b { font-size: .85rem; font-weight: 800; min-width: 1ch; }
+.book-btn b:empty { display: none; }
+.book-btn:active { transform: scale(.95); }
 /* Full-screen temple */
 .screen.temple-view { position: fixed; inset: 0; max-width: none; padding: 0; background: #000; z-index: 4; }
 #temple-full { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
@@ -930,10 +952,45 @@ button.chip { cursor: pointer; }
 .home-card.teaching .row { justify-content: space-between; align-items: center; }
 .teach-star .ico { width: 22px; height: 22px; fill: none; stroke: var(--muted); stroke-width: 1.6; }
 .teach-star[aria-pressed="true"] .ico { fill: var(--gold); stroke: var(--gold); }
-.foot .text-btn + .text-btn { margin-left: 14px; }
-.book-count { color: var(--muted); margin: 0 0 12px; }
-.book-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; scrollbar-width: none; }
+.book-hero { margin-bottom: 14px; }
+.book-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 14px; scrollbar-width: none; }
 .book-tabs button { flex: none; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: .85rem; font-weight: 700; }
 .book-tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.book-item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; display: grid; gap: 6px; }
+.book-hero .book-count {
+  position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 26px 14px 10px; display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(transparent, rgba(12, 8, 5, .6) 35%, rgba(12, 8, 5, .9)); color: #f4e6c4; font-size: .9rem;
+}
+.book-hero .scroll-sprite { width: 40px; flex: none; }
+.book-hero #book-count { display: grid; }
+.book-hero #book-count b { font-family: var(--display); font-size: 1.5rem; line-height: 1; color: #f6d77a; }
+.book-hero #book-count small { color: #c9b48a; font-size: .78rem; }
+.book-hero #book-count { grid-template-columns: auto 1fr; column-gap: 6px; align-items: baseline; }
+.book-hero #book-count small { grid-column: 1 / -1; }
+/* Each teaching hangs between two wooden rods, on parchment whatever the theme. */
+.scroll { margin: 0 4px 18px; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .25)); }
+.rod { display: flex; align-items: center; height: 18px; margin: 0 -6px; }
+.rod .knob { display: block; width: 12px; height: 18px; flex: none; }
+.rod i {
+  flex: 1; height: 12px; margin: 0 -1px; border-block: 2px solid #2a1a12;
+  background: linear-gradient(#9b6a40 0 2px, #7a4a2c 2px 6px, #5a321c 6px);
+}
+.scroll-paper {
+  position: relative; margin: 0 6px; padding: 14px 16px 12px; display: grid; gap: 8px;
+  background-color: #f4e6c4; color: #2a1a12;
+  background-image: radial-gradient(rgba(138, 106, 74, .14) 1px, transparent 1.5px);
+  background-size: 6px 6px;
+  border-inline: 2px solid #c9b48a; box-shadow: inset -4px 0 0 #e6d3aa;
+}
+.scroll-paper .tc-kicker { color: #9a3a22; }
+.scroll-paper .tc-text { color: #2a1a12; }
+.scroll-paper .tc-source { color: #6e5a44; }
+.scroll-paper .teach-star .ico { stroke: #8a6a4a; }
+.scroll-paper .teach-star[aria-pressed="true"] .ico { fill: #d89a1a; stroke: #b07810; }
+.scroll-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.seal {
+  flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-bottom: -2px;
+  background: #b8352b; color: #f4e6c4; font-size: 1.05rem; font-weight: 700; line-height: 1;
+  box-shadow: inset 0 0 0 2px #b8352b, inset 0 0 0 3px #f4e6c4; opacity: .9;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", serif;
+}
 .bi-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
