@@ -970,7 +970,7 @@ export const HOLDS = [
     masteryTarget: 120,
     levels: [
       { name: 'Kneeling plank', target: 45, desc: 'On your fists and knees, fists under your shoulders. Hold shoulders, hips and knees in one straight line.' },
-      { name: 'Fist plank', target: 90, desc: 'On fists and toes, arms straight. One straight line from shoulders to heels.' },
+      { name: 'Fist plank', target: 60, desc: 'On fists and toes, arms straight. One straight line from shoulders to heels.' },
       { name: 'One-leg plank', target: 90, desc: 'Fist plank with one foot lifted off the floor. Switch feet halfway.' },
       { name: 'Low plank', target: 60, desc: 'Lower halfway into a push-up, elbows bent to 90° and tucked in, body straight. Hold.' },
     ],

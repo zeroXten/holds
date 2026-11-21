@@ -8,7 +8,7 @@
 // its own target and bonus time; side one switches over once you drop out of
 // position (or tap Switch in honour mode).
 
-import { makeBody, scorePose, visible, viewing, sided, SwayMeter } from './scoring.js';
+import { makeBody, scorePose, visible, viewing, sided, SwayMeter, missingParts, missingText, edgeParts, edgeText } from './scoring.js';
 import { requiredFor } from './holds.js';
 import { coinRateFor, targetBonusFor, DAILY_MULT, HONOUR_FORM, formFactor, bonusTier } from './economy.js';
 import { play, say } from './audio.js';
@@ -19,6 +19,9 @@ export const STRICTNESS = {
   strict: { start: 75, hold: 60 },
 };
 
+// The pose model finds you by your head and shoulders: those near the edge of the picture
+// risk losing you altogether, so they're what the edge warning watches.
+const HEAD_SHOULDERS = [11, 12];
 const GRACE = 1.5;        // seconds out of form that still count
 const GIVE_UP = 8;        // seconds out of form before the session ends
 const GIVE_UP_AFTER = 3.5; // ...once the target has been reached
@@ -92,6 +95,14 @@ export class Session {
     const lm = frame?.landmarks;
     const view = viewing(this.hold, this.level);
     const seen = !!lm && visible(lm, this.required, view);
+    // What's missing when you can't be seen, or what's close to the edge when you can.
+    this.edge = seen ? edgeParts(lm, HEAD_SHOULDERS) : [];
+    this.edgeTime = this.edge.length ? (this.edgeTime ?? 0) + dt : 0;
+    if (lm) this.lastLm = lm;
+    const lostAt = !lm && this.lastLm ? edgeParts(this.lastLm, HEAD_SHOULDERS) : [];
+    this.missing = seen ? null : lm ? missingParts(lm, this.required, view) : lostAt.length ? { parts: lostAt, edge: true, lost: true } : null;
+    // Warn once while you're still seen, before the edge costs you the hold.
+    if (this.edgeTime > 1.5 && !this.edgeWarned && this.state === 'holding' && this.stateTime > 1) { this.edgeWarned = true; say(edgeText(this.edge), { priority: true }); }
     let results = null;
     if (seen) {
       const body = makeBody(lm, frame.width, frame.height, view);
@@ -135,7 +146,7 @@ export class Session {
           else {
             this.go('broken');
             play('slip');
-            say(seen ? (this.worst?.cue ?? 'Back into position') : 'I can’t see you', { priority: true });
+            say(seen ? (this.worst?.cue ?? 'Back into position') : missingText(this.missing), { priority: true });
           }
         }
         this.milestoneChecks();
@@ -280,7 +291,7 @@ export class Session {
       tier: bonusTier(this.sideHeld[this.sideIndex], this.sideTarget),
       score: Math.round(this.score), results: this.results, worst: this.worst, reached: this.reached,
       inPose: !!this.seen && this.score >= this.thr.hold,
-      seen: this.seen, stateTime: this.stateTime, side: this.side,
+      seen: this.seen, missing: this.seen ? '' : missingText(this.missing), edge: this.edgeTime > 1.5 ? edgeText(this.edge) : '', stateTime: this.stateTime, side: this.side,
       sides: this.sides, sideIndex: this.sideIndex, sideHeld: this.sideHeld[this.sideIndex],
       sideTarget: this.sideTarget, sideReached: this.sideReached[this.sideIndex], canSwitch: this.onFirstSide(),
       press: this.state === 'holding' && this.pressCue ? pressPhase(this.sideHeld[this.sideIndex]) : null,

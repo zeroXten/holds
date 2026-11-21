@@ -103,6 +103,49 @@ export function visible(landmarks, indices, { eitherSide = false } = {}) {
   return indices.every(i => ok(i) || (eitherSide && PARTNER.has(i) && ok(PARTNER.get(i))));
 }
 
+// What stops `visible` passing, in words: the body parts it can't see, and whether
+// they're off the edge of the picture (or right at it) rather than just unclear.
+const PART_NAMES = { 0: 'head', 11: 'shoulders', 12: 'shoulders', 13: 'elbows', 14: 'elbows', 15: 'hands', 16: 'hands',
+  23: 'hips', 24: 'hips', 25: 'knees', 26: 'knees', 27: 'feet', 28: 'feet' };
+const EDGE = 0.04;
+export function missingParts(landmarks, indices, { eitherSide = false } = {}) {
+  const inFrame = p => p.x > -0.02 && p.x < 1.02 && p.y > -0.02 && p.y < 1.02;
+  const ok = i => { const p = landmarks[i]; return p && (p.visibility ?? 1) >= SEEN && inFrame(p); };
+  const atEdge = i => { const p = landmarks[i]; return p && !(p.x > EDGE && p.x < 1 - EDGE && p.y > EDGE && p.y < 1 - EDGE); };
+  const failed = indices.filter(i => !(ok(i) || (eitherSide && PARTNER.has(i) && ok(PARTNER.get(i)))));
+  const parts = [...new Set(failed.map(i => PART_NAMES[i] ?? 'body'))];
+  const edge = failed.length > 0 && failed.every(i => atEdge(i) || (eitherSide && PARTNER.has(i) && atEdge(PARTNER.get(i))));
+  return { parts, edge };
+}
+
+// Parts of the body (seen clearly) close to the edge of the picture. The pose model
+// finds a body by its head and shoulders, so with those cut off by the edge it can lose
+// you completely, even holding still: better to warn while there's still room.
+export const NEAR_EDGE = 0.08;
+export function edgeParts(landmarks, indices, margin = NEAR_EDGE) {
+  const near = i => {
+    const p = landmarks?.[i];
+    return p && (p.visibility ?? 1) >= SEEN && !(p.x > margin && p.x < 1 - margin && p.y > margin && p.y < 1 - margin);
+  };
+  return [...new Set([0, ...indices].filter(near).map(i => PART_NAMES[i] ?? 'body'))];
+}
+
+const listOf = parts => parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
+const isAre = parts => (parts.length === 1 && ['head', 'body'].includes(parts[0]) ? 'is' : 'are');
+
+// Says what's missing: "Your shoulders are off the edge of the picture". `m.lost`: no
+// body found at all, last seen with these parts at the edge.
+export function missingText(m) {
+  if (!m) return 'Can’t see you. Check you’re in the picture';
+  if (!m.parts.length) return '';
+  const list = listOf(m.parts);
+  if (m.lost) return `Lost you at the edge of the picture. Move the phone back so your ${list} ${isAre(m.parts)} well inside it`;
+  return m.edge ? `Your ${list} ${isAre(m.parts)} off the edge of the picture. Move the phone back or tilt it`
+    : `Can’t see your ${list} clearly`;
+}
+
+export const edgeText = parts => `Your ${listOf(parts)} ${isAre(parts)} near the edge of the picture. Move the phone back a little`;
+
 // Whether a level's criteria take a leading leg (`sides`), so both ways round are scored.
 // A one-sided hold's `bothLegs` levels (an ankle bend on both feet, say) don't.
 const legSided = (hold, level) => !!hold.sides && !hold.bothLegs?.includes(level);

@@ -5,7 +5,8 @@
 // A view maps video pixels to screen pixels: screenX = tx + s * x', screenY = ty + s * y,
 // where x' is the video x, flipped when the picture is mirrored.
 
-const EASE = 0.5;        // seconds for the view to settle on a new framing
+const EASE = 0.5;        // seconds for the view to settle on a new framing (zooming out or panning)
+const EASE_IN = 2.5;     // ...and to zoom in, gently, once you're in position
 const LOST_AFTER = 5;    // seconds without a body before easing back out to the whole picture
 const MAX_ZOOM = 3.5;    // never magnify beyond this many times the whole-picture view
 const MIN_ZOOM = 0.5;    // ...or shrink below half of it (when you're close to the phone)
@@ -13,9 +14,9 @@ const MIN_ZOOM = 0.5;    // ...or shrink below half of it (when you're close to 
 // flickers. A joint that drops out is remembered where it was last seen for this long, so
 // the body doesn't seem to shrink and the view doesn't lunge in on what's left.
 const REMEMBER = 4;
-// Zooming out happens at once (never cut the body off); zooming in only once the body
-// has looked clearly smaller than the framing allows for this long.
-const ZOOM_IN_AFTER = 2;
+// Zooming out happens at once (never cut the body off); zooming in only once you're in
+// the hold's position, and have been for this long.
+const ZOOM_IN_AFTER = 1;
 const ZOOM_IN_RATIO = 1.2; // ...and only if it would magnify at least this much more
 
 export function bodyBox(landmarks, vw, vh, mirrored) {
@@ -28,7 +29,9 @@ export function bodyBox(landmarks, vw, vh, mirrored) {
     minY = Math.min(minY, y); maxY = Math.max(maxY, y);
     n++;
   }
-  if (n < 8) return null;
+  // A face close to the lens (setting the phone down) isn't a body to frame.
+  const has = i => (landmarks[i]?.visibility ?? 1) >= 0.4;
+  if (n < 8 || !(has(11) || has(12)) || !(has(23) || has(24))) return null;
   return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 }
 
@@ -39,7 +42,8 @@ const clampAxis = (t, size, screen) => (size >= screen ? Math.min(0, Math.max(sc
 // in portrait, a panel down the left side in landscape.
 // Seeing the whole body always wins: the picture shrinks (with black bars) rather than
 // let the timer or form meter cover the head or feet.
-export function targetView(box, vw, vh, cw, ch, inset = {}) {
+// `cap`: the most it may magnify (to re-centre without zooming in).
+export function targetView(box, vw, vh, cw, ch, inset = {}, cap = Infinity) {
   const fit = Math.min(cw / vw, ch / vh);
   if (!box) return { s: fit, tx: (cw - fit * vw) / 2, ty: (ch - fit * vh) / 2 };
   const top = Math.min(inset.top ?? 0, ch * 0.3), bottom = Math.min(inset.bottom ?? 0, ch * 0.3);
@@ -52,7 +56,7 @@ export function targetView(box, vw, vh, cw, ch, inset = {}) {
   // There's no picture beyond the camera frame, so padding (or a body part the model
   // guesses is off the edge) past it would only shrink the picture into black bars.
   x0 = Math.max(0, x0); x1 = Math.min(vw, x1); y0 = Math.max(0, y0); y1 = Math.min(vh, y1);
-  const s = Math.max(fit * MIN_ZOOM, Math.min(rw / (x1 - x0), rh / (y1 - y0), fit * MAX_ZOOM));
+  const s = Math.min(cap, Math.max(fit * MIN_ZOOM, Math.min(rw / (x1 - x0), rh / (y1 - y0), fit * MAX_ZOOM)));
   // Centre the padded body in the clear area, avoid empty edges where the picture allows...
   let tx = clampAxis(left + rw / 2 - s * (x0 + x1) / 2, s * vw, cw);
   let ty = clampAxis(top + rh / 2 - s * (y0 + y1) / 2, s * vh, ch);
@@ -103,7 +107,9 @@ export class AutoFrame {
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
   }
 
-  update(dt, frame, cw, ch, mirrored, inset) {
+  // `inPosition`: the session has you in the hold's position. Until then the view only
+  // ever zooms out or pans, so it never closes in on someone still getting set up.
+  update(dt, frame, cw, ch, mirrored, inset, inPosition = true) {
     if (!frame?.width) return this.view;
     const { width: vw, height: vh } = frame;
     const box = this.steadyBox(frame.landmarks, dt, vw, vh, mirrored);
@@ -115,16 +121,18 @@ export class AutoFrame {
     const body = this.enabled && this.lost < LOST_AFTER ? this.box : null;
     const want = targetView(body, vw, vh, cw, ch, inset);
     if (!this.goal || resized || !body) {
-      // Start wide, re-fit when the screen turns, and drift back out when nobody's there.
-      this.goal = want;
+      // Start on the whole picture (and go back to it when the screen turns, or nobody's
+      // there); zooming in waits until a body has been seen steadily.
+      this.goal = targetView(null, vw, vh, cw, ch, inset);
       this.inFor = 0;
     } else if (box) {
       // Only re-frame when the body needs it: straight away if any of it would be cut
-      // off, after a steady couple of seconds if it's become much smaller on screen.
+      // off (zooming in only if you're in position), and closer in once you've been in
+      // position for a moment and look much smaller on screen than you could.
       if (!fitsIn(this.goal, box, cw, ch, inset)) {
-        this.goal = want;
+        this.goal = inPosition ? want : targetView(body, vw, vh, cw, ch, inset, this.goal.s);
         this.inFor = 0;
-      } else if (want.s > this.goal.s * ZOOM_IN_RATIO) {
+      } else if (inPosition && want.s > this.goal.s * ZOOM_IN_RATIO) {
         this.inFor += dt;
         if (this.inFor > ZOOM_IN_AFTER) { this.goal = want; this.inFor = 0; }
       } else this.inFor = 0;
@@ -134,7 +142,7 @@ export class AutoFrame {
       this.size = size;
       this.view = { ...this.goal };
     } else {
-      const k = 1 - Math.exp(-dt / EASE);
+      const k = 1 - Math.exp(-dt / (this.goal.s > this.view.s * 1.01 ? EASE_IN : EASE));
       for (const key of ['s', 'tx', 'ty']) this.view[key] += (this.goal[key] - this.view[key]) * k;
     }
     this.view.vw = vw;

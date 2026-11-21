@@ -26,7 +26,7 @@ for (const [orient, [cw, ch]] of Object.entries(screens)) {
     let view;
     // Roughly the timer and form-meter heights in each orientation.
     const inset = orient === 'portrait' ? { top: 150, bottom: 110 } : { top: 100, bottom: 80 };
-    for (let i = 0; i < 120; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, inset);
+    for (let i = 0; i < 300; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, inset);
     const box = bodyBox(lm, vw, vh, true);
     const left = view.tx + view.s * box.x, right = left + view.s * box.w;
     const top = view.ty + view.s * box.y, bottom = top + view.s * box.h;
@@ -49,7 +49,7 @@ for (const [orient, [cw, ch]] of Object.entries(screens)) {
   const lm = raw.map(p => ({ ...p, y: 0.06 + (p.y - lo) / (hi - lo) * 0.92 }));
   const f = new AutoFrame();
   let view;
-  for (let i = 0; i < 120; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, inset);
+  for (let i = 0; i < 300; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, inset);
   const box = bodyBox(lm, vw, vh, true);
   const top = view.ty + view.s * box.y, bottom = top + view.s * box.h;
   const ok = top >= inset.top - 1 && bottom <= ch - inset.bottom + 1;
@@ -64,7 +64,7 @@ for (const [orient, [cw, ch]] of Object.entries(screens)) {
     const lm = syntheticLandmarks(HOLDS.find(h => h.id === id).figure(3), { width: vw, height: vh });
     const f = new AutoFrame();
     let view;
-    for (let i = 0; i < 120; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, inset);
+    for (let i = 0; i < 300; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, inset);
     const box = bodyBox(lm, vw, vh, true);
     const left = view.tx + view.s * box.x, right = left + view.s * box.w;
     const top = view.ty + view.s * box.y, bottom = top + view.s * box.h;
@@ -116,10 +116,10 @@ for (const [id, level, want] of [['bow', 1, false], ['bow', 4, false], ['kick', 
     const flicker = rnd() < 0.5, noFeet = (i % 150) > 100;
     return { landmarks: lm.map((p, j) => ({ ...p, visibility: (flicker && far.includes(j)) || (noFeet && feet.includes(j)) || (rnd() < 0.15 && j > 10) ? 0.2 : 0.9 })), width: vw, height: vh };
   };
-  for (let i = 0; i < 150; i++) f.update(1 / 30, frameAt(i), cw, ch, true, inset);
+  for (let i = 0; i < 450; i++) f.update(1 / 30, frameAt(i), cw, ch, true, inset);
   const settled = { ...f.view };
   let worst = 0;
-  for (let i = 150; i < 30 * 30; i++) {
+  for (let i = 450; i < 40 * 30; i++) {
     const v = f.update(1 / 30, frameAt(i), cw, ch, true, inset);
     worst = Math.max(worst, Math.abs(v.s / settled.s - 1), Math.abs(v.tx - settled.tx) / cw, Math.abs(v.ty - settled.ty) / ch);
   }
@@ -131,10 +131,35 @@ for (const [id, level, want] of [['bow', 1, false], ['bow', 4, false], ['kick', 
   const [cw, ch] = screens.portrait, [vw, vh] = cams.portrait;
   const lm = syntheticLandmarks(poses.standing, { width: vw, height: vh }).map(p => ({ ...p, x: 0.5 + (p.x - 0.5) * 0.4, y: 0.5 + (p.y - 0.5) * 0.4 }));
   const f = new AutoFrame(), fit = Math.min(cw / vw, ch / vh);
-  const first = f.update(1 / 30, { landmarks: null, width: vw, height: vh }, cw, ch, true).s / fit;
+  const first = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true).s / fit;  // in view from the start
   let view;
   for (let i = 0; i < 180; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true);
   check('starts wide, then fits', Math.abs(first - 1) < 0.01 && view.s / fit > 2, `starts ${first.toFixed(2)}x, ${(view.s / fit).toFixed(2)}x after 6s`);
+}
+
+// Setting the phone down: a face close to the lens isn't a body, so the view stays wide.
+{
+  const [cw, ch] = screens.landscape, [vw, vh] = cams.landscape;
+  const face = syntheticLandmarks(poses.standing, { width: vw, height: vh })
+    .map((p, i) => ({ ...p, x: 0.5 + (p.x - 0.5) * 6, y: 0.5 + (p.y - 0.15) * 6, visibility: i <= 10 ? 0.99 : 0.1 }));
+  const f = new AutoFrame(), fit = Math.min(cw / vw, ch / vh);
+  let view;
+  for (let i = 0; i < 150; i++) view = f.update(1 / 30, { landmarks: face, width: vw, height: vh }, cw, ch, true);
+  check('face close to the lens', Math.abs(view.s / fit - 1) < 0.01, `zoom ${(view.s / fit).toFixed(2)}x`);
+}
+
+// Getting set up: someone seen but not yet in position. The view may zoom out or pan,
+// never in; once they're in position it closes in, gently.
+{
+  const [cw, ch] = screens.portrait, [vw, vh] = cams.portrait;
+  const lm = syntheticLandmarks(poses.standing, { width: vw, height: vh }).map(p => ({ ...p, x: 0.5 + (p.x - 0.5) * 0.4, y: 0.5 + (p.y - 0.5) * 0.4 }));
+  const f = new AutoFrame(), fit = Math.min(cw / vw, ch / vh);
+  let view, most = 0;
+  for (let i = 0; i < 180; i++) { view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, {}, false); most = Math.max(most, view.s / fit); }
+  const at = [];
+  for (let i = 1; i <= 180; i++) { view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true, {}, true); if (i % 30 === 0) at.push((view.s / fit).toFixed(2)); }
+  const ok = most < 1.01 && Number(at[0]) < 1.05 && Number(at[2]) > 1.5 && Number(at[5]) > 2.5;
+  check('zooms in only once in position', ok, `not in position: up to ${most.toFixed(2)}x; then each second: ${at.join(', ')}x`);
 }
 
 console.log(failures ? `${failures} failure(s)` : 'all passed');

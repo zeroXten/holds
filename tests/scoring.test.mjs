@@ -2,7 +2,8 @@
 // should not. Run: node tests/scoring.test.mjs
 import { HOLDS, HOLD_GROUPS } from '../js/holds.js';
 import { syntheticLandmarks, standing } from '../js/figure.js';
-import { makeBody, scorePose, SwayMeter, viewing } from '../js/scoring.js';
+import { makeBody, scorePose, SwayMeter, viewing, visible, missingParts, missingText, edgeParts } from '../js/scoring.js';
+import { requiredFor } from '../js/holds.js';
 
 let failures = 0;
 const W = 720, H = 1280;
@@ -235,6 +236,25 @@ for (const [a, b] of [['plank', 'forearm'], ['forearm', 'plank']]) {
   const ok = linked >= 85 && apart >= 70 && hanging < 50 && overhead >= 85;
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} sky start position: wrists 0.5 apart ${linked}, 0.7 apart ${apart}, arms hanging ${hanging}`);
+}
+
+// When the camera loses you, say which part and why. A side-on plank with the
+// shoulders pushed off the top of the picture, then with the feet unclear.
+{
+  const plank = HOLDS.find(h => h.id === 'plank'), req = requiredFor(plank, 2), view = viewing(plank, 2);
+  const lm = syntheticLandmarks(plank.figure(2), { width: 1280, height: 960 });
+  const offTop = lm.map((p, i) => ([11, 12].includes(i) ? { ...p, y: -0.05 } : p));
+  const a = missingParts(offTop, req, view), ta = missingText(a);
+  const unclear = lm.map((p, i) => ([27, 28].includes(i) ? { ...p, visibility: 0.2 } : p));
+  const b = missingParts(unclear, req, view), tb = missingText(b);
+  const nearTop = lm.map((p, i) => ([0, 11, 12].includes(i) ? { ...p, y: 0.05 } : p));
+  const lost = missingText({ parts: edgeParts(nearTop, [11, 12]), edge: true, lost: true });
+  console.log(`     near the edge: [${edgeParts(nearTop, [11, 12])}] then "${lost}"`);
+  const ok = edgeParts(lm, [11, 12]).length === 0 && edgeParts(nearTop, [11, 12]).join() === 'head,shoulders'
+    && visible(lm, req, view) && !visible(offTop, req, view) && a.edge && a.parts.join() === 'shoulders'
+    && !b.edge && b.parts.join() === 'feet' && missingText(null).startsWith('Can’t see you');
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} missing parts: "${ta}" / "${tb}"`);
 }
 
 console.log(failures ? `${failures} failure(s)` : 'all passed');

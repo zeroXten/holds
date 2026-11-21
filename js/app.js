@@ -664,7 +664,7 @@ async function startSession(hold, level, useCamera, { test = false, mastery = fa
       const t = performance.now(), dt = (t - run.lastFrameAt) / 1000;
       run.lastFrameAt = t;
       const stage = $('#overlay');
-      const view = run.framer.update(dt, frame, stage.clientWidth, stage.clientHeight, source.mirrored, hudInset());
+      const view = run.framer.update(dt, frame, stage.clientWidth, stage.clientHeight, source.mirrored, hudInset(), !!v.inPose);
       if (view) {
         placeVideo(view, source.mirrored);
         drawSkeleton(frame, v, view, source.mirrored);
@@ -769,24 +769,27 @@ function updateHud(v) {
   switch (v.state) {
     case 'framing':
       setStatus('wait', 'Step back so your whole body is in view');
-      $('#s-cue').textContent = orientationTip(run) ?? `${viewHint(run.hold, run.level)}, about 2–3 m from the phone.`;
+      // Once part of you is seen, say which part is missing; until then, how to set up.
+      $('#s-cue').textContent = (v.missing && !v.missing.startsWith('Can’t see you') ? v.missing : null)
+        ?? orientationTip(run) ?? `${viewHint(run.hold, run.level)}, about 2–3 m from the phone.`;
       break;
     case 'ready':
       setStatus('wait', 'Get into position');
-      $('#s-cue').textContent = cue || 'Looking good… hold still';
+      $('#s-cue').textContent = v.edge || cue || 'Looking good… hold still';
       break;
     case 'holding':
       setStatus(v.tier.tier ? 'bonus' : 'good', v.tier.tier ? `Bonus ×${v.tier.mult} coins` : 'Hold');
       if (v.sideReached && v.canSwitch) $('#s-cue').textContent = run.camera ? 'Step out of position when you’re ready to switch sides' : 'Tap Switch sides when you’re ready';
       else if (v.tier.tier && v.tier.tier < 3 && (!run.camera || v.score >= 90)) $('#s-cue').textContent = `Bonus level ${v.tier.tier}. Keep going for ×${BONUS_TIERS[v.tier.tier].mult}`;
       else if (v.press && (!run.camera || v.score >= 75)) $('#s-cue').textContent = run.hold.press[v.press];
+      else if (v.edge) $('#s-cue').textContent = v.edge;
       else $('#s-cue').textContent = run.camera ? (v.score >= 90 ? 'Great form' : cue) : (v.sideReached ? 'Keep going for bonus coins' : '');
       break;
     case 'broken': {
       // Test mode waits for you (tap Done to finish); otherwise it counts down to the end.
       const left = s.manual ? '' : ` · ${Math.ceil((v.sideReached ? 3.5 : 8) - s.outTime)}`;
       setStatus('bad', v.seen ? `Back into position${left}` : `Can’t see you${left}`);
-      $('#s-cue').textContent = cue;
+      $('#s-cue').textContent = v.seen ? cue : v.missing;
       break;
     }
     case 'switch':
