@@ -642,19 +642,22 @@ body.demo .stage video { display: none; }
   border-radius: var(--radius); overflow: hidden; background: #000; box-shadow: var(--shadow); cursor: pointer;
 }
 .temple-banner.static { cursor: default; }
-.temple-wrap { position: relative; margin: 0 0 14px; }
-.temple-wrap .temple-banner { margin: 0; }
+/* The home temple sits in a frame, with a carved wooden plaque beneath it for the book. */
+.temple-wrap { margin: 0 0 14px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: #000; }
+.temple-wrap .temple-banner { margin: 0; border-radius: 0; box-shadow: none; }
 .scroll-sprite { display: inline-flex; }
 .scroll-sprite svg { width: 100%; height: auto; image-rendering: pixelated; }
-.book-btn {
-  position: absolute; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 4px;
-  padding: 5px 9px 5px 6px; border: 0; border-radius: 10px; cursor: pointer; font: inherit;
-  background: rgba(20, 12, 8, .55); color: #f6d77a; backdrop-filter: blur(2px);
+.temple-plaque {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 14px 9px; border: 0; cursor: pointer;
+  font: inherit; text-align: left; color: #f6d77a;
+  border-top: 2px solid #2a1a12; box-shadow: inset 0 2px 0 #a87820, inset 0 -2px 0 #2a1a12;
+  background: linear-gradient(#5a321c 0 3px, #4a2a18 3px calc(100% - 5px), #3a2014 calc(100% - 5px));
 }
-.book-btn .scroll-sprite { width: 32px; }
-.book-btn b { font-size: .85rem; font-weight: 800; min-width: 1ch; }
-.book-btn b:empty { display: none; }
-.book-btn:active { transform: scale(.95); }
+.temple-plaque .scroll-sprite { width: 28px; flex: none; }
+.temple-plaque .tp-name { flex: 1; font-family: var(--display); font-weight: 700; font-size: 1rem; letter-spacing: .02em; }
+.temple-plaque b { color: #d8c49a; font-size: .8rem; font-weight: 700; }
+.temple-plaque .chev { width: 18px; height: 18px; fill: #f6d77a; }
+.temple-plaque:active { filter: brightness(1.15); }
 /* Full-screen temple */
 .screen.temple-view { position: fixed; inset: 0; max-width: none; padding: 0; background: #000; z-index: 4; }
 #temple-full { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }

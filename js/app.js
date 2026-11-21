@@ -147,8 +147,7 @@ function renderDayStats() {
   <button class="progress-link" data-act="open-progress"><span><b>Progress &amp; badges</b>
     <small>${P.sashRank(state).name} · ${P.BADGES.filter(b => state.badges[b.id]).length} of ${P.BADGES.length} badges</small></span>${CHEVRON}</button>`;
   const read = state.teachings.order.length;
-  $('#book-n').textContent = read || '';
-  $('.book-btn').setAttribute('aria-label', `Book of teachings: ${read} received`);
+  $('#book-n').textContent = read ? `${read} received` : '';
 }
 
 // ---------- Swipe cards ----------
@@ -1858,13 +1857,15 @@ function drawScenes(resize = false) {
   const cv = screen === 'home' ? $('#temple-canvas') : screen === 'teachings' ? $('#book-canvas')
     : screen === 'shop' && !$('#shop-preview').hidden ? $('#shop-canvas') : null;
   if (!cv) return;
+  // The home screen's temple is a little taller than the others, with more courtyard.
+  const home = screen === 'home', h = home ? SCENE_H + 20 : SCENE_H;
   if (resize || !cv.dataset.sized) {
     const w = Math.max(150, Math.round(cv.parentElement.clientWidth / ART_PX));
     if (cv.width !== w) cv.width = w;
-    cv.height = SCENE_H;
+    if (cv.height !== h) cv.height = h;
     cv.dataset.sized = '1';
   }
-  drawTemple(cv, state, reduceMotion ? 3.3 : performance.now() / 1000, state.temple.theme, templeMonk());
+  drawTemple(cv, state, reduceMotion ? 3.3 : performance.now() / 1000, state.temple.theme, templeMonk(), home ? 28 : 22);
 }
 
 function animateScenes() {
