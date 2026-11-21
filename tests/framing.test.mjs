@@ -100,5 +100,42 @@ for (const [id, level, want] of [['bow', 1, false], ['bow', 4, false], ['kick', 
   check('no body', Math.abs(view.s - fit) < fit * 0.01, `zoom ${(view.s / fit).toFixed(2)}x after 10s with nobody seen`);
 }
 
+// Holding a side-on plank perfectly still while the model's confidence in the far-side
+// joints and the feet flickers, and the odd frame finds nobody at all: the framing,
+// once settled, should stay put rather than lunge in on what's left or drop out wide.
+{
+  const [cw, ch] = screens.landscape, [vw, vh] = cams.landscape;
+  const inset = { top: 100, bottom: 80 };
+  const lm = syntheticLandmarks(poses.plank, { width: vw, height: vh });
+  const far = [12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32], feet = [27, 28, 29, 30, 31, 32];
+  const f = new AutoFrame();
+  let rand = 7;
+  const rnd = () => ((rand = (rand * 16807) % 2147483647) / 2147483647);
+  const frameAt = i => {
+    if (i % 97 < 4) return { landmarks: null, width: vw, height: vh };     // brief dropout
+    const flicker = rnd() < 0.5, noFeet = (i % 150) > 100;
+    return { landmarks: lm.map((p, j) => ({ ...p, visibility: (flicker && far.includes(j)) || (noFeet && feet.includes(j)) || (rnd() < 0.15 && j > 10) ? 0.2 : 0.9 })), width: vw, height: vh };
+  };
+  for (let i = 0; i < 150; i++) f.update(1 / 30, frameAt(i), cw, ch, true, inset);
+  const settled = { ...f.view };
+  let worst = 0;
+  for (let i = 150; i < 30 * 30; i++) {
+    const v = f.update(1 / 30, frameAt(i), cw, ch, true, inset);
+    worst = Math.max(worst, Math.abs(v.s / settled.s - 1), Math.abs(v.tx - settled.tx) / cw, Math.abs(v.ty - settled.ty) / ch);
+  }
+  check('still plank, flickery joints', worst < 0.03, `framing moved up to ${(worst * 100).toFixed(1)}% over 25s`);
+}
+
+// Starts wide: the first frames show the whole picture, then it zooms in on the body.
+{
+  const [cw, ch] = screens.portrait, [vw, vh] = cams.portrait;
+  const lm = syntheticLandmarks(poses.standing, { width: vw, height: vh }).map(p => ({ ...p, x: 0.5 + (p.x - 0.5) * 0.4, y: 0.5 + (p.y - 0.5) * 0.4 }));
+  const f = new AutoFrame(), fit = Math.min(cw / vw, ch / vh);
+  const first = f.update(1 / 30, { landmarks: null, width: vw, height: vh }, cw, ch, true).s / fit;
+  let view;
+  for (let i = 0; i < 180; i++) view = f.update(1 / 30, { landmarks: lm, width: vw, height: vh }, cw, ch, true);
+  check('starts wide, then fits', Math.abs(first - 1) < 0.01 && view.s / fit > 2, `starts ${first.toFixed(2)}x, ${(view.s / fit).toFixed(2)}x after 6s`);
+}
+
 console.log(failures ? `${failures} failure(s)` : 'all passed');
 process.exit(failures ? 1 : 0);
