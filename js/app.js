@@ -73,7 +73,27 @@ function show(id) {
   document.body.dataset.screen = id;
   window.scrollTo(0, 0);
   if (id === 'home' || id === 'shop' || id === 'temple-view' || id === 'teachings') requestAnimationFrame(() => drawScenes(true));
+  // Android's back button (and the browser's) follows the page history. Every screen but
+  // home sits one step above it, so back from any of them comes home, and back from home
+  // leaves the app as before. Going from one screen to another swaps that step rather
+  // than adding one.
+  const above = !!history.state?.screen;
+  if (id !== 'home') history[above ? 'replaceState' : 'pushState']({ screen: id }, '');
+  else if (above && !backing) { skipPop = true; history.back(); }
 }
+
+let backing = false, skipPop = false;
+window.addEventListener('popstate', () => {
+  if (skipPop) { skipPop = false; return; }  // our own step back, from a Home button
+  const screen = document.body.dataset.screen;
+  if (screen === 'home') return;
+  backing = true;
+  try {
+    // Back in the middle of a hold stops it like Done would (it still counts), with its summary.
+    if (screen === 'session') endSession();
+    else { stopRun(); show('home'); renderHome(); }
+  } finally { backing = false; }
+});
 
 // Toasts queue up, so several notices in a row are each seen.
 const toastQueue = [];
