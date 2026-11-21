@@ -190,5 +190,49 @@ const style = id => HOLDS.find(h => h.id === id).style;
   check('sessions without a plan are fine', r.plan === null);
 }
 
+// Starred holds are daily holds: mixed into today's plan where they fit, never twice,
+// and extra to it (the plan's day is full on its own holds); with no plan, the list.
+{
+  const style = id => HOLDS.find(h => h.id === id).style;
+  const group = id => HOLD_GROUPS.find(g => g.ids.includes(id)).key;
+  const pick = (id, sets = 1, main = false) => ({ holdId: id, sets, group: group(id), main });
+  const picks = [pick('horse', 2, true), pick('bow'), pick('plank'), pick('post')];
+  const hardUpper = HOLD_GROUPS.find(g => g.key === 'upper').ids.find(id => style(id) === 'hard');
+  const extras = ['balance', 'forearm', hardUpper, 'weituo', 'horse'].map(id => ({ ...pick(id), starred: true }));
+  const order = P.mixInDaily(picks, extras).map(x => x.holdId);
+  const at = id => order.indexOf(id);
+  check('daily holds mixed in where they fit',
+    order.length === 8 && order.filter(id => id === 'horse').length === 1
+    && at('forearm') === at('plank') + 1 && at('weituo') === at('post') + 1 && at('balance') === order.length - 1
+    && at(hardUpper) < at('post') && at(hardUpper) > at('horse'),
+    order.join(' → '));
+  const easy = P.mixInDaily([pick('post'), pick('wuji')], [{ ...pick('plank'), starred: true }, { ...pick('weituo'), starred: true }]).map(x => x.holdId);
+  check('a hard daily hold leads a soft day; soft ones before stillness', easy.join() === 'plank,post,weituo,wuji', easy.join(' → '));
+
+  const s = fresh();
+  const today = P.dayKey();
+  P.startPlan(s, { minutes: 5, focus: 'balanced', weeks: 1 }, today);
+  const planIds = s.plan.picks.map(x => x.holdId);
+  const locked = HOLDS.find(h => !P.isOpen(s, h.id));
+  const outside = HOLDS.find(h => !P.isOpen(s, h.id) && h !== locked);
+  s.unlocked.push(outside.id);  // open, but picked after the plan's day was
+  P.toggleStar(s, outside.id);
+  P.toggleStar(s, locked.id);
+  P.toggleStar(s, planIds[0]);
+  const list = P.todaysList(s, today);
+  check('today’s list adds open starred holds once', list.length === planIds.length + 1 && list.some(x => x.holdId === outside.id && x.starred)
+    && !list.some(x => x.holdId === locked.id), list.map(x => x.holdId + (x.starred ? '★' : '')).join(' '));
+  for (const x of s.plan.picks) for (let i = 0; i < x.sets; i++)
+    P.recordSession(s, { holdId: x.holdId, level: 1, held: 300, target: 30, coins: 0, camera: false, avgForm: 0, unit: 'seconds' });
+  P.planToday(s, P.addDays(today, 1));
+  check('a plan day is full without its daily holds', s.plan.cycle[0] === 'full', `day 1: ${s.plan.cycle[0]}`);
+
+  const n = fresh();
+  n.unlocked.push(outside.id);
+  P.toggleStar(n, outside.id);
+  const solo = P.todaysList(n, today);
+  check('no plan: the daily holds are the list', solo.length === 1 && solo[0].holdId === outside.id, solo.map(x => x.holdId).join());
+}
+
 console.log(failures ? `${failures} failed` : 'all passed');
 process.exit(failures ? 1 : 0);

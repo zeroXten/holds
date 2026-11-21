@@ -91,7 +91,7 @@ const blank = () => ({
   // Your monk: what's worn, what's owned, and whether it stands in the temple.
   avatar: { character: 'young', outfit: 'saffron', wear: {}, owned: ['young', 'saffron'], inTemple: true },
   notices: [],  // messages to show once (a freeze was used, a bet was won...)
-  starred: [],  // holds you've starred, to see on their own
+  starred: [],  // holds you've starred: your daily holds, done every day (see todaysList)
   // The donation box: teachings received (id → the day), in order, the day's, and starred ones.
   teachings: { got: {}, order: [], today: null, starred: [] },
 });
@@ -777,6 +777,42 @@ function planAfterSession(state, today) {
   p.fullOn = today;
   if (p.step === planLength(p) - 1) advancePlan(state, 'full', today);
   return { dayDone: true, done: p.done };
+}
+
+// Your starred holds are your daily ones: one set each, every day. With a plan they're
+// mixed into today's list (but the plan's days and coins only ever count its own holds,
+// so starring a hold never makes a plan harder to finish); without one they're the list.
+// Starred holds you haven't unlocked yet wait until you have.
+export function dailyStarred(state) {
+  const groupOf = id => HOLD_GROUPS.find(g => g.ids.includes(id))?.key;
+  return state.starred.filter(id => isOpen(state, id) && HOLDS.some(h => h.id === id))
+    .map(id => ({ holdId: id, sets: 1, group: groupOf(id), starred: true }));
+}
+
+// Mixes daily holds into a plan day's list where they fit: after the plan's holds from the
+// same section, so a day's core work stays together; a hard hold from another section
+// after the plan's hard holds, while you're fresh; a soft one at the end to wind down,
+// stillness last. A hold already in the plan isn't added again.
+export function mixInDaily(picks, extras) {
+  const list = [...picks];
+  const style = x => HOLDS.find(h => h.id === x.holdId)?.style;
+  const lastIndex = test => list.reduce((at, x, i) => (test(x) ? i : at), -1);
+  for (const x of extras) {
+    if (list.some(y => y.holdId === x.holdId)) continue;
+    // Insert after `at` (-1: at the start, as when a hard hold joins a day of soft ones).
+    let at = lastIndex(y => y.group === x.group);
+    if (at < 0) at = style(x) === 'hard' ? lastIndex(y => style(y) === 'hard')
+      : x.group === 'still' ? list.length - 1 : lastIndex(y => y.group !== 'still');
+    list.splice(at + 1, 0, x);
+  }
+  return list;
+}
+
+// Today's whole list: the plan's holds (if a plan day is on) with your daily holds mixed in.
+export function todaysList(state, today = dayKey()) {
+  const p = planToday(state, today);
+  const picks = p && !p.done && !planWaiting(state, today) ? p.picks : [];
+  return mixInDaily(picks, dailyStarred(state));
 }
 
 // Seconds of holding in today's plan, as picked.

@@ -216,7 +216,8 @@ function renderPlanCard() {
     $('#pc-start').textContent = 'See the plan';
     return;
   }
-  const planned = P.planSeconds(state, p.picks), held = state.days[P.dayKey()]?.time ?? 0;
+  const { list } = planNow();
+  const planned = P.planSeconds(state, list), held = state.days[P.dayKey()]?.time ?? 0;
   $('#pc-kicker').textContent = `Today’s plan · ${dayType(p).name}`;
   $('#pc-where').textContent = p.weeks > 1 ? `Week ${Math.floor(p.step / 7) + 1} of ${p.weeks}` : `Day ${p.step % 7 + 1} of 7`;
   $('#pc-progress').innerHTML = `<div class="hp-top"><span><b>${fmt(held)}</b> of ${fmt(planned)} today</span><small>${
@@ -233,14 +234,14 @@ function renderPlanCard() {
     return;
   }
   const h = holdById(next.holdId), hs = P.holdState(state, h.id), lv = h.levels[hs.level - 1];
-  const n = p.picks.indexOf(next), done = P.setsDone(state, h.id);
+  const n = list.indexOf(next), done = P.setsDone(state, h.id);
   $('#pc-fig').innerHTML = figureSVG(h.figure(hs.level));
   $('#pc-name').textContent = h.name;
   $('#pc-level').textContent = `Level ${hs.level} · ${lv.name}${hs.mastered ? ' · Mastered' : ''}`;
   $('#pc-meta').innerHTML = `
     <span class="tag strong">${targetText(h, hs.level, lv.target)}</span>
     <span class="tag">${next.sets > 1 ? `Set ${done + 1} of ${next.sets}` : '1 set'}</span>
-    <span class="tag">Hold ${n + 1} of ${p.picks.length}</span>
+    <span class="tag">${next.starred ? `${STAR} Daily · ` : ''}Hold ${n + 1} of ${list.length}</span>
     ${P.isDaily(state, h.id) ? `<span class="tag gold">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× coins` : `${DAILY_MULT}× used`}</span>` : ''}`;
   $('#pc-start').textContent = 'Start';
 }
@@ -307,10 +308,16 @@ function renderGrid() {
   for (const b of $$('#list-tabs [data-list]')) b.setAttribute('aria-selected', b.dataset.list === list);
   if (list === 'plan') { renderPlan(); return; }
   if (list === 'starred') {
-    const holds = HOLD_GROUPS.flatMap(ordered).filter(h => P.isStarred(state, h.id));
-    $('#grid').innerHTML = holds.length
-      ? `<div class="grid">${holds.map(card).join('')}</div>`
-      : '<p class="empty-note">No starred holds yet. Open a hold and tap the star to keep it here.</p>';
+    // Your daily holds: one set of each every day, ticked off as you go.
+    const daily = P.dailyStarred(state), locked = HOLD_GROUPS.flatMap(ordered).filter(h => P.isStarred(state, h.id) && !P.isOpen(state, h.id));
+    const left = daily.filter(x => P.setsDone(state, x.holdId) < 1).length;
+    const withPlan = P.hasPlan(state) && !state.plan.done;
+    $('#grid').innerHTML = !daily.length && !locked.length
+      ? '<p class="empty-note">No starred holds yet. Star the holds you want to do every day: open one and tap the star.</p>'
+      : `${daily.length ? `<h3 class="group-title">Every day · ${left ? `${left} to do today` : 'all done today'}</h3>
+        <p class="plan-order">One set of each, every day.${withPlan ? ' They’re mixed into your plan’s list too.' : ''}</p>
+        <div class="plan-items">${daily.map((x, n) => planItemHTML({ ...x, starred: false }, n)).join('')}</div>` : ''}
+        ${locked.length ? `<h3 class="group-title">Starred, not unlocked yet</h3><div class="grid">${locked.map(card).join('')}</div>` : ''}`;
     return;
   }
   // My holds: the open ones, in their sections (empty sections left out).
@@ -324,8 +331,8 @@ function renderGrid() {
 
 // Today's plan, and its next hold with sets still to do (null once it's all done).
 function planNow() {
-  const p = P.planToday(state);
-  return { p, next: p?.picks.find(x => P.setsDone(state, x.holdId) < x.sets) ?? null };
+  const p = P.planToday(state), list = P.todaysList(state);
+  return { p, list, next: list.find(x => P.setsDone(state, x.holdId) < x.sets) ?? null };
 }
 
 const dayType = (p, step = p.step) => DAY_TYPES[focusByKey(p.focus).week[step % 7]];
@@ -354,20 +361,10 @@ function renderPlan() {
     const mark = step < p.step ? p.cycle[step] ?? '' : step === p.step ? 'now' : '';
     return `<i class="${mark}" title="Day ${i + 1}: ${DAY_TYPES[t].name}"></i>`;
   }).join('');
-  let allDone = p.picks.length > 0;
-  const items = p.picks.map((it, n) => {
-    const h = holdById(it.holdId), hs = P.holdState(state, h.id);
-    const done = Math.min(it.sets, P.setsDone(state, h.id));
-    if (done < it.sets) allDone = false;
-    const flag = P.isDaily(state, h.id) ? `<span class="pi-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : '';
-    return `<button class="plan-item ${done >= it.sets ? 'done' : ''}" data-hold="${h.id}">
-      <span class="pi-num">${n + 1}</span>
-      ${figureSVG(h.figure(hs.level))}
-      <span class="pi-text"><b>${h.name}</b><small>Lv ${hs.level} · ${targetShort(h, hs.level, { long: true })}</small>${it.sets > 1 ? `<small>${it.sets} sets · rest a minute between</small>` : ''}${flag}</span>
-      <span class="pi-sets" aria-label="${done} of ${it.sets} set${it.sets === 1 ? '' : 's'} done">${
-        Array.from({ length: it.sets }, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join('')}</span>
-    </button>`;
-  });
+  const { list } = planNow();
+  let allDone = list.length > 0;
+  const items = list.map((it, n) => planItemHTML(it, n, () => { allDone = false; }));
+  const starredExtra = list.some(x => x.starred);
   const planned = P.planSeconds(state, p.picks), budget = dayBudget(p, p.step);
   const nextDay = p.step + 1 < length ? `Next: ${dayType(p, p.step + 1).name.toLowerCase()}.` : 'This is the last day of the plan: train today to finish it.';
   $('#grid').innerHTML = `<div class="plan-head">
@@ -375,12 +372,27 @@ function renderPlan() {
       <small class="plan-where">${p.weeks > 1 ? `Week ${week + 1} of ${p.weeks} · ` : ''}day ${p.step % 7 + 1} of 7</small>
       <div class="plan-dots">${dots}</div>
     </div>
-    <h3 class="group-title">Today · ${dayType(p).name} · about ${minText(planned)}</h3>
-    <p class="plan-order">Work down the list in order.</p>
+    <h3 class="group-title">Today · ${dayType(p).name} · about ${minText(P.planSeconds(state, list))}</h3>
+    <p class="plan-order">Work down the list in order.${starredExtra ? ` ${STAR} Your daily (starred) holds are mixed in.` : ''}</p>
     <div class="plan-items">${items.join('') || '<p class="empty-note">Nothing to fill today’s plan with yet: unlock a hold to get started.</p>'}</div>
     ${planned && planned < budget - 60 ? `<p class="plan-note">Your holds fill about ${minText(planned)} of today’s ${minText(budget)}. Days grow as you unlock holds and level up.</p>` : ''}
-    <p class="plan-note">${allDone ? '<b>Today’s plan is done.</b> ' : ''}${nextDay} The plan moves on a day once you’ve done some of it, so a missed day waits for you.</p>
+    <p class="plan-note">${allDone ? '<b>Today’s list is done.</b> ' : ''}${nextDay} The plan moves on a day once you’ve done some of it, so a missed day waits for you.${starredExtra ? ' Daily holds are extra: the plan’s days count its own holds.' : ''}</p>
     <p class="plan-note">Finishing the plan pays ${PLAN_COINS.full} coins for each day you did in full and ${PLAN_COINS.part} for each day you did some of.${p.finished ? ` ${plural(p.finished, 'plan')} finished so far.` : ''}</p>`;
+}
+
+// One row of today's list: a hold with a dot per set. `undone` is called if it isn't finished.
+function planItemHTML(it, n, undone = () => {}) {
+  const h = holdById(it.holdId), hs = P.holdState(state, h.id);
+  const done = Math.min(it.sets, P.setsDone(state, h.id));
+  if (done < it.sets) undone();
+  const flag = P.isDaily(state, h.id) ? `<span class="pi-flag">${P.dailyAvailable(state, h.id) ? `${DAILY_MULT}× today` : `${DAILY_MULT}× done`}</span>` : '';
+  return `<button class="plan-item ${done >= it.sets ? 'done' : ''} ${it.starred ? 'starred' : ''}" data-hold="${h.id}">
+    <span class="pi-num">${n + 1}</span>
+    ${figureSVG(h.figure(hs.level))}
+    <span class="pi-text"><b>${h.name}</b><small>${it.starred ? `<span class="pi-star">${STAR} Daily</span> · ` : ''}Lv ${hs.level} · ${targetShort(h, hs.level, { long: true })}</small>${it.sets > 1 ? `<small>${it.sets} sets · rest a minute between</small>` : ''}${flag}</span>
+    <span class="pi-sets" aria-label="${done} of ${it.sets} set${it.sets === 1 ? '' : 's'} done">${
+      Array.from({ length: it.sets }, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join('')}</span>
+  </button>`;
 }
 
 // With no plan: what a plan is, and a button to build one.
@@ -511,7 +523,7 @@ function openHold(hold) {
 function renderStar() {
   const on = P.isStarred(state, sheetHold.id);
   $('#hs-star').setAttribute('aria-pressed', on);
-  $('#hs-star').setAttribute('aria-label', on ? 'Unstar this hold' : 'Star this hold');
+  $('#hs-star').setAttribute('aria-label', on ? 'Unstar: stop doing this hold every day' : 'Star: do this hold every day');
 }
 
 function renderSheetLevel() {
@@ -1902,7 +1914,12 @@ $('#hero-start').onclick = () => {
 };
 $('#hero-fig').onclick = () => openHold(hero);
 $('#hero-more').onclick = () => openHold(hero);
-$('#hs-star').onclick = () => { P.toggleStar(state, sheetHold.id); renderStar(); renderGrid(); };
+$('#hs-star').onclick = () => {
+  P.toggleStar(state, sheetHold.id);
+  renderStar();
+  renderHome();
+  if (P.isStarred(state, sheetHold.id)) toast(P.isOpen(state, sheetHold.id) ? 'Starred: one set every day' : 'Starred: one set every day, once it’s unlocked');
+};
 $('#list-tabs').onclick = e => {
   const b = e.target.closest('[data-list]');
   if (!b) return;
