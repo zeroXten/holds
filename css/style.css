@@ -868,6 +868,31 @@ button.chip { cursor: pointer; }
 .area-bar { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
 .area-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--accent)); border-radius: inherit; }
 
+/* ---------- Progress charts ---------- */
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 26px 0 12px; }
+.chart-head .section-title { margin: 0; }
+.chart-select { font: inherit; font-size: .9rem; font-weight: 600; padding: 6px 10px; border-radius: var(--r-chip); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); min-height: 38px; max-width: 55%; }
+.chart-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.chart-sum { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; font-size: .9rem; color: var(--muted); }
+.chart-sum b { color: var(--ink); font-size: 1.05rem; }
+.chart-read { min-height: 1.3em; font-size: .85rem; color: var(--muted); margin-top: 4px; }
+.chart-read b { color: var(--ink); }
+.chart { display: block; width: 100%; height: auto; margin-top: 8px; overflow: visible; touch-action: pan-y; }
+.chart text { fill: var(--muted); font-size: 10px; font-family: var(--sans); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .bar { fill: var(--accent); }
+.chart .bar.on { fill: var(--gold); }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart .line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.chart .target { stroke-width: 1.2; stroke-dasharray: 4 3; opacity: .7; }
+.chart .dot { stroke: var(--surface); stroke-width: 1.5; }
+.chart .dot.on { r: 5; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: .82rem; color: var(--muted); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i { width: 14px; height: 3px; border-radius: 2px; background: currentColor; }
+.chart-empty { color: var(--muted); font-size: .9rem; margin: 0; }
+.chart-note { font-size: .78rem; color: var(--muted); margin: 8px 0 0; }
+
 /* ---------- Live checklist ----------
    A column of round ticks down the left. A check that needs fixing slides open to the
    right with what to do, and closes back to a tick once it's right again. */

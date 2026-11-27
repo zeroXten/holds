@@ -1,11 +1,11 @@
 {
   "name": "mabu",
-  "version": "3.5.1",
+  "version": "3.6.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "python3 tools/serve.py 8765",
-    "test": "node tests/scoring.test.mjs && node tests/session.test.mjs && node tests/framing.test.mjs && node tests/economy.test.mjs && node tests/shop.test.mjs && node tests/plan.test.mjs && node tests/teachings.test.mjs && node tests/tracker.test.mjs && node tests/version.test.mjs && node tests/calm.test.mjs",
+    "test": "node tests/scoring.test.mjs && node tests/session.test.mjs && node tests/framing.test.mjs && node tests/economy.test.mjs && node tests/shop.test.mjs && node tests/plan.test.mjs && node tests/teachings.test.mjs && node tests/tracker.test.mjs && node tests/version.test.mjs && node tests/calm.test.mjs && node tests/charts.test.mjs",
     "icons": "node tools/make-icons.mjs"
   }
 }

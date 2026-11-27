@@ -1180,6 +1180,8 @@ function renderProgress() {
     <div><b>${t.sessions}</b><small>sessions</small></div>
     <div><b>${P.streak(state)}</b><small>day streak</small></div>
     <div><b>${t.bestStreak}</b><small>best streak</small></div>`;
+  renderDayChart();
+  renderHoldChart();
 
   // 16 weeks, Monday-first columns, ending this week.
   const weeks = 16, today = new Date();
@@ -1211,6 +1213,128 @@ function renderProgress() {
       <small class="when">${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</small></li>`;
   }).join('') : '<li class="empty">No sessions yet.</li>';
 }
+
+// ---------- Progress charts ----------
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const dateOf = key => new Date(key + 'T12:00');
+const shortDate = key => dateOf(key).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+const longDate = key => key === P.dayKey() ? 'Today' : dateOf(key).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+const METRIC_TEXT = {
+  earned: v => `${v.toLocaleString()} coins`,
+  spent: v => `${v.toLocaleString()} coins`,
+  time: v => fmtLong(v),
+  sessions: v => `${v} ${v === 1 ? 'hold' : 'holds'}`,
+};
+// A round number at or above v for the top of an axis (time in seconds).
+function niceTop(v, time = false) {
+  if (time) {
+    const steps = [10, 20, 30, 60, 90, 120, 180, 240, 300, 600, 900, 1200, 1800, 2700, 3600];
+    return steps.find(s => s >= v) ?? Math.ceil(v / 1800) * 1800;
+  }
+  if (v <= 1) return 1;
+  const p = 10 ** Math.floor(Math.log10(v));
+  return [1, 2, 2.5, 5, 10].map(m => m * p).find(x => x >= v);
+}
+const axisText = (v, time) => time ? fmtLong(v) : v.toLocaleString();
+
+// Tapping or pointing at a bar or dot shows its value in the readout line.
+function chartReadout(svg, read, text) {
+  const pick = e => {
+    const el = e.target.closest('[data-i]');
+    if (!el) return;
+    svg.querySelectorAll('.on').forEach(x => x.classList.remove('on'));
+    svg.querySelectorAll(`[data-i="${el.dataset.i}"]:not(.hit)`).forEach(x => x.classList.add('on'));
+    read.innerHTML = text(+el.dataset.i);
+  };
+  svg.addEventListener('pointerover', pick);
+  svg.addEventListener('click', pick);
+}
+
+// Coins earned or spent, time held or holds done, a bar a day for the last 30 days.
+function renderDayChart() {
+  const metric = $('#day-metric').value, time = metric === 'time';
+  const series = P.dailySeries(state, metric, 30);
+  const total = series.reduce((t, d) => t + d.value, 0), active = series.filter(d => d.value).length;
+  const top = niceTop(Math.max(...series.map(d => d.value)), time);
+  const W = 320, H = 150, L = 40, B = 18, T = 6, slot = (W - L) / series.length, y = v => T + (H - B - T) * (1 - v / top);
+  let svg = '';
+  for (const v of [0, top / 2, top]) {
+    svg += `<line class="grid" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${axisText(v, time)}</text>`;
+  }
+  series.forEach((d, i) => {
+    const x = L + i * slot, h = y(0) - y(d.value);
+    if (d.value) svg += `<rect class="bar" data-i="${i}" x="${x + slot * 0.15}" y="${y(d.value)}" width="${slot * 0.7}" height="${Math.max(1.5, h)}" rx="1.5"/>`;
+    svg += `<rect class="hit" data-i="${i}" x="${x}" y="${T}" width="${slot}" height="${H - T}"/>`;
+  });
+  svg += `<text x="${L}" y="${H}">${shortDate(series[0].day)}</text><text x="${W}" y="${H}" text-anchor="end">Today</text>`;
+  const since = metric === 'spent' && state.ledgerSince > series[0].day
+    ? `<p class="chart-note">Spending is counted from ${shortDate(state.ledgerSince)}, when this chart arrived.</p>` : '';
+  const card = $('#day-chart');
+  card.innerHTML = `<div class="chart-sum"><span><b>${METRIC_TEXT[metric](total)}</b> in all</span>
+      ${active ? `<span>${METRIC_TEXT[metric](Math.round(total / active))} a day on ${active} ${active === 1 ? 'day' : 'days'}</span>` : ''}</div>
+    <div class="chart-read"></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H + 2}" role="img" aria-label="${$('#day-metric').selectedOptions[0].text}, last 30 days">${svg}</svg>${since}`;
+  const read = card.querySelector('.chart-read');
+  const text = i => `<b>${longDate(series[i].day)}</b>: ${METRIC_TEXT[metric](series[i].value)}`;
+  read.innerHTML = text(series.length - 1);
+  chartReadout(card.querySelector('svg'), read, text);
+}
+$('#day-metric').onchange = renderDayChart;
+
+// A hold's longest time each day it was done, a line for each level, with each
+// level's target dashed.
+const LEVEL_COLORS = ['var(--gold)', 'var(--accent)', 'var(--good)', '#5b7bd6', '#9a5cc6'];
+const levelName = l => l === 5 ? 'Mastery' : `Lv ${l}`;
+let chartHold = null;
+function renderHoldChart() {
+  const ids = P.practisedHolds(state), pickEl = $('#hold-pick'), card = $('#hold-chart');
+  pickEl.hidden = !ids.length;
+  if (!ids.length) { card.innerHTML = '<p class="chart-empty">Do a hold and its progress shows here.</p>'; return; }
+  if (!ids.includes(chartHold)) chartHold = ids[0];
+  pickEl.innerHTML = ids.map(id => `<option value="${id}" ${id === chartHold ? 'selected' : ''}>${holdById(id)?.name ?? id}</option>`).join('');
+  const hold = holdById(chartHold), series = P.holdSeries(state, chartHold);
+  const levels = [...new Set(series.map(p => p.level))].sort((a, b) => a - b);
+  const targets = hold?.flow ? {} : Object.fromEntries(series.map(p => [p.level, p.target]));
+  // At least a week across, ending today.
+  const today = P.dayKey(), first = series[0].day < P.addDays(today, -6) ? series[0].day : P.addDays(today, -6);
+  const t0 = dateOf(first).getTime(), span = dateOf(today).getTime() - t0;
+  const top = niceTop(Math.max(...series.map(p => p.held), ...Object.values(targets)) * 1.05, true);
+  const W = 320, H = 170, L = 40, R = 8, B = 18, T = 8;
+  const x = day => L + (W - L - R) * (dateOf(day).getTime() - t0) / span, y = v => T + (H - B - T) * (1 - v / top);
+  let svg = '';
+  for (const v of [0, top / 2, top]) {
+    svg += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${fmtLong(v)}</text>`;
+  }
+  for (const l of levels) {
+    const c = LEVEL_COLORS[l - 1] ?? 'var(--ink)';
+    if (targets[l]) svg += `<line class="target" stroke="${c}" x1="${L}" x2="${W - R}" y1="${y(targets[l])}" y2="${y(targets[l])}"/>`;
+    const pts = series.filter(p => p.level === l);
+    if (pts.length > 1) svg += `<polyline class="line" stroke="${c}" points="${pts.map(p => `${x(p.day).toFixed(1)},${y(p.held).toFixed(1)}`).join(' ')}"/>`;
+  }
+  series.forEach((p, i) => {
+    const c = LEVEL_COLORS[p.level - 1] ?? 'var(--ink)';
+    svg += `<circle class="dot" data-i="${i}" fill="${c}" cx="${x(p.day)}" cy="${y(p.held)}" r="3.5"/><circle class="hit" data-i="${i}" cx="${x(p.day)}" cy="${y(p.held)}" r="12"/>`;
+  });
+  svg += `<text x="${L}" y="${H}">${shortDate(first)}</text><text x="${W - R}" y="${H}" text-anchor="end">Today</text>`;
+  // The headline: at the level done most recently, the best so far against the first.
+  const lvl = series.at(-1).level, at = series.filter(p => p.level === lvl);
+  const best = at.reduce((a, b) => (b.held > a.held ? b : a));
+  const head = at.length > 1 && best.held > at[0].held
+    ? `<span>${levelName(lvl)}: <b>${fmtLong(best.held)}</b> best, up from ${fmtLong(at[0].held)} on ${shortDate(at[0].day)}</span>`
+    : `<span>${levelName(lvl)}: <b>${fmtLong(best.held)}</b> best</span>`;
+  const days = new Set(series.map(p => p.day)).size;
+  card.innerHTML = `<div class="chart-sum">${head}<span>${days} ${days === 1 ? 'day' : 'days'} practised</span></div>
+    <div class="chart-read"></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H + 2}" role="img" aria-label="Longest time each day on ${hold?.name ?? chartHold}">${svg}</svg>
+    <div class="chart-legend">${levels.map(l => `<span style="color:${LEVEL_COLORS[l - 1] ?? 'var(--ink)'}"><i></i>${levelName(l)}</span>`).join('')}
+      ${Object.keys(targets).length ? '<span><i style="background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)"></i>Target</span>' : ''}</div>`;
+  const read = card.querySelector('.chart-read');
+  const text = i => { const p = series[i]; return `<b>${longDate(p.day)}</b> · ${levelName(p.level)}: longest ${fmtLong(p.held)}${targets[p.level] ? ` (target ${fmtLong(p.target)})` : ''}`; };
+  read.innerHTML = text(series.length - 1);
+  chartReadout(card.querySelector('svg'), read, text);
+}
+$('#hold-pick').onchange = e => { chartHold = e.target.value; renderHoldChart(); };
 
 // ---------- Settings ----------
 

@@ -106,6 +106,15 @@
     <header class="subbar"><button class="icon-btn back" data-home aria-label="Back"><svg viewBox="0 0 24 24" class="ico"><path d="M15 4l-8 8 8 8 1.4-1.4L9.8 12l6.6-6.6z"/></svg></button><h1>Progress</h1></header>
     <div class="rank-card" id="rank-card"></div>
     <div class="stats" id="stats"></div>
+    <div class="chart-head"><h2 class="section-title">Last 30 days</h2>
+      <select id="day-metric" class="chart-select" aria-label="What to show">
+        <option value="earned">Coins earned</option><option value="spent">Coins spent</option>
+        <option value="time">Time held</option><option value="sessions">Holds done</option>
+      </select></div>
+    <div class="chart-card" id="day-chart"></div>
+    <div class="chart-head"><h2 class="section-title">Hold progress</h2>
+      <select id="hold-pick" class="chart-select" aria-label="Hold"></select></div>
+    <div class="chart-card" id="hold-chart"></div>
     <h2 class="section-title">Last 7 days by body area</h2>
     <div class="area-bars" id="area-bars"></div>
     <h2 class="section-title">Training days</h2>

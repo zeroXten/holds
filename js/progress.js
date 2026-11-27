@@ -94,6 +94,9 @@ const blank = () => ({
   starred: [],  // holds you've starred: your daily holds, done every day (see todaysList)
   // The donation box: teachings received (id → the day), in order, the day's, and starred ones.
   teachings: { got: {}, order: [], today: null, starred: [] },
+  // Coins by day beyond the sessions' own (those are in days): spent, and earned from
+  // milestones, bets and plans. Kept apart from days, since a day there means you trained.
+  ledger: {}, ledgerSince: dayKey(),
 });
 
 // Version 1 had points (about 80 per coin) and every hold open. Convert the
@@ -143,6 +146,8 @@ export function load() {
         if (data.settings.list === 'starred') data.settings.holdList ??= 'starred';
         delete data.settings.list;
       }
+      // Saves from before the ledger only have spending from now on.
+      data.ledger ??= {}; data.ledgerSince ??= dayKey();
       // Starter holds added since this save was made are free too.
       data.unlocked = [...new Set([...(data.unlocked ?? []), ...STARTER_HOLDS])];
       const state = {
@@ -168,6 +173,14 @@ export function save(state) {
 
 export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Coins in and out, booked by day for the charts.
+function book(state, kind, n, day = dayKey()) {
+  const l = (state.ledger ??= {})[day] ??= {};
+  l[kind] = (l[kind] ?? 0) + n;
+}
+function spend(state, n) { state.coins -= n; book(state, 'spent', n); }
+function gain(state, n) { state.coins += n; state.lifetime += n; book(state, 'earned', n); }
 
 export const addDays = (key, n) => {
   const [y, m, d] = key.split('-').map(Number);
@@ -236,8 +249,7 @@ function claimMilestones(state, today) {
       // A free freeze, or its price in coins if you already hold the maximum.
       if (state.streak.freezes < FREEZE_MAX) { state.streak.freezes++; freeze = true; } else coins += FREEZE_PRICE;
     }
-    state.coins += coins;
-    state.lifetime += coins;
+    gain(state, coins);
     earned.push({ ...m, coins, freeze });
   }
   return earned;
@@ -270,7 +282,7 @@ export function repairStreak(state) {
   const b = state.streak.broken;
   if (!b || state.coins < b.price) return false;
   for (const d of b.missed) state.streak.covered[d] = 'repair';
-  state.coins -= b.price;
+  spend(state, b.price);
   state.streak.broken = null;
   save(state);
   return true;
@@ -285,7 +297,7 @@ export function dismissRepair(state) {
 
 export function buyFreeze(state) {
   if (state.streak.freezes >= FREEZE_MAX || state.coins < FREEZE_PRICE) return false;
-  state.coins -= FREEZE_PRICE;
+  spend(state, FREEZE_PRICE);
   state.streak.freezes++;
   save(state);
   return true;
@@ -313,7 +325,7 @@ export function restBlocker(state, day, today = dayKey()) {
 
 export function planRest(state, day, today = dayKey()) {
   if (restBlocker(state, day, today)) return false;
-  state.coins -= REST_DAY_PRICE;
+  spend(state, REST_DAY_PRICE);
   state.streak.covered[day] = 'rest';
   save(state);
   return true;
@@ -322,7 +334,7 @@ export function planRest(state, day, today = dayKey()) {
 export function cancelRest(state, day, today = dayKey()) {
   if (state.streak.covered[day] !== 'rest' || day <= today) return false;
   delete state.streak.covered[day];
-  state.coins += REST_DAY_PRICE;
+  spend(state, -REST_DAY_PRICE);  // a refund
   save(state);
   return true;
 }
@@ -350,7 +362,7 @@ export function betBlocker(state, id, today = dayKey()) {
 export function placeBet(state, id, today = dayKey()) {
   if (betBlocker(state, id, today)) return false;
   const def = betDef(id);
-  state.coins -= def.stake;
+  spend(state, def.stake);
   if (betSlot(def) === 'bet') state.lastBetDay = today;
   state[betSlot(def)] = { id, start: today, end: addDays(today, def.days - 1), holds: [], time: 0, days: [], done: false, bonus: 0, paid: 0, paidCoins: 0 };
   save(state);
@@ -418,7 +430,7 @@ export function settleBet(state, today = dayKey(), { notify = true, slot = 'bet'
     // Stepped bets have paid out as each step was reached; time up after at least one is a win.
     payout = b.paidCoins ?? 0;
     if (result === 'lost' && b.paid > 0) result = 'won';
-  } else if (result === 'won') { state.coins += def.payout; state.lifetime += def.payout; }
+  } else if (result === 'won') gain(state, def.payout);
   if (notify) state.notices.push(result === 'won' ? `Bet won: ${def.name}! +${payout} coins.` : `Bet lost: ${def.name}. Better luck next time.`);
   state.betLog.unshift({ id: def.id, result, stake: def.stake, payout, progress, at: new Date().toISOString() });
   state.betLog.splice(30);
@@ -441,7 +453,7 @@ export const ownsAvatar = (state, id) => state.avatar.owned.includes(id);
 export function buyAvatarItem(state, kind, id) {
   const item = avatarItem(kind, id);
   if (!item || ownsAvatar(state, id) || state.coins < item.price) return false;
-  state.coins -= item.price;
+  spend(state, item.price);
   state.avatar.owned.push(id);
   wearAvatarItem(state, kind, id);
   return true;
@@ -485,7 +497,7 @@ export const ownsSeasonal = (state, item) => (item.theme ? state.temple.themes.i
 export function buySeasonalItem(state, id, date = new Date()) {
   const season = SEASONS.find(s => s.items.some(i => i.id === id)), item = season?.items.find(i => i.id === id);
   if (!item || !inSeason(season, date) || ownsSeasonal(state, item) || state.coins < item.price) return false;
-  state.coins -= item.price;
+  spend(state, item.price);
   if (item.theme) { state.temple.themes.push(id); state.temple.theme = id; } else state.temple.owned.push(id);
   save(state);
   return true;
@@ -513,7 +525,7 @@ export const nextTier = state => TEMPLE_TIERS[(state.temple.tier ?? 0) + 1] ?? n
 export function upgradeTemple(state) {
   const next = nextTier(state);
   if (!next || state.coins < next.price || !hasSash(state, next.sash)) return false;
-  state.coins -= next.price;
+  spend(state, next.price);
   state.temple.tier = (state.temple.tier ?? 0) + 1;
   save(state);
   return true;
@@ -524,7 +536,7 @@ export const canBuild = (state, item) => (state.temple.tier ?? 0) >= (item.needs
 export function buyTempleItem(state, id) {
   const item = TEMPLE_ITEMS.find(i => i.id === id);
   if (!item || owns(state, id) || !canBuild(state, item) || state.coins < item.price) return false;
-  state.coins -= item.price;
+  spend(state, item.price);
   state.temple.owned.push(id);
   save(state);
   return true;
@@ -533,7 +545,7 @@ export function buyTempleItem(state, id) {
 export function buyTheme(state, id) {
   const theme = THEMES.find(t => t.id === id);
   if (!theme || state.temple.themes.includes(id) || state.coins < theme.price) return false;
-  state.coins -= theme.price;
+  spend(state, theme.price);
   state.temple.themes.push(id);
   state.temple.theme = id;
   save(state);
@@ -543,7 +555,7 @@ export function buyTheme(state, id) {
 export function buyFrame(state, id) {
   const f = FRAMES.find(x => x.id === id);
   if (!f || state.temple.frames.includes(id) || state.coins < f.price) return false;
-  state.coins -= f.price;
+  spend(state, f.price);
   state.temple.frames.push(id);
   state.temple.frame = id;
   save(state);
@@ -603,7 +615,7 @@ export const unlockPrice = state => UNLOCK_PRICES[Math.min(state.purchased.lengt
 export function unlockHold(state, id) {
   const price = unlockPrice(state), hold = HOLDS.find(h => h.id === id);
   if (isUnlocked(state, id) || state.coins < price || !hasSash(state, hold?.sash)) return null;
-  state.coins -= price;
+  spend(state, price);
   state.unlocked.push(id);
   state.purchased.push(id);
   const earned = [];
@@ -762,8 +774,7 @@ function advancePlan(state, status, today) {
   const full = p.cycle.filter(c => c === 'full').length, part = p.cycle.filter(c => c === 'part').length;
   const coins = full * PLAN_COINS.full + part * PLAN_COINS.part;
   const time = state.history.filter(h => dayKey(new Date(h.at)) >= p.start).reduce((t, h) => t + h.held, 0);
-  state.coins += coins;
-  state.lifetime += coins;
+  gain(state, coins);
   p.done = { on: today, coins, full, part, days: planLength(p), time: Math.round(time), points: sashRank(state).points - p.points, seen: false };
   p.finished++;
 }
@@ -968,7 +979,7 @@ export function recordSession(state, s) {
     if (passed && testLevel === 5) { hs.mastered = true; hs.masteredOn = today; hs.qualDays = []; mastered = true; }
     // The test doesn't count towards the next level, but it's today's work on this hold.
     else if (passed) { hs.level = testLevel; hs.qualDays = []; hs.passedOn = today; levelUp = true; }
-    else state.coins -= testPrice(testLevel);
+    else spend(state, testPrice(testLevel));
     test = { passed, mastery: testLevel === 5, form: qualifyForm(testLevel), price: testPrice(testLevel) };
   }
   // A day counts towards the next level when the target is reached at your level, on
@@ -1013,8 +1024,7 @@ export function recordSession(state, s) {
       const steps = betDef('bonus').steps;
       while (b.paid < steps.length && b.bonus >= steps[b.paid].x) {
         const step = steps[b.paid];
-        state.coins += step.coins;
-        state.lifetime += step.coins;
+        gain(state, step.coins);
         b.paidCoins = (b.paidCoins ?? 0) + step.coins;
         b.paid++;
         betSteps.push({ ...step, n: b.paid, of: steps.length });
@@ -1156,7 +1166,7 @@ export function receiveTeaching(state, today = dayKey()) {
   if (teachingStatus(state, today) !== 'ready') return null;
   const t = pickTeaching(state, today);
   if (!t) return null;
-  state.coins -= TEACHING_PRICE;
+  spend(state, TEACHING_PRICE);
   if (!state.teachings.got[t.id]) state.teachings.order.push(t.id);
   state.teachings.got[t.id] = today;
   state.teachings.today = { day: today, id: t.id };
@@ -1168,4 +1178,41 @@ export function starTeaching(state, id) {
   const s = state.teachings.starred;
   state.teachings.starred = s.includes(id) ? s.filter(x => x !== id) : [...s, id];
   save(state);
+}
+
+// ---- Charts ----
+
+// One number a day for the last `days` days, oldest first: coins earned or spent, time
+// held, or sessions done.
+export const METRICS = {
+  earned: (d, l) => (d?.coins ?? 0) + (l?.earned ?? 0),
+  spent: (d, l) => Math.max(0, l?.spent ?? 0),
+  time: d => d?.time ?? 0,
+  sessions: d => d?.sessions ?? 0,
+};
+export function dailySeries(state, metric, days = 30, today = dayKey()) {
+  const f = METRICS[metric];
+  return Array.from({ length: days }, (_, i) => {
+    const day = addDays(today, i - days + 1);
+    return { day, value: f(state.days[day], state.ledger?.[day]) };
+  });
+}
+
+// A hold's longest session each day at each level it was done, oldest first, with that
+// level's target. Levels are different positions, so each is its own line.
+export function holdSeries(state, holdId) {
+  const best = new Map();
+  for (const h of state.history) {
+    if (h.holdId !== holdId || !h.at) continue;
+    const day = dayKey(new Date(h.at)), k = `${day}|${h.level}`, cur = best.get(k);
+    if (!cur || h.held > cur.held) best.set(k, { day, level: h.level, held: h.held, target: h.target });
+  }
+  return [...best.values()].sort((a, b) => a.day.localeCompare(b.day) || a.level - b.level);
+}
+
+// Holds with any sessions recorded, the most recently practised first.
+export function practisedHolds(state) {
+  const last = new Map();
+  for (const h of state.history) if (h.at) last.set(h.holdId, h.at);
+  return [...last.entries()].sort((a, b) => b[1].localeCompare(a[1])).map(([id]) => id);
 }
